@@ -1,19 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard,
-  Users,
-  Package,
-  FileText,
-  CreditCard,
-  Truck,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Receipt
+  LayoutDashboard, Users, Package, FileText, CreditCard,
+  Truck, Settings, ChevronLeft, ChevronRight, Receipt
 } from 'lucide-react';
 
 export type PageView =
@@ -57,7 +48,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle }: A
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
           <span className="font-bold text-lg">
-            GestFact <span className="text-xs text-muted-foreground">V1.42</span>
+            GestFact <span className="text-xs text-muted-foreground">V1.44</span>
           </span>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle}>
@@ -71,7 +62,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle }: A
             variant={currentView === item.id ? 'secondary' : 'ghost'}
             className={cn(
               'w-full justify-start gap-3',
-              currentView === item.id && 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+              currentView === item.id && 'bg-blue-100 text-blue-900 hover:bg-blue-200'
             )}
             onClick={() => onViewChange(item.id)}
           >

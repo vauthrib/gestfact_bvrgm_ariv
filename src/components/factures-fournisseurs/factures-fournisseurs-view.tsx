@@ -82,10 +82,10 @@ export function FacturesFournisseursView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-amber-800">Factures Fournisseurs</h1><p className="text-muted-foreground">Gérez vos factures fournisseurs</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-800">Factures Fournisseurs</h1><p className="text-muted-foreground">Gérez vos factures fournisseurs</p></div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExport}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-amber-500 hover:bg-amber-600" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-blue-500 hover:bg-blue-600" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -95,32 +95,26 @@ export function FacturesFournisseursView() {
           {filtered.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucune facture</div> : (
             <Table>
               <TableHeader><TableRow><TableHead>N° Facture</TableHead><TableHead>Date</TableHead><TableHead>Fournisseur</TableHead><TableHead>HT</TableHead><TableHead>TVA</TableHead><TableHead>TTC</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {filtered.map((f) => (
-                  <TableRow key={f.id}>
-                    <TableCell className="font-medium">{f.numeroFacture}</TableCell>
-                    <TableCell>{new Date(f.dateFacture).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell>{f.fournisseur?.raisonSociale}</TableCell>
-                    <TableCell>{formatCurrency(f.montantHT)}</TableCell>
-                    <TableCell>{formatCurrency(f.montantTVA)}</TableCell>
-                    <TableCell>{formatCurrency(f.montantTTC)}</TableCell>
-                    <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Enregistrée'}</span></TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {f.statut === 'ENREGISTREE' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)}><CheckCircle className="h-4 w-4" /></Button>}
-                        <Button size="sm" variant="outline" onClick={() => openEditDialog(f)}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+              <TableBody>{filtered.map((f) => (<TableRow key={f.id}>
+                <TableCell className="font-medium">{f.numeroFacture}</TableCell>
+                <TableCell>{new Date(f.dateFacture).toLocaleDateString('fr-FR')}</TableCell>
+                <TableCell>{f.fournisseur?.raisonSociale}</TableCell>
+                <TableCell>{formatCurrency(f.montantHT)}</TableCell>
+                <TableCell>{formatCurrency(f.montantTVA)}</TableCell>
+                <TableCell>{formatCurrency(f.montantTTC)}</TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Enregistrée'}</span></TableCell>
+                <TableCell><div className="flex gap-2">
+                  {f.statut === 'ENREGISTREE' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)}><CheckCircle className="h-4 w-4" /></Button>}
+                  <Button size="sm" variant="outline" onClick={() => openEditDialog(f)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)}><Trash2 className="h-4 w-4" /></Button>
+                </div></TableCell>
+              </TableRow>))}</TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[8000px]">
+        <DialogContent className="w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Facture Fournisseur</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -137,7 +131,7 @@ export function FacturesFournisseursView() {
               <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
               <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} /></div>
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-amber-500 hover:bg-amber-600">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-500 hover:bg-blue-600">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

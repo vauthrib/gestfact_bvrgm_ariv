@@ -83,10 +83,10 @@ export function ReglementsFournisseursView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-amber-800">Règlements Fournisseurs</h1><p className="text-muted-foreground">Gérez les règlements effectués</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-800">Règlements Fournisseurs</h1><p className="text-muted-foreground">Gérez les règlements effectués</p></div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExport}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-amber-500 hover:bg-amber-600" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-blue-500 hover:bg-blue-600" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -96,30 +96,24 @@ export function ReglementsFournisseursView() {
           {filteredReglements.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucun règlement</div> : (
             <Table>
               <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Fournisseur</TableHead><TableHead>Facture</TableHead><TableHead>Montant</TableHead><TableHead>Mode</TableHead><TableHead>Référence</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {filteredReglements.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell>{r.facture?.fournisseur?.raisonSociale}</TableCell>
-                    <TableCell>{r.facture?.numeroFacture}</TableCell>
-                    <TableCell>{formatCurrency(r.montant)}</TableCell>
-                    <TableCell>{r.modePaiement}</TableCell>
-                    <TableCell>{r.reference}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEditDialog(r)}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+              <TableBody>{filteredReglements.map((r) => (<TableRow key={r.id}>
+                <TableCell>{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
+                <TableCell>{r.facture?.fournisseur?.raisonSociale}</TableCell>
+                <TableCell>{r.facture?.numeroFacture}</TableCell>
+                <TableCell>{formatCurrency(r.montant)}</TableCell>
+                <TableCell>{r.modePaiement}</TableCell>
+                <TableCell>{r.reference}</TableCell>
+                <TableCell><div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => openEditDialog(r)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)}><Trash2 className="h-4 w-4" /></Button>
+                </div></TableCell>
+              </TableRow>))}</TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[8000px]">
+        <DialogContent className="w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingReglement ? 'Modifier' : 'Nouveau'} Règlement</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -151,7 +145,7 @@ export function ReglementsFournisseursView() {
             </div>
             <div><Label>Référence</Label><Input value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} placeholder="N° chèque, virement..." /></div>
             <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} placeholder="Informations complémentaires..." /></div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-amber-500 hover:bg-amber-600">{editingReglement ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-500 hover:bg-blue-600">{editingReglement ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

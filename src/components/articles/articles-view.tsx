@@ -81,15 +81,15 @@ export function ArticlesView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-amber-800">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-800">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExport}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-amber-500 hover:bg-amber-600" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-blue-500 hover:bg-blue-600" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle><Package className="w-4 h-4" /></CardHeader><CardContent><div className="text-2xl font-bold">{articles.length}</div></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Actifs</CardTitle><Package className="w-4 h-4 text-amber-500" /></CardHeader><CardContent><div className="text-2xl font-bold">{articles.filter(a => a.actif).length}</div></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Actifs</CardTitle><Package className="w-4 h-4 text-blue-500" /></CardHeader><CardContent><div className="text-2xl font-bold">{articles.filter(a => a.actif).length}</div></CardContent></Card>
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Inactifs</CardTitle><Package className="w-4 h-4 text-gray-400" /></CardHeader><CardContent><div className="text-2xl font-bold">{articles.filter(a => !a.actif).length}</div></CardContent></Card>
       </div>
       <Card>
@@ -116,7 +116,7 @@ export function ArticlesView() {
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[8000px]">
+        <DialogContent className="w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingArticle ? 'Modifier' : 'Nouveau'} Article</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -130,7 +130,7 @@ export function ArticlesView() {
               <div className="flex items-center gap-2 pt-6"><input type="checkbox" checked={formData.actif} onChange={(e) => setFormData({ ...formData, actif: e.target.checked })} /><Label>Actif</Label></div>
             </div>
             <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-amber-500 hover:bg-amber-600">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-500 hover:bg-blue-600">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

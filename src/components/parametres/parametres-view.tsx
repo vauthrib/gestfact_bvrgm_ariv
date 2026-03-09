@@ -52,7 +52,7 @@ export function ParametresView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div>
-        <h1 className="text-3xl font-bold text-amber-800">Paramètres</h1>
+        <h1 className="text-3xl font-bold text-blue-800">Paramètres</h1>
         <p className="text-muted-foreground">Configuration de l'application</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -112,7 +112,7 @@ export function ParametresView() {
 
         <div className="flex justify-end gap-4">
           {saved && <span className="text-green-600 self-center">Paramètres enregistrés!</span>}
-          <Button type="submit" className="bg-amber-500 hover:bg-amber-600">Enregistrer</Button>
+          <Button type="submit" className="bg-blue-500 hover:bg-blue-600">Enregistrer</Button>
         </div>
       </form>
     </div>

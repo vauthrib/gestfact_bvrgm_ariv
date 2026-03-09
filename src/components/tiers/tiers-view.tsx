@@ -76,16 +76,16 @@ export function TiersView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-amber-800">Tiers</h1><p className="text-muted-foreground">Gérez vos clients et fournisseurs</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-800">Tiers</h1><p className="text-muted-foreground">Gérez vos clients et fournisseurs</p></div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExport}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-amber-500 hover:bg-amber-600" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-blue-500 hover:bg-blue-600" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle><Users className="w-4 h-4" /></CardHeader><CardContent><div className="text-2xl font-bold">{tiers.length}</div></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clients</CardTitle><Users className="w-4 h-4 text-amber-500" /></CardHeader><CardContent><div className="text-2xl font-bold">{tiers.filter(t => t.type === 'CLIENT').length}</div></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Fournisseurs</CardTitle><Users className="w-4 h-4 text-orange-500" /></CardHeader><CardContent><div className="text-2xl font-bold">{tiers.filter(t => t.type === 'FOURNISSEUR').length}</div></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clients</CardTitle><Users className="w-4 h-4 text-blue-500" /></CardHeader><CardContent><div className="text-2xl font-bold">{tiers.filter(t => t.type === 'CLIENT').length}</div></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Fournisseurs</CardTitle><Users className="w-4 h-4 text-sky-500" /></CardHeader><CardContent><div className="text-2xl font-bold">{tiers.filter(t => t.type === 'FOURNISSEUR').length}</div></CardContent></Card>
       </div>
       <Card>
         <CardHeader><CardTitle>Liste des Tiers</CardTitle></CardHeader>
@@ -96,7 +96,7 @@ export function TiersView() {
               <TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Type</TableHead><TableHead>Raison Sociale</TableHead><TableHead>Ville</TableHead><TableHead>Téléphone</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>{filteredTiers.map((t) => (<TableRow key={t.id}>
                 <TableCell className="font-medium">{t.code}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${t.type === 'CLIENT' ? 'bg-amber-100 text-amber-800' : 'bg-orange-100 text-orange-800'}`}>{t.type}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${t.type === 'CLIENT' ? 'bg-blue-100 text-blue-800' : 'bg-sky-100 text-sky-800'}`}>{t.type}</span></TableCell>
                 <TableCell>{t.raisonSociale}</TableCell><TableCell>{t.ville}</TableCell><TableCell>{t.telephone}</TableCell>
                 <TableCell><div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => openEditDialog(t)}><Pencil className="h-4 w-4" /></Button>
@@ -108,7 +108,7 @@ export function TiersView() {
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[8000px]">
+        <DialogContent className="w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingTiers ? 'Modifier' : 'Nouveau'} Tiers</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -127,7 +127,7 @@ export function TiersView() {
             </div>
             <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
             <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} /></div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-amber-500 hover:bg-amber-600">{editingTiers ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-500 hover:bg-blue-600">{editingTiers ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

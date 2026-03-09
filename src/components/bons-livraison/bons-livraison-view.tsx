@@ -82,10 +82,10 @@ export function BonsLivraisonView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-amber-800">Bons de Livraison</h1><p className="text-muted-foreground">Gérez vos BL</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-800">Bons de Livraison</h1><p className="text-muted-foreground">Gérez vos BL</p></div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => window.open('/api/export?type=bons-livraison', '_blank')}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-amber-500 hover:bg-amber-600" onClick={() => { resetForm(); generateNum(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-blue-500 hover:bg-blue-600" onClick={() => { resetForm(); generateNum(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -95,30 +95,24 @@ export function BonsLivraisonView() {
           {filtered.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucun BL</div> : (
             <Table>
               <TableHeader><TableRow><TableHead>N°</TableHead><TableHead>Date</TableHead><TableHead>Client</TableHead><TableHead>Total HT</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {filtered.map((b) => (
-                  <TableRow key={b.id}>
-                    <TableCell className="font-medium">{b.numero}</TableCell>
-                    <TableCell>{new Date(b.dateBL).toLocaleDateString('fr-FR')}</TableCell>
-                    <TableCell>{b.client?.raisonSociale}</TableCell>
-                    <TableCell>{formatCurrency(b.totalHT)}</TableCell>
-                    <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {b.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(b.id)}><CheckCircle className="h-4 w-4" /></Button>}
-                        <Button size="sm" variant="outline" onClick={() => { setEditing(b); setDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDelete(b.id)} disabled={b.statut === 'VALIDEE'}><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+              <TableBody>{filtered.map((b) => (<TableRow key={b.id}>
+                <TableCell className="font-medium">{b.numero}</TableCell>
+                <TableCell>{new Date(b.dateBL).toLocaleDateString('fr-FR')}</TableCell>
+                <TableCell>{b.client?.raisonSociale}</TableCell>
+                <TableCell>{formatCurrency(b.totalHT)}</TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
+                <TableCell><div className="flex gap-2">
+                  {b.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(b.id)}><CheckCircle className="h-4 w-4" /></Button>}
+                  <Button size="sm" variant="outline" onClick={() => { setEditing(b); setDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleDelete(b.id)} disabled={b.statut === 'VALIDEE'}><Trash2 className="h-4 w-4" /></Button>
+                </div></TableCell>
+              </TableRow>))}</TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[8000px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? 'Modifier' : 'Nouveau'} BL</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -130,18 +124,14 @@ export function BonsLivraisonView() {
               <div className="flex justify-between items-center mb-2"><Label>Lignes</Label><Button type="button" size="sm" variant="outline" onClick={addLigne}>+ Ajouter</Button></div>
               <Table>
                 <TableHeader><TableRow><TableHead>Article</TableHead><TableHead>Désignation</TableHead><TableHead>Qté</TableHead><TableHead>P.U.</TableHead><TableHead>Total HT</TableHead><TableHead></TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {lignes.map((l, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell><Select value={l.articleId || ''} onValueChange={(v) => updateLigne(idx, 'articleId', v)}><SelectTrigger className="w-32"><SelectValue placeholder="..." /></SelectTrigger><SelectContent>{articles.map((a) => (<SelectItem key={a.id} value={a.id}>{a.code}</SelectItem>))}</SelectContent></Select></TableCell>
-                      <TableCell><Textarea value={l.designation} onChange={(e) => updateLigne(idx, 'designation', e.target.value)} className="min-h-[40px]" /></TableCell>
-                      <TableCell><Input type="text" value={l.quantite} onChange={(e) => updateLigne(idx, 'quantite', e.target.value)} className="w-20" /></TableCell>
-                      <TableCell><Input type="text" value={l.prixUnitaire} onChange={(e) => updateLigne(idx, 'prixUnitaire', e.target.value)} className="w-24" /></TableCell>
-                      <TableCell>{formatCurrency(l.totalHT)}</TableCell>
-                      <TableCell><Button type="button" size="sm" variant="ghost" onClick={() => removeLigne(idx)}>×</Button></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                <TableBody>{lignes.map((l, idx) => (<TableRow key={idx}>
+                  <TableCell><Select value={l.articleId || ''} onValueChange={(v) => updateLigne(idx, 'articleId', v)}><SelectTrigger className="w-32"><SelectValue placeholder="..." /></SelectTrigger><SelectContent>{articles.map((a) => (<SelectItem key={a.id} value={a.id}>{a.code}</SelectItem>))}</SelectContent></Select></TableCell>
+                  <TableCell><Textarea value={l.designation} onChange={(e) => updateLigne(idx, 'designation', e.target.value)} className="min-h-[40px]" /></TableCell>
+                  <TableCell><Input type="text" value={l.quantite} onChange={(e) => updateLigne(idx, 'quantite', e.target.value)} className="w-20" /></TableCell>
+                  <TableCell><Input type="text" value={l.prixUnitaire} onChange={(e) => updateLigne(idx, 'prixUnitaire', e.target.value)} className="w-24" /></TableCell>
+                  <TableCell>{formatCurrency(l.totalHT)}</TableCell>
+                  <TableCell><Button type="button" size="sm" variant="ghost" onClick={() => removeLigne(idx)}>×</Button></TableCell>
+                </TableRow>))}</TableBody>
               </Table>
               <div className="text-right font-bold mt-2">Total HT: {formatCurrency(calcTotal())}</div>
             </div>
@@ -149,7 +139,7 @@ export function BonsLivraisonView() {
               <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
               <div><Label>Notes</Label><Textarea value={formData.notesLivraison} onChange={(e) => setFormData({ ...formData, notesLivraison: e.target.value })} /></div>
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-amber-500 hover:bg-amber-600">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-500 hover:bg-blue-600">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

@@ -26,11 +26,11 @@ export function SecretCodeGate({ children }: SecretCodeGateProps) {
   if (isAuthenticated) return <>{children}</>;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-yellow-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-sky-100">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-amber-800">GestFact</h1>
-          <p className="text-sm text-muted-foreground">V1.42</p>
+          <h1 className="text-3xl font-bold text-blue-800">GestFact</h1>
+          <p className="text-sm text-muted-foreground">V1.44</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -41,7 +41,7 @@ export function SecretCodeGate({ children }: SecretCodeGateProps) {
             className={`text-center text-xl ${error ? 'border-red-500 animate-shake' : ''}`}
             autoFocus
           />
-          <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600">
+          <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600">
             Entrer
           </Button>
         </form>
