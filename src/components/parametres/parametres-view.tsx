@@ -51,9 +51,12 @@ export function ParametresView() {
 
   return (
     <div className="p-6 space-y-6 w-full">
-      <div>
-        <h1 className="text-3xl font-bold text-blue-800">Paramètres</h1>
-        <p className="text-muted-foreground">Configuration de l'application</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-blue-800">Paramètres</h1>
+          <p className="text-muted-foreground">Configuration de l'application</p>
+        </div>
+        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01</span>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>

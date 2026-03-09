@@ -82,7 +82,8 @@ export function ArticlesView() {
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
         <div><h1 className="text-3xl font-bold text-blue-800">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
           <Button variant="outline" onClick={handleExport}><Download className="w-4 h-4 mr-2" />Export</Button>
           <Button className="bg-blue-500 hover:bg-blue-600" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
