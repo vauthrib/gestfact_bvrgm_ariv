@@ -129,17 +129,39 @@ export function ArticlesView() {
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            {/* Row 1: Code */}
+            <div className="grid grid-cols-2 gap-4">
               <div><Label>Code</Label><Input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} required /></div>
-              <div><Label>Désignation</Label><Input value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} required /></div>
               <div><Label>Prix Unitaire HT</Label><Input type="text" value={formData.prixUnitaire} onChange={(e) => setFormData({ ...formData, prixUnitaire: e.target.value })} required /></div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+
+            {/* Row 2: Désignation (3 lignes, ~30 caractères) */}
+            <div>
+              <Label>Désignation</Label>
+              <Textarea
+                value={formData.designation}
+                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                required
+                rows={3}
+                className="w-full max-w-md font-mono"
+                placeholder="Désignation de l'article..."
+              />
+            </div>
+
+            {/* Row 3: Unité | TVA % */}
+            <div className="grid grid-cols-2 gap-4">
               <div><Label>Unité</Label><Input value={formData.unite} onChange={(e) => setFormData({ ...formData, unite: e.target.value })} /></div>
               <div><Label>Taux TVA (%)</Label><Input type="text" value={formData.tauxTVA} onChange={(e) => setFormData({ ...formData, tauxTVA: e.target.value })} /></div>
-              <div className="flex items-center gap-2 pt-6"><input type="checkbox" checked={formData.actif} onChange={(e) => setFormData({ ...formData, actif: e.target.checked })} /><Label>Actif</Label></div>
             </div>
-            <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
+
+            {/* Row 4: Info Libres */}
+            <div><Label>Info libres</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
+
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="actif" checked={formData.actif} onChange={(e) => setFormData({ ...formData, actif: e.target.checked })} className="w-4 h-4" />
+              <Label htmlFor="actif">Article actif</Label>
+            </div>
+
             <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-500 hover:bg-blue-600">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>

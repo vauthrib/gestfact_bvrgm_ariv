@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// Format number with comma as decimal separator
+const formatNumber = (val: any): string => {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'number') {
+    return val.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return String(val);
+};
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -9,42 +18,49 @@ export async function GET(request: NextRequest) {
 
     let data: any[] = [];
     let headers: string[] = [];
+    let numericFields: string[] = []; // Fields that need comma decimal separator
     let filename = 'export';
 
     switch (type) {
       case 'tiers':
         data = await prisma.tiers.findMany();
-        headers = ['code', 'type', 'raisonSociale', 'adresse', 'codePostal', 'ville', 'telephone', 'email', 'ice', 'rc'];
+        headers = ['code', 'type', 'raisonSociale', 'adresse', 'adresse2', 'codePostal', 'ville', 'pays', 'telephone', 'email', 'ice', 'rc', 'rcLieu', 'cnss'];
         filename = 'tiers';
         break;
       case 'articles':
         data = await prisma.article.findMany();
         headers = ['code', 'designation', 'prixUnitaire', 'unite', 'tauxTVA', 'actif'];
+        numericFields = ['prixUnitaire', 'tauxTVA'];
         filename = 'articles';
         break;
       case 'factures-clients':
         data = await prisma.factureClient.findMany({ include: { client: true } });
         headers = ['numero', 'dateFacture', 'codeClient', 'dateEcheance', 'totalHT', 'totalTVA', 'totalTTC', 'statut'];
+        numericFields = ['totalHT', 'totalTVA', 'totalTTC'];
         filename = 'factures_clients';
         break;
       case 'reglements-clients':
         data = await prisma.reglementClient.findMany({ include: { facture: { include: { client: true } } } });
         headers = ['numero', 'dateReglement', 'numeroFacture', 'montant', 'modePaiement', 'reference'];
+        numericFields = ['montant'];
         filename = 'reglements_clients';
         break;
       case 'factures-fournisseurs':
         data = await prisma.factureFournisseur.findMany({ include: { fournisseur: true } });
         headers = ['numeroFacture', 'dateFacture', 'codeFournisseur', 'dateEcheance', 'montantHT', 'montantTVA', 'montantTTC', 'statut'];
+        numericFields = ['montantHT', 'montantTVA', 'montantTTC'];
         filename = 'factures_fournisseurs';
         break;
       case 'reglements-fournisseurs':
         data = await prisma.reglementFournisseur.findMany({ include: { facture: { include: { fournisseur: true } } } });
         headers = ['dateReglement', 'numeroFacture', 'montant', 'modePaiement', 'reference'];
+        numericFields = ['montant'];
         filename = 'reglements_fournisseurs';
         break;
       case 'bons-livraison':
         data = await prisma.bonLivraison.findMany({ include: { client: true } });
         headers = ['numero', 'dateBL', 'codeClient', 'totalHT', 'statut'];
+        numericFields = ['totalHT'];
         filename = 'bons_livraison';
         break;
       default:
@@ -70,9 +86,15 @@ export async function GET(request: NextRequest) {
         } else if (typeof val === 'object' && 'code' in val) {
           values[h] = val.code;
         } else if (h === 'codeClient' || h === 'codeFournisseur') {
-          // Get the code from the related entity
           const entity = row.client || row.fournisseur;
           values[h] = entity?.code || '';
+        } else if (numericFields.includes(h) && typeof val === 'number') {
+          // Use comma as decimal separator
+          values[h] = formatNumber(val);
+        } else if (typeof val === 'boolean') {
+          values[h] = val ? 'true' : 'false';
+        } else if (val instanceof Date) {
+          values[h] = val.toISOString().split('T')[0];
         } else {
           values[h] = String(val);
         }
@@ -95,8 +117,11 @@ export async function GET(request: NextRequest) {
           'Content-Disposition': `attachment; filename="${filename}.csv"`
         }
       });
-    } else if (format === 'xls') {
-      // Generate simple HTML table that Excel can open
+    } else if (format === 'xls' || format === 'xlsx') {
+      const contentType = format === 'xlsx'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'application/vnd.ms-excel; charset=utf-8';
+
       let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">';
       html += '<head><meta charset="utf-8"></head><body>';
       html += '<table border="1">';
@@ -108,25 +133,8 @@ export async function GET(request: NextRequest) {
 
       return new NextResponse(html, {
         headers: {
-          'Content-Type': 'application/vnd.ms-excel; charset=utf-8',
-          'Content-Disposition': `attachment; filename="${filename}.xls"`
-        }
-      });
-    } else if (format === 'xlsx') {
-      // Same as XLS but with xlsx extension - will work in modern Excel
-      let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">';
-      html += '<head><meta charset="utf-8"></head><body>';
-      html += '<table border="1">';
-      html += '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
-      for (const row of rows) {
-        html += '<tr>' + headers.map(h => `<td>${String(row[h] || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('') + '</tr>';
-      }
-      html += '</table></body></html>';
-
-      return new NextResponse(html, {
-        headers: {
-          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'Content-Disposition': `attachment; filename="${filename}.xlsx"`
+          'Content-Type': contentType,
+          'Content-Disposition': `attachment; filename="${filename}.${format}"`
         }
       });
     }
