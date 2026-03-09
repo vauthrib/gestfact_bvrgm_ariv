@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, Download, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Download, Upload, AlertTriangle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImportDialog } from '@/components/import-export/import-dialog';
 import { ExportDialog } from '@/components/import-export/export-dialog';
@@ -25,7 +25,7 @@ interface FactureFournisseur {
 }
 
 const parseNumber = (v: string) => { if (!v) return 0; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
-const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}\tDH`;
+const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH`;
 
 export function ReglementsFournisseursView() {
   const [reglements, setReglements] = useState<ReglementFournisseur[]>([]);
@@ -36,6 +36,8 @@ export function ReglementsFournisseursView() {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [editingReglement, setEditingReglement] = useState<ReglementFournisseur | null>(null);
+  const [selectedFacture, setSelectedFacture] = useState<FactureFournisseur | null>(null);
+  const [resteAPayer, setResteAPayer] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     factureId: '', dateReglement: new Date().toISOString().split('T')[0],
     montant: '', modePaiement: 'VIREMENT', reference: '', infoLibre: '', notes: ''
@@ -45,14 +47,48 @@ export function ReglementsFournisseursView() {
   const fetchReglements = async () => { try { const res = await fetch('/api/reglements-fournisseurs'); const data = await res.json(); setReglements(Array.isArray(data) ? data : []); } catch (e) { console.error(e); } finally { setLoading(false); } };
   const fetchFactures = async () => { try { const res = await fetch('/api/factures-fournisseurs'); const data = await res.json(); setFactures(Array.isArray(data) ? data : []); } catch (e) { console.error(e); } };
 
+  // Calculer le reste à payer pour une facture
+  const calculerResteAPayer = (factureId: string) => {
+    const facture = factures.find(f => f.id === factureId);
+    if (!facture) return 0;
+    const totalReglements = reglements
+      .filter(r => r.factureId === factureId && (!editingReglement || r.id !== editingReglement.id))
+      .reduce((sum, r) => sum + r.montant, 0);
+    return facture.montantTTC - totalReglements;
+  };
+
+  // Quand on sélectionne une facture
+  const handleFactureChange = (factureId: string) => {
+    const facture = factures.find(f => f.id === factureId);
+    setSelectedFacture(facture || null);
+    const reste = calculerResteAPayer(factureId);
+    setResteAPayer(reste);
+    setFormData({ ...formData, factureId, montant: reste > 0 ? reste.toString() : '' });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.factureId) { alert('Sélectionnez une facture'); return; }
-    if (parseNumber(formData.montant) <= 0) { alert('Montant invalide'); return; }
+    const montant = parseNumber(formData.montant);
+    if (montant <= 0) { alert('Montant invalide'); return; }
+    
+    // Vérifier le dépassement
+    const reste = calculerResteAPayer(formData.factureId);
+    const depassement = montant - reste;
+    const TOLERANCE_DEPASSEMENT = 10; // Tolérance de 10 DH
+    
+    if (depassement > TOLERANCE_DEPASSEMENT) {
+      const confirmMsg = `Attention: Le règlement de ${formatCurrency(montant)} dépasse le reste à payer de ${formatCurrency(reste)}.\n\nDépassement: ${formatCurrency(depassement)}\n\nVoulez-vous vraiment continuer?`;
+      if (!confirm(confirmMsg)) return;
+    } else if (depassement > 0 && depassement <= TOLERANCE_DEPASSEMENT) {
+      const confirmMsg = `Petit dépassement détecté: ${formatCurrency(depassement)}.\n\nConfirmer ce règlement?`;
+      if (!confirm(confirmMsg)) return;
+    }
+    
     try {
       const res = await fetch('/api/reglements-fournisseurs', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, montant: parseNumber(formData.montant) })
+        body: JSON.stringify({ ...formData, montant })
       });
       if (res.ok) { setDialogOpen(false); resetForm(); fetchReglements(); }
       else { const err = await res.json(); alert(err.error || 'Erreur'); }
@@ -67,10 +103,16 @@ export function ReglementsFournisseursView() {
   const resetForm = () => {
     setFormData({ factureId: '', dateReglement: new Date().toISOString().split('T')[0], montant: '', modePaiement: 'VIREMENT', reference: '', infoLibre: '', notes: '' });
     setEditingReglement(null);
+    setSelectedFacture(null);
+    setResteAPayer(null);
   };
 
   const openEditDialog = (r: ReglementFournisseur) => {
     setEditingReglement(r);
+    const facture = factures.find(f => f.id === r.factureId);
+    setSelectedFacture(facture || null);
+    const reste = calculerResteAPayer(r.factureId) + r.montant;
+    setResteAPayer(reste);
     setFormData({
       factureId: r.factureId, dateReglement: new Date(r.dateReglement).toISOString().split('T')[0],
       montant: r.montant.toString(), modePaiement: r.modePaiement,
@@ -86,12 +128,12 @@ export function ReglementsFournisseursView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-blue-800">Règlements Fournisseurs</h1><p className="text-muted-foreground">Gérez les règlements effectués</p></div>
+        <div><h1 className="text-3xl font-bold text-green-700">Règlements Fournisseurs</h1><p className="text-muted-foreground">Gérez les règlements effectués</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-mono font-bold">MFF01</span>
+          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFF01</span>
           <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4 mr-2" />Import</Button>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-blue-500 hover:bg-blue-600" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -122,13 +164,13 @@ export function ReglementsFournisseursView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingReglement ? 'Modifier' : 'Nouveau'} Règlement</DialogTitle>
-              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-mono font-bold">MFF01-DLG</span>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFF01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Facture</Label>
-              <Select value={formData.factureId} onValueChange={(v) => setFormData({ ...formData, factureId: v })}>
+              <Select value={formData.factureId} onValueChange={handleFactureChange} disabled={!!editingReglement}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner une facture" /></SelectTrigger>
                 <SelectContent>
                   {factures.filter(f => f.statut === 'VALIDEE').map((f) => (
@@ -137,9 +179,41 @@ export function ReglementsFournisseursView() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {selectedFacture && resteAPayer !== null && (
+              <div className={`p-4 rounded-lg border ${resteAPayer > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Total Facture:</span>
+                    <div className="font-bold text-lg">{formatCurrency(selectedFacture.montantTTC)}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Déjà réglé:</span>
+                    <div className="font-bold text-lg">{formatCurrency(selectedFacture.montantTTC - resteAPayer)}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Reste à payer:</span>
+                    <div className={`font-bold text-lg ${resteAPayer > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                      {formatCurrency(resteAPayer)}
+                      {resteAPayer <= 0 && <span className="ml-2 text-sm">(Soldée)</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Date</Label><Input type="date" value={formData.dateReglement} onChange={(e) => setFormData({ ...formData, dateReglement: e.target.value })} required /></div>
-              <div><Label>Montant</Label><Input type="text" value={formData.montant} onChange={(e) => setFormData({ ...formData, montant: e.target.value })} required /></div>
+              <div>
+                <Label>Montant</Label>
+                <Input type="text" value={formData.montant} onChange={(e) => setFormData({ ...formData, montant: e.target.value })} required />
+                {resteAPayer !== null && parseNumber(formData.montant) > resteAPayer && (
+                  <div className="flex items-center gap-2 mt-1 text-orange-600 text-sm">
+                    <AlertTriangle className="w-4 h-4" />
+                    Dépassement de {formatCurrency(parseNumber(formData.montant) - resteAPayer)}
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <Label>Mode de paiement</Label>
@@ -155,7 +229,7 @@ export function ReglementsFournisseursView() {
             </div>
             <div><Label>Référence</Label><Input value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} placeholder="N° chèque, virement..." /></div>
             <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} placeholder="Informations complémentaires..." /></div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-500 hover:bg-blue-600">{editingReglement ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editingReglement ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

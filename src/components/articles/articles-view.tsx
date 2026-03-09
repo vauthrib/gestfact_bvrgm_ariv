@@ -84,12 +84,12 @@ export function ArticlesView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-blue-800">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
+        <div><h1 className="text-3xl font-bold text-green-700">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
+          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
           <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4 mr-2" />Import</Button>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-blue-500 hover:bg-blue-600" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -125,7 +125,7 @@ export function ArticlesView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingArticle ? 'Modifier' : 'Nouveau'} Article</DialogTitle>
-              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01-DLG</span>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -145,7 +145,7 @@ export function ArticlesView() {
                 onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
                 required
                 rows={3}
-                className="w-[30ch] font-mono resize-none"
+                className="w-[50ch] font-mono resize-none"
                 placeholder="Désignation..."
               />
             </div>
@@ -166,7 +166,7 @@ export function ArticlesView() {
               <Label htmlFor="actif">Article actif</Label>
             </div>
 
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-500 hover:bg-blue-600">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

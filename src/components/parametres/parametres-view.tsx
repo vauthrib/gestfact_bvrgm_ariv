@@ -53,10 +53,10 @@ export function ParametresView() {
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-blue-800">Paramètres</h1>
+          <h1 className="text-3xl font-bold text-green-700">Paramètres</h1>
           <p className="text-muted-foreground">Configuration de l'application</p>
         </div>
-        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01</span>
+        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01</span>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
@@ -115,7 +115,7 @@ export function ParametresView() {
 
         <div className="flex justify-end gap-4">
           {saved && <span className="text-green-600 self-center">Paramètres enregistrés!</span>}
-          <Button type="submit" className="bg-blue-500 hover:bg-blue-600">Enregistrer</Button>
+          <Button type="submit" className="bg-green-600 hover:bg-green-700">Enregistrer</Button>
         </div>
       </form>
     </div>
