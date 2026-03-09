@@ -41,6 +41,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'ID requis' }, { status: 400 });
     }
     
+    // Vérifier si le règlement est déjà validé
+    const existing = await prisma.reglementClient.findUnique({
+      where: { id },
+      select: { statut: true }
+    });
+    
+    if (existing?.statut === 'VALIDE') {
+      return NextResponse.json({ error: 'Ce règlement est déjà validé et ne peut plus être modifié' }, { status: 400 });
+    }
+    
     const reglement = await prisma.reglementClient.update({
       where: { id },
       data: {
@@ -60,6 +70,17 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'ID requis' }, { status: 400 });
+    
+    // Vérifier si le règlement est déjà validé
+    const existing = await prisma.reglementClient.findUnique({
+      where: { id },
+      select: { statut: true }
+    });
+    
+    if (existing?.statut === 'VALIDE') {
+      return NextResponse.json({ error: 'Ce règlement est déjà validé et ne peut plus être supprimé' }, { status: 400 });
+    }
+    
     await prisma.reglementClient.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error: any) {

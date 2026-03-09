@@ -102,12 +102,14 @@ model ReglementClient {
   reference       String?
   infoLibre       String?
   notes           String?
+  statut          String   @default("ENREGISTRE")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   facture         FactureClient @relation(fields: [factureId], references: [id])
 
   @@index([factureId])
+  @@index([statut])
 }
 
 model FactureFournisseur {
@@ -141,12 +143,14 @@ model ReglementFournisseur {
   reference       String?
   infoLibre       String?
   notes           String?
+  statut          String   @default("ENREGISTRE")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   facture         FactureFournisseur @relation(fields: [factureId], references: [id])
 
   @@index([factureId])
+  @@index([statut])
 }
 
 model BonLivraison {

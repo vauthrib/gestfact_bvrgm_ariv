@@ -9,14 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, Download, Upload, AlertTriangle } from 'lucide-react';
-import { ImportDialog } from '@/components/import-export/import-dialog';
+import { Plus, Pencil, Trash2, Search, Download, AlertTriangle, CheckCircle } from 'lucide-react';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 
 interface ReglementClient {
   id: string; numero: string; factureId: string; dateReglement: string;
   montant: number; modePaiement: string; reference: string | null;
-  infoLibre: string | null; notes: string | null;
+  infoLibre: string | null; notes: string | null; statut: string;
   facture?: { numero: string; client?: { raisonSociale: string }; totalTTC: number };
 }
 
@@ -34,7 +33,6 @@ export function ReglementsClientsView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [editingReglement, setEditingReglement] = useState<ReglementClient | null>(null);
   const [selectedFacture, setSelectedFacture] = useState<FactureClient | null>(null);
@@ -48,15 +46,30 @@ export function ReglementsClientsView() {
   const fetchReglements = async () => { try { const res = await fetch('/api/reglements-clients'); const data = await res.json(); setReglements(Array.isArray(data) ? data : []); } catch (e) { console.error(e); } finally { setLoading(false); } };
   const fetchFactures = async () => { try { const res = await fetch('/api/factures-clients'); const data = await res.json(); setFactures(Array.isArray(data) ? data : []); } catch (e) { console.error(e); } };
 
-  // Calculer le reste à payer pour une facture
+  // Calculer le reste à payer pour une facture (basé sur les règlements VALIDÉS uniquement)
   const calculerResteAPayer = (factureId: string) => {
     const facture = factures.find(f => f.id === factureId);
     if (!facture) return 0;
-    const totalReglements = reglements
-      .filter(r => r.factureId === factureId && (!editingReglement || r.id !== editingReglement.id))
+    const totalReglementsValides = reglements
+      .filter(r => r.factureId === factureId && r.statut === 'VALIDE' && (!editingReglement || r.id !== editingReglement.id))
       .reduce((sum, r) => sum + r.montant, 0);
-    return facture.totalTTC - totalReglements;
+    return facture.totalTTC - totalReglementsValides;
   };
+
+  // Vérifier si une facture est soldée (basé sur les règlements VALIDÉS uniquement)
+  const isFactureSoldee = (factureId: string) => {
+    const facture = factures.find(f => f.id === factureId);
+    if (!facture) return false;
+    const totalReglementsValides = reglements
+      .filter(r => r.factureId === factureId && r.statut === 'VALIDE')
+      .reduce((sum, r) => sum + r.montant, 0);
+    return totalReglementsValides >= facture.totalTTC;
+  };
+
+  // Filtrer les factures validées qui ne sont pas soldées
+  const facturesDisponibles = factures.filter(f => 
+    f.statut === 'VALIDEE' && !isFactureSoldee(f.id)
+  );
 
   // Quand on sélectionne une facture
   const handleFactureChange = (factureId: string) => {
@@ -73,7 +86,7 @@ export function ReglementsClientsView() {
     const montant = parseNumber(formData.montant);
     if (montant <= 0) { alert('Montant invalide'); return; }
     
-    // Vérifier le dépassement
+    // Vérifier le dépassement (basé sur les règlements validés)
     const reste = calculerResteAPayer(formData.factureId);
     const depassement = montant - reste;
     const TOLERANCE_DEPASSEMENT = 10; // Tolérance de 10 DH
@@ -97,9 +110,22 @@ export function ReglementsClientsView() {
     } catch (e) { console.error(e); alert('Erreur serveur'); }
   };
 
+  const handleValidate = async (id: string) => {
+    if (!confirm('Valider ce règlement ? Une fois validé, il ne pourra plus être modifié.')) return;
+    try {
+      const res = await fetch(`/api/reglements-clients/${id}/validate`, { method: 'POST' });
+      if (res.ok) fetchReglements();
+      else { const err = await res.json(); alert(err.error || 'Erreur'); }
+    } catch (e) { console.error(e); }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce règlement ?')) return;
-    try { await fetch(`/api/reglements-clients?id=${id}`, { method: 'DELETE' }); fetchReglements(); } catch (e) { console.error(e); }
+    try {
+      const res = await fetch(`/api/reglements-clients?id=${id}`, { method: 'DELETE' });
+      if (res.ok) fetchReglements();
+      else { const err = await res.json(); alert(err.error || 'Erreur'); }
+    } catch (e) { console.error(e); }
   };
 
   const resetForm = () => {
@@ -110,6 +136,10 @@ export function ReglementsClientsView() {
   };
 
   const openEditDialog = (r: ReglementClient) => {
+    if (r.statut === 'VALIDE') {
+      alert('Ce règlement est validé et ne peut plus être modifié.');
+      return;
+    }
     setEditingReglement(r);
     const facture = factures.find(f => f.id === r.factureId);
     setSelectedFacture(facture || null);
@@ -130,12 +160,11 @@ export function ReglementsClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-pink-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus</p></div>
+        <div><h1 className="text-3xl font-bold text-green-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
-          <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4 mr-2" />Import</Button>
+          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-pink-600 hover:bg-pink-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -144,7 +173,7 @@ export function ReglementsClientsView() {
           <div className="mb-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" /></div></div>
           {filteredReglements.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucun règlement</div> : (
             <Table>
-              <TableHeader><TableRow><TableHead>N°</TableHead><TableHead>Date</TableHead><TableHead>Client</TableHead><TableHead>Facture</TableHead><TableHead>Montant</TableHead><TableHead>Mode</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>N°</TableHead><TableHead>Date</TableHead><TableHead>Client</TableHead><TableHead>Facture</TableHead><TableHead>Montant</TableHead><TableHead>Mode</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>{filteredReglements.map((r) => (<TableRow key={r.id}>
                 <TableCell className="font-medium">{r.numero}</TableCell>
                 <TableCell>{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
@@ -152,9 +181,17 @@ export function ReglementsClientsView() {
                 <TableCell>{r.facture?.numero}</TableCell>
                 <TableCell>{formatCurrency(r.montant)}</TableCell>
                 <TableCell>{r.modePaiement}</TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    {r.statut === 'VALIDE' ? 'Validé' : 'En attente'}
+                  </span>
+                </TableCell>
                 <TableCell><div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openEditDialog(r)}><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)}><Trash2 className="h-4 w-4" /></Button>
+                  {r.statut === 'ENREGISTRE' && (
+                    <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier"><Pencil className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
                 </div></TableCell>
               </TableRow>))}</TableBody>
             </Table>
@@ -166,36 +203,40 @@ export function ReglementsClientsView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingReglement ? 'Modifier' : 'Nouveau'} Règlement</DialogTitle>
-              <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01-DLG</span>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label>Facture</Label>
+              <Label className="text-base font-semibold">Facture (non soldée)</Label>
               <Select value={formData.factureId} onValueChange={handleFactureChange} disabled={!!editingReglement}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner une facture" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Sélectionner une facture non soldée" /></SelectTrigger>
                 <SelectContent>
-                  {factures.filter(f => f.statut === 'VALIDEE').map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.numero} - {f.client?.raisonSociale} ({formatCurrency(f.totalTTC)})</SelectItem>
-                  ))}
+                  {facturesDisponibles.length === 0 ? (
+                    <SelectItem value="" disabled>Aucune facture disponible</SelectItem>
+                  ) : (
+                    facturesDisponibles.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.numero} - {f.client?.raisonSociale} ({formatCurrency(f.totalTTC)})</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
             
             {selectedFacture && resteAPayer !== null && (
-              <div className={`p-4 rounded-lg border ${resteAPayer > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-pink-50 border-pink-200'}`}>
+              <div className={`p-4 rounded-lg border ${resteAPayer > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Total Facture:</span>
                     <div className="font-bold text-lg">{formatCurrency(selectedFacture.totalTTC)}</div>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Déjà réglé:</span>
+                    <span className="text-muted-foreground">Déjà réglé (validé):</span>
                     <div className="font-bold text-lg">{formatCurrency(selectedFacture.totalTTC - resteAPayer)}</div>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Reste à payer:</span>
-                    <div className={`font-bold text-lg ${resteAPayer > 0 ? 'text-orange-600' : 'text-pink-600'}`}>
+                    <div className={`font-bold text-lg ${resteAPayer > 0 ? 'text-orange-600' : 'text-green-600'}`}>
                       {formatCurrency(resteAPayer)}
                       {resteAPayer <= 0 && <span className="ml-2 text-sm">(Soldée)</span>}
                     </div>
@@ -205,9 +246,12 @@ export function ReglementsClientsView() {
             )}
             
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Date</Label><Input type="date" value={formData.dateReglement} onChange={(e) => setFormData({ ...formData, dateReglement: e.target.value })} required /></div>
               <div>
-                <Label>Montant</Label>
+                <Label className="text-base font-semibold">Date</Label>
+                <Input type="date" value={formData.dateReglement} onChange={(e) => setFormData({ ...formData, dateReglement: e.target.value })} required />
+              </div>
+              <div>
+                <Label className="text-base font-semibold">Montant</Label>
                 <Input type="text" value={formData.montant} onChange={(e) => setFormData({ ...formData, montant: e.target.value })} required />
                 {resteAPayer !== null && parseNumber(formData.montant) > resteAPayer && (
                   <div className="flex items-center gap-2 mt-1 text-orange-600 text-sm">
@@ -218,7 +262,7 @@ export function ReglementsClientsView() {
               </div>
             </div>
             <div>
-              <Label>Mode de paiement</Label>
+              <Label className="text-base font-semibold">Mode de paiement</Label>
               <Select value={formData.modePaiement} onValueChange={(v) => setFormData({ ...formData, modePaiement: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -229,13 +273,21 @@ export function ReglementsClientsView() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Référence</Label><Input value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} placeholder="N° chèque, virement..." /></div>
-            <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} placeholder="Informations complémentaires..." /></div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-pink-600 hover:bg-pink-700">{editingReglement ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <div>
+              <Label className="text-base font-semibold">Référence</Label>
+              <Input value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} placeholder="N° chèque, virement..." />
+            </div>
+            <div>
+              <Label className="text-base font-semibold">Info libre</Label>
+              <Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} placeholder="Informations complémentaires..." />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
+              <Button type="submit" className="bg-green-600 hover:bg-green-700">{editingReglement ? 'Modifier' : 'Créer'}</Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-      <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="reglements-clients" code="MFC01" onSuccess={fetchReglements} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="reglements-clients" code="MFC01" />
     </div>
   );

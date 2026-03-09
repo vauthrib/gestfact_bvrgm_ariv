@@ -48,7 +48,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle }: A
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
           <span className="font-bold text-lg">
-            GestFact <span className="text-xs text-muted-foreground">V1.50</span>
+            GestFact <span className="text-xs text-muted-foreground">V1.61</span>
           </span>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle}>
