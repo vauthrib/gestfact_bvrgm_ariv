@@ -1,211 +1,206 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model Parametres {
-  id        String   @id @default(cuid())
-  raisonSociale String?
-  adresse      String?
-  telephone    String?
-  fax          String?
-  email        String?
-  siteWeb      String?
-  ICE          String?
-  IF           String?
-  RC           String?
-  CNSS         String?
-  logo         String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Tiers {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  raisonSociale String
-  adresse     String?
-  ville       String?
-  telephone   String?
-  fax         String?
-  email       String?
-  ICE         String?
-  IF          String?
-  RC          String?
-  type        String   // "CLIENT" ou "FOURNISSEUR" ou "LES_DEUX"
-  solde       Float    @default(0)
-  infoLibre   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  facturesClients       FactureClient[]
-  reglementsClients     ReglementClient[]
-  facturesFournisseurs  FactureFournisseur[]
-  reglementsFournisseurs ReglementFournisseur[]
-  bonsLivraison         BonLivraison[]
+  id              String   @id @default(cuid())
+  code            String   @unique
+  type            String
+  raisonSociale   String
+  adresse         String?
+  codePostal      String?
+  ville           String?
+  pays            String?
+  telephone       String?
+  email           String?
+  ice             String?
+  rc              String?
+  rcLieu          String?
+  if              String?
+  tp              String?
+  cnss            String?
+  infoLibre       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  facturesClients          FactureClient[]
+  facturesFournisseurs     FactureFournisseur[]
+  bonsLivraison            BonLivraison[]
 }
 
 model Article {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  designation String
-  unite       String?
-  prixHT      Float    @default(0)
-  tva         Float    @default(0)
-  stock       Float    @default(0)
-  seuilAlerte Float?
-  infoLibre   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  lignesFactureClient      LigneFactureClient[]
-  lignesFactureFournisseur LigneFactureFournisseur[]
-  lignesBonLivraison       LigneBonLivraison[]
+  id            String   @id @default(cuid())
+  code          String   @unique
+  designation   String
+  prixUnitaire  Float    @default(0)
+  unite         String    @default("pièce")
+  tauxTVA       Float    @default(20)
+  infoLibre     String?
+  actif         Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lignesFactureClient    LigneFactureClient[]
+  lignesBonLivraison     LigneBonLivraison[]
 }
 
 model FactureClient {
-  id            String   @id @default(cuid())
-  numero        String   @unique
-  date          DateTime @default(now())
-  tiersId       String
-  tiers         Tiers    @relation(fields: [tiersId], references: [id])
-  statut        String   @default("BROUILLON") // BROUILLON, VALIDEE, PAYEE
-  totalHT       Float    @default(0)
-  totalTVA      Float    @default(0)
-  totalTTC      Float    @default(0)
-  montantPaye   Float    @default(0)
-  resteAPayer   Float    @default(0)
-  infoLibre     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  lignes        LigneFactureClient[]
-  reglements    ReglementClient[]
+  id              String   @id @default(cuid())
+  numero          String   @unique
+  dateFacture     DateTime
+  clientId        String
+  numeroBL        String?
+  dateEcheance    DateTime
+  statut          String   @default("BROUILLON")
+  notes           String?
+  notesLivraison  String?
+  infoLibre       String?
+  totalHT         Float    @default(0)
+  totalTVA        Float    @default(0)
+  totalTTC        Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client          Tiers              @relation(fields: [clientId], references: [id])
+  lignes          LigneFactureClient[]
+  reglements      ReglementClient[]
+
+  @@index([clientId])
+  @@index([statut])
 }
 
 model LigneFactureClient {
   id            String   @id @default(cuid())
   factureId     String
-  facture       FactureClient @relation(fields: [factureId], references: [id], onDelete: Cascade)
   articleId     String?
-  article       Article? @relation(fields: [articleId], references: [id])
   designation   String
-  quantite      Float    @default(1)
+  quantite      Float    @default(0)
   prixUnitaire  Float    @default(0)
-  tva           Float    @default(0)
-  montantHT     Float    @default(0)
-  montantTVA    Float    @default(0)
-  montantTTC    Float    @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  tauxTVA       Float    @default(20)
+  totalHT       Float    @default(0)
+
+  facture       FactureClient @relation(fields: [factureId], references: [id], onDelete: Cascade)
+  article       Article?      @relation(fields: [articleId], references: [id])
+
+  @@index([factureId])
 }
 
 model ReglementClient {
-  id            String   @id @default(cuid())
-  numero        String   @unique
-  date          DateTime @default(now())
-  factureId     String?
-  facture       FactureClient? @relation(fields: [factureId], references: [id])
-  tiersId       String
-  tiers         Tiers    @relation(fields: [tiersId], references: [id])
-  montant       Float    @default(0)
-  modeReglement String?  // ESPECES, CHEQUE, VIREMENT, etc.
-  reference     String?
-  infoLibre     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  numero          String   @unique
+  factureId       String
+  dateReglement   DateTime
+  montant         Float    @default(0)
+  modePaiement    String   @default("VIREMENT")
+  reference       String?
+  infoLibre       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  facture         FactureClient @relation(fields: [factureId], references: [id])
+
+  @@index([factureId])
 }
 
 model FactureFournisseur {
-  id            String   @id @default(cuid())
-  numero        String   @unique
-  date          DateTime @default(now())
-  tiersId       String
-  tiers         Tiers    @relation(fields: [tiersId], references: [id])
-  statut        String   @default("BROUILLON") // BROUILLON, VALIDEE, PAYEE
-  totalHT       Float    @default(0)
-  totalTVA      Float    @default(0)
-  totalTTC      Float    @default(0)
-  montantPaye   Float    @default(0)
-  resteAPayer   Float    @default(0)
-  infoLibre     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  lignes        LigneFactureFournisseur[]
-  reglements    ReglementFournisseur[]
-}
+  id              String   @id @default(cuid())
+  numeroFacture   String
+  fournisseurId   String
+  dateFacture     DateTime
+  dateEcheance    DateTime
+  montantHT       Float    @default(0)
+  montantTVA      Float    @default(0)
+  montantTTC      Float    @default(0)
+  statut          String   @default("ENREGISTREE")
+  infoLibre       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-model LigneFactureFournisseur {
-  id            String   @id @default(cuid())
-  factureId     String
-  facture       FactureFournisseur @relation(fields: [factureId], references: [id], onDelete: Cascade)
-  articleId     String?
-  article       Article? @relation(fields: [articleId], references: [id])
-  designation   String
-  quantite      Float    @default(1)
-  prixUnitaire  Float    @default(0)
-  tva           Float    @default(0)
-  montantHT     Float    @default(0)
-  montantTVA    Float    @default(0)
-  montantTTC    Float    @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  fournisseur     Tiers                 @relation(fields: [fournisseurId], references: [id])
+  reglements      ReglementFournisseur[]
+
+  @@index([fournisseurId])
+  @@index([statut])
 }
 
 model ReglementFournisseur {
-  id            String   @id @default(cuid())
-  numero        String   @unique
-  date          DateTime @default(now())
-  factureId     String?
-  facture       FactureFournisseur? @relation(fields: [factureId], references: [id])
-  tiersId       String
-  tiers         Tiers    @relation(fields: [tiersId], references: [id])
-  montant       Float    @default(0)
-  modeReglement String?  // ESPECES, CHEQUE, VIREMENT, etc.
-  reference     String?
-  infoLibre     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  factureId       String
+  dateReglement   DateTime
+  montant         Float    @default(0)
+  modePaiement    String   @default("VIREMENT")
+  reference       String?
+  infoLibre       String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  facture         FactureFournisseur @relation(fields: [factureId], references: [id])
+
+  @@index([factureId])
 }
 
 model BonLivraison {
-  id            String   @id @default(cuid())
-  numero        String   @unique
-  date          DateTime @default(now())
-  tiersId       String
-  tiers         Tiers    @relation(fields: [tiersId], references: [id])
-  statut        String   @default("BROUILLON") // BROUILLON, VALIDEE
-  totalHT       Float    @default(0)
-  totalTVA      Float    @default(0)
-  totalTTC      Float    @default(0)
-  infoLibre     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  lignes        LigneBonLivraison[]
+  id              String   @id @default(cuid())
+  numero          String   @unique
+  dateBL          DateTime
+  clientId        String
+  statut          String   @default("BROUILLON")
+  infoLibre       String?
+  notesLivraison  String?
+  totalHT         Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client          Tiers               @relation(fields: [clientId], references: [id])
+  lignes          LigneBonLivraison[]
+
+  @@index([clientId])
+  @@index([statut])
 }
 
 model LigneBonLivraison {
-  id            String   @id @default(cuid())
-  bonId         String
-  bon           BonLivraison @relation(fields: [bonId], references: [id], onDelete: Cascade)
-  articleId     String?
-  article       Article? @relation(fields: [articleId], references: [id])
-  designation   String
-  quantite      Float    @default(1)
-  prixUnitaire  Float    @default(0)
-  tva           Float    @default(0)
-  montantHT     Float    @default(0)
-  montantTVA    Float    @default(0)
-  montantTTC    Float    @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  bonLivraisonId  String
+  articleId       String?
+  designation     String
+  quantite        Float    @default(0)
+  prixUnitaire    Float    @default(0)
+  totalHT         Float    @default(0)
+
+  bonLivraison    BonLivraison @relation(fields: [bonLivraisonId], references: [id], onDelete: Cascade)
+  article         Article?     @relation(fields: [articleId], references: [id])
+
+  @@index([bonLivraisonId])
+}
+
+model Parametres {
+  id                    String   @id @default(cuid())
+  nomEntreprise         String   @default("")
+  adresseEntreprise     String?
+  villeEntreprise       String?
+  telephoneEntreprise   String?
+  emailEntreprise       String?
+  ice                   String?
+  rc                    String?
+  rcLieu                String?
+  if                    String?
+  tp                    String?
+  cnss                  String?
+  infoLibre             String?
+  tvaDefaut             Float    @default(20)
+  prefixeFacture        String?
+  numeroFactureDepart   Int?
+  prefixeBL             String?
+  numeroBLDepart        Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
