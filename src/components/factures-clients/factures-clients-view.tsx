@@ -8,36 +8,42 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Upload, Printer } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImportDialog } from '@/components/import-export/import-dialog';
 import { ExportDialog } from '@/components/import-export/export-dialog';
+import { PrintDocument } from '@/components/print/print-document';
 
 interface LigneFacture { id?: string; articleId?: string; designation: string; quantite: string; prixUnitaire: string; tauxTVA: string; totalHT: number; }
-interface FactureClient { id: string; numero: string; dateFacture: string; clientId: string; dateEcheance: string; statut: string; infoLibre: string | null; notes: string | null; totalHT: number; totalTVA: number; totalTTC: number; client: { raisonSociale: string }; lignes?: LigneFacture[]; }
+interface FactureClient { id: string; numero: string; dateFacture: string; clientId: string; dateEcheance: string; statut: string; infoLibre: string | null; notes: string | null; totalHT: number; totalTVA: number; totalTTC: number; client: { raisonSociale: string; adresse?: string; ville?: string; ice?: string }; lignes?: LigneFacture[]; }
 interface Tiers { id: string; code: string; raisonSociale: string; type: string; }
 interface Article { id: string; code: string; designation: string; prixUnitaire: number; tauxTVA: number; }
+interface Parametres { nomEntreprise: string; adresseEntreprise?: string; villeEntreprise?: string; telephoneEntreprise?: string; emailEntreprise?: string; ice?: string; rc?: string; rcLieu?: string; }
 
 const parseNumber = (v: string) => { if (!v) return 0; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
-const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}\tDH`;
+const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH`;
 
 export function FacturesClientsView() {
   const [factures, setFactures] = useState<FactureClient[]>([]);
   const [clients, setClients] = useState<Tiers[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [parametres, setParametres] = useState<Parametres | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [selectedFacture, setSelectedFacture] = useState<FactureClient | null>(null);
   const [editing, setEditing] = useState<FactureClient | null>(null);
   const [lignes, setLignes] = useState<LigneFacture[]>([{ designation: '', quantite: '1', prixUnitaire: '0', tauxTVA: '20', totalHT: 0 }]);
   const [formData, setFormData] = useState({ numero: '', dateFacture: new Date().toISOString().split('T')[0], clientId: '', dateEcheance: '', infoLibre: '', notes: '' });
 
-  useEffect(() => { fetchFactures(); fetchClients(); fetchArticles(); }, []);
+  useEffect(() => { fetchFactures(); fetchClients(); fetchArticles(); fetchParametres(); }, []);
   const fetchFactures = async () => { try { const res = await fetch('/api/factures-clients'); const d = await res.json(); setFactures(Array.isArray(d) ? d : []); } catch (e) { console.error(e); } finally { setLoading(false); } };
   const fetchClients = async () => { try { const res = await fetch('/api/tiers'); const d = await res.json(); setClients((Array.isArray(d) ? d : []).filter((t: any) => t.type === 'CLIENT')); } catch (e) { } };
   const fetchArticles = async () => { try { const res = await fetch('/api/articles'); const d = await res.json(); setArticles(Array.isArray(d) ? d : []); } catch (e) { } };
+  const fetchParametres = async () => { try { const res = await fetch('/api/parametres'); const d = await res.json(); setParametres(d); } catch (e) { } };
 
   const calcTotalHT = () => lignes.reduce((s, l) => s + (l.totalHT || 0), 0);
   const calcTotalTVA = () => lignes.reduce((s, l) => s + ((l.totalHT || 0) * parseNumber(l.tauxTVA) / 100), 0);
@@ -82,6 +88,19 @@ export function FacturesClientsView() {
   const handleValidate = async (id: string) => { if (!confirm('Valider ?')) return; try { const res = await fetch(`/api/factures-clients/${id}/validate`, { method: 'POST' }); if (res.ok) fetchFactures(); else { const err = await res.json(); alert(err.error || 'Erreur'); } } catch (e) { } };
   const handleDelete = async (id: string) => { if (!confirm('Supprimer ?')) return; try { await fetch(`/api/factures-clients?id=${id}`, { method: 'DELETE' }); fetchFactures(); } catch (e) { } };
 
+  const handlePrint = async (facture: FactureClient) => {
+    try {
+      const res = await fetch('/api/factures-clients');
+      const allFactures = await res.json();
+      const fullFacture = allFactures.find((f: any) => f.id === facture.id);
+      setSelectedFacture(fullFacture || facture);
+      setPrintOpen(true);
+    } catch (e) {
+      setSelectedFacture(facture);
+      setPrintOpen(true);
+    }
+  };
+
   const resetForm = () => { setFormData({ numero: '', dateFacture: new Date().toISOString().split('T')[0], clientId: '', dateEcheance: '', infoLibre: '', notes: '' }); setLignes([{ designation: '', quantite: '1', prixUnitaire: '0', tauxTVA: '20', totalHT: 0 }]); setEditing(null); };
   const generateNum = () => setFormData({ ...formData, numero: `FC${(factures.length + 1).toString().padStart(5, '0')}` });
 
@@ -115,10 +134,11 @@ export function FacturesClientsView() {
                 <TableCell>{formatCurrency(f.totalTVA)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTTC)}</TableCell>
                 <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
-                <TableCell><div className="flex gap-2">
-                  {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)}><CheckCircle className="h-4 w-4" /></Button>}
-                  <Button size="sm" variant="outline" onClick={() => { setEditing(f); setDialogOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)} disabled={f.statut === 'VALIDEE'}><Trash2 className="h-4 w-4" /></Button>
+                <TableCell><div className="flex gap-1 flex-wrap">
+                  {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  <Button size="sm" variant="outline" onClick={() => handlePrint(f)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="outline" onClick={() => { setEditing(f); setDialogOpen(true); }} title="Modifier"><Pencil className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)} disabled={f.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
                 </div></TableCell>
               </TableRow>))}</TableBody>
             </Table>
@@ -170,6 +190,7 @@ export function FacturesClientsView() {
       </Dialog>
       <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="factures-clients" code="NFC01" onSuccess={fetchFactures} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="factures-clients" code="NFC01" />
+      <PrintDocument open={printOpen} onOpenChange={setPrintOpen} documentType="FC" documentData={selectedFacture} entreprise={parametres} code="NFC01" />
     </div>
   );
 }
