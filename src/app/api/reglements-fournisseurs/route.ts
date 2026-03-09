@@ -29,6 +29,29 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const data = await request.json();
+    const { id, ...updateData } = data;
+    
+    if (!id) {
+      return NextResponse.json({ error: 'ID requis' }, { status: 400 });
+    }
+    
+    const reglement = await prisma.reglementFournisseur.update({
+      where: { id },
+      data: {
+        ...updateData,
+        dateReglement: updateData.dateReglement ? new Date(updateData.dateReglement) : undefined
+      },
+      include: { facture: { include: { fournisseur: true } } }
+    });
+    return NextResponse.json(reglement);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

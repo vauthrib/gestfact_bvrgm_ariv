@@ -43,6 +43,33 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const data = await request.json();
+    const { id, lignes, ...blData } = data;
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID requis' }, { status: 400 });
+    }
+
+    // Supprimer les anciennes lignes et créer les nouvelles
+    await prisma.ligneBonLivraison.deleteMany({ where: { bonLivraisonId: id } });
+
+    const bl = await prisma.bonLivraison.update({
+      where: { id },
+      data: {
+        ...blData,
+        dateBL: blData.dateBL ? new Date(blData.dateBL) : undefined,
+        lignes: { create: lignes || [] }
+      },
+      include: { lignes: true, client: true }
+    });
+    return NextResponse.json(bl);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

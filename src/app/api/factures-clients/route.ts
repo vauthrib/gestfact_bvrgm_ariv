@@ -44,6 +44,34 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const data = await request.json();
+    const { id, lignes, ...factureData } = data;
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID requis' }, { status: 400 });
+    }
+
+    // Supprimer les anciennes lignes et créer les nouvelles
+    await prisma.ligneFactureClient.deleteMany({ where: { factureId: id } });
+
+    const facture = await prisma.factureClient.update({
+      where: { id },
+      data: {
+        ...factureData,
+        dateFacture: factureData.dateFacture ? new Date(factureData.dateFacture) : undefined,
+        dateEcheance: factureData.dateEcheance ? new Date(factureData.dateEcheance) : undefined,
+        lignes: { create: lignes || [] }
+      },
+      include: { lignes: true, client: true }
+    });
+    return NextResponse.json(facture);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

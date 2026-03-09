@@ -20,7 +20,7 @@ interface Tiers { id: string; code: string; raisonSociale: string; type: string;
 interface Article { id: string; code: string; designation: string; prixUnitaire: number; tauxTVA: number; }
 interface Parametres { nomEntreprise: string; adresseEntreprise?: string; villeEntreprise?: string; telephoneEntreprise?: string; emailEntreprise?: string; ice?: string; rc?: string; rcLieu?: string; prefixeFacture?: string; numeroFactureDepart?: number; }
 
-const parseNumber = (v: string) => { if (!v) return 0; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
+const parseNumber = (v: string | number) => { if (!v) return 0; if (typeof v === 'number') return v; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH`;
 
 export function FacturesClientsView() {
@@ -41,12 +41,36 @@ export function FacturesClientsView() {
 
   useEffect(() => { fetchFactures(); fetchClients(); fetchArticles(); fetchParametres(); }, []);
   
+  // Recharger les données à l'ouverture du dialogue
   useEffect(() => {
     if (dialogOpen) {
       fetchClients();
       fetchArticles();
+      
+      // Si on est en mode édition, charger les données de la facture
+      if (editing) {
+        setFormData({
+          numero: editing.numero,
+          dateFacture: new Date(editing.dateFacture).toISOString().split('T')[0],
+          clientId: editing.clientId,
+          dateEcheance: editing.dateEcheance ? new Date(editing.dateEcheance).toISOString().split('T')[0] : '',
+          infoLibre: editing.infoLibre || '',
+          notes: editing.notes || ''
+        });
+        if (editing.lignes && editing.lignes.length > 0) {
+          setLignes(editing.lignes.map(l => ({
+            id: l.id,
+            articleId: l.articleId,
+            designation: l.designation,
+            quantite: l.quantite.toString(),
+            prixUnitaire: l.prixUnitaire.toString(),
+            tauxTVA: l.tauxTVA.toString(),
+            totalHT: l.totalHT
+          })));
+        }
+      }
     }
-  }, [dialogOpen]);
+  }, [dialogOpen, editing]);
   
   const fetchFactures = async () => { try { const res = await fetch('/api/factures-clients'); const d = await res.json(); setFactures(Array.isArray(d) ? d : []); } catch (e) { console.error(e); } finally { setLoading(false); } };
   const fetchClients = async () => { try { const res = await fetch('/api/tiers'); const d = await res.json(); setClients((Array.isArray(d) ? d : []).filter((t: any) => t.type === 'CLIENT')); } catch (e) { } };
@@ -79,17 +103,30 @@ export function FacturesClientsView() {
     if (!formData.clientId) { alert('Sélectionnez un client'); return; }
     const validLignes = lignes.filter(l => l.designation.trim() && parseNumber(l.quantite) > 0);
     if (validLignes.length === 0) { alert('Ajoutez au moins une ligne'); return; }
+    
     try {
-      const res = await fetch('/api/factures-clients', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData, dateEcheance: formData.dateEcheance || formData.dateFacture,
-          lignes: validLignes.map(l => ({ ...l, quantite: parseNumber(l.quantite), prixUnitaire: parseNumber(l.prixUnitaire), tauxTVA: parseNumber(l.tauxTVA), totalHT: l.totalHT })),
-          totalHT: calcTotalHT(), totalTVA: calcTotalTVA(), totalTTC: calcTotalTTC()
-        })
+      const body = JSON.stringify({
+        ...formData,
+        id: editing?.id,
+        dateEcheance: formData.dateEcheance || formData.dateFacture,
+        lignes: validLignes.map(l => ({ ...l, quantite: parseNumber(l.quantite), prixUnitaire: parseNumber(l.prixUnitaire), tauxTVA: parseNumber(l.tauxTVA), totalHT: l.totalHT })),
+        totalHT: calcTotalHT(), totalTVA: calcTotalTVA(), totalTTC: calcTotalTTC()
       });
-      if (res.ok) { setDialogOpen(false); resetForm(); fetchFactures(); }
-      else { const err = await res.json(); alert(err.error || 'Erreur'); }
+      
+      const res = await fetch('/api/factures-clients', {
+        method: editing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      });
+      
+      if (res.ok) { 
+        setDialogOpen(false); 
+        resetForm(); 
+        fetchFactures(); 
+      } else { 
+        const err = await res.json(); 
+        alert(err.error || 'Erreur'); 
+      }
     } catch (e) { console.error(e); alert('Erreur serveur'); }
   };
 
@@ -109,9 +146,25 @@ export function FacturesClientsView() {
     }
   };
 
-  const resetForm = () => { setFormData({ numero: '', dateFacture: new Date().toISOString().split('T')[0], clientId: '', dateEcheance: '', infoLibre: '', notes: '' }); setLignes([{ designation: '', quantite: '1', prixUnitaire: '0', tauxTVA: '20', totalHT: 0 }]); setEditing(null); };
+  const openEditDialog = async (facture: FactureClient) => {
+    // Recharger les données complètes de la facture depuis le serveur
+    try {
+      const res = await fetch('/api/factures-clients');
+      const allFactures = await res.json();
+      const fullFacture = allFactures.find((f: any) => f.id === facture.id);
+      setEditing(fullFacture || facture);
+    } catch (e) {
+      setEditing(facture);
+    }
+    setDialogOpen(true);
+  };
 
-  // Générer le prochain numéro prévisionnel pour l'affichage
+  const resetForm = () => { 
+    setFormData({ numero: '', dateFacture: new Date().toISOString().split('T')[0], clientId: '', dateEcheance: '', infoLibre: '', notes: '' }); 
+    setLignes([{ designation: '', quantite: '1', prixUnitaire: '0', tauxTVA: '20', totalHT: 0 }]); 
+    setEditing(null); 
+  };
+
   const getProchainNumero = () => {
     const prefixe = parametres?.prefixeFacture || 'FC';
     const numeroDepart = parametres?.numeroFactureDepart || 1;
@@ -125,12 +178,12 @@ export function FacturesClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-green-700">Factures Clients</h1><p className="text-muted-foreground">Gérez vos factures</p></div>
+        <div><h1 className="text-3xl font-bold text-pink-700">Factures Clients</h1><p className="text-muted-foreground">Gérez vos factures</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
+          <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
           <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4 mr-2" />Import</Button>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-pink-600 hover:bg-pink-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -147,11 +200,11 @@ export function FacturesClientsView() {
                 <TableCell>{formatCurrency(f.totalHT)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTVA)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTTC)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-pink-100 text-pink-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
-                  {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-pink-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(f)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="outline" onClick={() => { setEditing(f); setDialogOpen(true); }} title="Modifier"><Pencil className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="outline" onClick={() => openEditDialog(f)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
                   <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)} disabled={f.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
                 </div></TableCell>
               </TableRow>))}</TableBody>
@@ -159,12 +212,12 @@ export function FacturesClientsView() {
           )}
         </CardContent>
       </Card>
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-[8000px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Facture</DialogTitle>
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DLG</span>
+              <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -175,7 +228,7 @@ export function FacturesClientsView() {
                   <Input value={formData.numero} disabled className="bg-gray-100" />
                 ) : (
                   <div className="space-y-1">
-                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-green-700" />
+                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-pink-700" />
                     <span className="text-xs text-muted-foreground">(Numéro automatique)</span>
                   </div>
                 )}
@@ -208,7 +261,7 @@ export function FacturesClientsView() {
               <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
               <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} /></div>
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-pink-600 hover:bg-pink-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

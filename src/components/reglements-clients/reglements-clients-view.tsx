@@ -88,8 +88,9 @@ export function ReglementsClientsView() {
     
     try {
       const res = await fetch('/api/reglements-clients', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, montant })
+        method: editingReglement ? 'PUT' : 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, id: editingReglement?.id, montant })
       });
       if (res.ok) { setDialogOpen(false); resetForm(); fetchReglements(); }
       else { const err = await res.json(); alert(err.error || 'Erreur'); }
@@ -129,12 +130,12 @@ export function ReglementsClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-green-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus</p></div>
+        <div><h1 className="text-3xl font-bold text-pink-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
+          <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
           <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4 mr-2" />Import</Button>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-pink-600 hover:bg-pink-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -165,7 +166,7 @@ export function ReglementsClientsView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingReglement ? 'Modifier' : 'Nouveau'} Règlement</DialogTitle>
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01-DLG</span>
+              <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -182,7 +183,7 @@ export function ReglementsClientsView() {
             </div>
             
             {selectedFacture && resteAPayer !== null && (
-              <div className={`p-4 rounded-lg border ${resteAPayer > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+              <div className={`p-4 rounded-lg border ${resteAPayer > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-pink-50 border-pink-200'}`}>
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Total Facture:</span>
@@ -194,7 +195,7 @@ export function ReglementsClientsView() {
                   </div>
                   <div>
                     <span className="text-muted-foreground">Reste à payer:</span>
-                    <div className={`font-bold text-lg ${resteAPayer > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                    <div className={`font-bold text-lg ${resteAPayer > 0 ? 'text-orange-600' : 'text-pink-600'}`}>
                       {formatCurrency(resteAPayer)}
                       {resteAPayer <= 0 && <span className="ml-2 text-sm">(Soldée)</span>}
                     </div>
@@ -230,7 +231,7 @@ export function ReglementsClientsView() {
             </div>
             <div><Label>Référence</Label><Input value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} placeholder="N° chèque, virement..." /></div>
             <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} placeholder="Informations complémentaires..." /></div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editingReglement ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-pink-600 hover:bg-pink-700">{editingReglement ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
