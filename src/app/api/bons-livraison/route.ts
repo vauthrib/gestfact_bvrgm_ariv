@@ -17,9 +17,21 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
     const { lignes, ...blData } = data;
+
+    // Récupérer les paramètres pour la numérotation
+    const parametres = await prisma.parametres.findFirst();
+    const prefixe = parametres?.prefixeBL || 'BL';
+    const numeroDepart = parametres?.numeroBLDepart || 1;
+
+    // Compter les BL existants pour obtenir le prochain numéro
+    const count = await prisma.bonLivraison.count();
+    const prochainNumero = numeroDepart + count;
+    const numero = `${prefixe}${prochainNumero.toString().padStart(5, '0')}`;
+
     const bl = await prisma.bonLivraison.create({
       data: {
         ...blData,
+        numero,
         dateBL: new Date(blData.dateBL),
         lignes: { create: lignes }
       },

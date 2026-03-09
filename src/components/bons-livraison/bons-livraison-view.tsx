@@ -15,10 +15,10 @@ import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
 
 interface LigneBL { id?: string; articleId?: string; designation: string; quantite: number; prixUnitaire: number; totalHT: number; }
-interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; client: { raisonSociale: string }; lignes?: LigneBL[]; }
+interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; }
 interface Tiers { id: string; code: string; raisonSociale: string; type: string; }
 interface Article { id: string; code: string; designation: string; prixUnitaire: number; }
-interface Parametres { nomEntreprise: string; adresseEntreprise?: string; villeEntreprise?: string; telephoneEntreprise?: string; emailEntreprise?: string; ice?: string; rc?: string; rcLieu?: string; }
+interface Parametres { nomEntreprise: string; adresseEntreprise?: string; villeEntreprise?: string; telephoneEntreprise?: string; emailEntreprise?: string; ice?: string; rc?: string; rcLieu?: string; prefixeBL?: string; numeroBLDepart?: number; }
 
 const parseNumber = (v: string | number) => { if (!v) return 0; if (typeof v === 'number') return v; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH`;
@@ -41,7 +41,6 @@ export function BonsLivraisonView() {
 
   useEffect(() => { fetchBons(); fetchClients(); fetchArticles(); fetchParametres(); }, []);
   
-  // Recharger les données à l'ouverture du dialogue
   useEffect(() => {
     if (dialogOpen) {
       fetchClients();
@@ -103,7 +102,6 @@ export function BonsLivraisonView() {
   };
 
   const handlePrint = async (bl: BonLivraison) => {
-    // Fetch full BL with lines
     try {
       const res = await fetch('/api/bons-livraison');
       const allBL = await res.json();
@@ -138,7 +136,13 @@ export function BonsLivraisonView() {
     setLignes([{ designation: '', quantite: 1, prixUnitaire: 0, totalHT: 0 }]);
     setEditing(null);
   };
-  const generateNum = () => setFormData({ ...formData, numero: `BL${(bons.length + 1).toString().padStart(5, '0')}` });
+
+  // Générer le prochain numéro prévisionnel pour l'affichage
+  const getProchainNumero = () => {
+    const prefixe = parametres?.prefixeBL || 'BL';
+    const numeroDepart = parametres?.numeroBLDepart || 1;
+    return `${prefixe}${(numeroDepart + bons.length).toString().padStart(5, '0')}`;
+  };
 
   const filtered = bons.filter(b => b.numero?.toLowerCase().includes(search.toLowerCase()) || b.client?.raisonSociale?.toLowerCase().includes(search.toLowerCase()));
 
@@ -152,7 +156,7 @@ export function BonsLivraisonView() {
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01</span>
           <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4 mr-2" />Import</Button>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); generateNum(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -190,7 +194,17 @@ export function BonsLivraisonView() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
-              <div><Label>N°</Label><Input value={formData.numero} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} required /></div>
+              <div>
+                <Label>N° Bon</Label>
+                {editing ? (
+                  <Input value={formData.numero} disabled className="bg-gray-100" />
+                ) : (
+                  <div className="space-y-1">
+                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-green-700" />
+                    <span className="text-xs text-muted-foreground">(Numéro automatique)</span>
+                  </div>
+                )}
+              </div>
               <div><Label>Date</Label><Input type="date" value={formData.dateBL} onChange={(e) => setFormData({ ...formData, dateBL: e.target.value })} required /></div>
               <div><Label>Client</Label><Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
             </div>
