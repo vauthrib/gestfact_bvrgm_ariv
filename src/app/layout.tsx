@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GestFact V1.48 - Gestion de Facturation",
+  title: "GestFact V1.49 - Gestion de Facturation",
   description: "Application de gestion de facturation",
 };
 

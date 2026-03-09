@@ -50,7 +50,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-blue-800">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur GestFact V1.48</p>
+          <p className="text-muted-foreground">Bienvenue sur GestFact V1.49</p>
         </div>
         <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
       </div>

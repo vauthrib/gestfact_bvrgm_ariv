@@ -146,7 +146,7 @@ export function FacturesClientsView() {
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogContent className="max-w-[8000px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Facture</DialogTitle>
