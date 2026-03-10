@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         break;
       case 'factures-clients':
         data = await prisma.factureClient.findMany({ include: { client: true } });
-        headers = ['numero', 'dateFacture', 'codeClient', 'dateEcheance', 'totalHT', 'totalTVA', 'totalTTC', 'statut'];
+        headers = ['numero', 'dateFacture', 'clientId', 'client.raisonSociale', 'dateEcheance', 'totalHT', 'totalTVA', 'totalTTC', 'statut'];
         numericFields = ['totalHT', 'totalTVA', 'totalTTC'];
         filename = 'factures_clients';
         break;

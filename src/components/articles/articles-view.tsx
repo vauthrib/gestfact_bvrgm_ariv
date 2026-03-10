@@ -82,11 +82,11 @@ export function ArticlesView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-orange-700">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
+        <div><h1 className="text-3xl font-bold text-pink-700">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
+          <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-orange-600 hover:bg-orange-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-pink-600 hover:bg-pink-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -107,7 +107,7 @@ export function ArticlesView() {
                 <TableCell>{formatCurrency(a.prixUnitaire)}</TableCell>
                 <TableCell>{a.unite}</TableCell>
                 <TableCell>{a.tauxTVA}%</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${a.actif ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>{a.actif ? 'Actif' : 'Inactif'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${a.actif ? 'bg-pink-100 text-pink-800' : 'bg-gray-100 text-gray-800'}`}>{a.actif ? 'Actif' : 'Inactif'}</span></TableCell>
                 <TableCell><div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => openEditDialog(a)}><Pencil className="h-4 w-4" /></Button>
                   <Button size="sm" variant="destructive" onClick={() => handleDelete(a.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -122,7 +122,7 @@ export function ArticlesView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingArticle ? 'Modifier' : 'Nouveau'} Article</DialogTitle>
-              <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01-DLG</span>
+              <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,7 +163,7 @@ export function ArticlesView() {
               <Label htmlFor="actif">Article actif</Label>
             </div>
 
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-orange-600 hover:bg-orange-700">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-pink-600 hover:bg-pink-700">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

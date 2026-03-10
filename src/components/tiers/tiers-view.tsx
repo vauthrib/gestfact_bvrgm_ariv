@@ -84,11 +84,11 @@ export function TiersView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-orange-700">Tiers</h1><p className="text-muted-foreground">Gérez vos clients et fournisseurs</p></div>
+        <div><h1 className="text-3xl font-bold text-pink-700">Tiers</h1><p className="text-muted-foreground">Gérez vos clients et fournisseurs</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TIE01</span>
+          <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TIE01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-orange-600 hover:bg-orange-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-pink-600 hover:bg-pink-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -121,7 +121,7 @@ export function TiersView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingTiers ? 'Modifier' : 'Nouveau'} Tiers</DialogTitle>
-              <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TIE01-DLG</span>
+              <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TIE01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -177,7 +177,7 @@ export function TiersView() {
             {/* Row 10: Notes */}
             <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} /></div>
 
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-orange-600 hover:bg-orange-700">{editingTiers ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-pink-600 hover:bg-pink-700">{editingTiers ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

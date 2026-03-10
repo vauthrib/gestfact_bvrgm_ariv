@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
     if (!data.factureId) {
       return NextResponse.json({ error: 'Facture requise' }, { status: 400 });
     }
-    if (!data.montant || isNaN(parseFloat(data.montant)) || parseFloat(data.montant) <= 0) {
+    
+    // Accepter le montant comme nombre ou string
+    const montant = typeof data.montant === 'number' ? data.montant : parseFloat(data.montant);
+    if (isNaN(montant) || montant <= 0) {
       return NextResponse.json({ error: 'Montant invalide' }, { status: 400 });
     }
     
@@ -44,7 +47,7 @@ export async function POST(request: NextRequest) {
       data: {
         factureId: data.factureId,
         dateReglement: new Date(data.dateReglement),
-        montant: parseFloat(data.montant),
+        montant: montant,
         modePaiement: data.modePaiement || 'VIREMENT',
         reference: data.reference || null,
         infoLibre: data.infoLibre || null,
