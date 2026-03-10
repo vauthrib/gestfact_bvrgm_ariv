@@ -21,23 +21,41 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
+    
+    // Validation des données requises
+    if (!data.factureId) {
+      return NextResponse.json({ error: 'Facture requise' }, { status: 400 });
+    }
+    if (!data.montant || isNaN(parseFloat(data.montant)) || parseFloat(data.montant) <= 0) {
+      return NextResponse.json({ error: 'Montant invalide' }, { status: 400 });
+    }
+    
+    // Vérifier que la facture existe
+    const facture = await prisma.factureFournisseur.findUnique({
+      where: { id: data.factureId }
+    });
+    if (!facture) {
+      return NextResponse.json({ error: 'Facture non trouvée' }, { status: 400 });
+    }
+    
     const count = await prisma.reglementFournisseur.count();
     const reglement = await prisma.reglementFournisseur.create({
       data: {
         factureId: data.factureId,
         dateReglement: new Date(data.dateReglement),
-        montant: data.montant,
+        montant: parseFloat(data.montant),
         modePaiement: data.modePaiement || 'VIREMENT',
         reference: data.reference || null,
         infoLibre: data.infoLibre || null,
         notes: data.notes || null,
-        statut: 'ENREGISTRE',
+        statut: data.statut || 'ENREGISTRE',
       },
       include: { facture: { include: { fournisseur: true } } }
     });
     return NextResponse.json(reglement);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Erreur POST reglements-fournisseurs:', error);
+    return NextResponse.json({ error: error.message || 'Erreur lors de la création' }, { status: 500 });
   }
 }
 
