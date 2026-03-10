@@ -96,12 +96,12 @@ export function PrintDocument({ open, onOpenChange, documentType, documentData, 
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Aperçu - {getTitle()}</DialogTitle>
-            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-PRT</span>
+            <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-PRT</span>
           </div>
         </DialogHeader>
 
         <div className="flex gap-2 mb-4">
-          <Button onClick={handlePrint} className="bg-green-600 hover:bg-green-700">
+          <Button onClick={handlePrint} className="bg-orange-600 hover:bg-orange-700">
             <Printer className="w-4 h-4 mr-2" /> Imprimer
           </Button>
         </div>
@@ -109,9 +109,9 @@ export function PrintDocument({ open, onOpenChange, documentType, documentData, 
         {/* Preview */}
         <div ref={printRef} className="border rounded-lg p-6 bg-white">
           {/* Header */}
-          <div className="flex justify-between border-b-2 border-green-700 pb-4 mb-6">
+          <div className="flex justify-between border-b-2 border-orange-700 pb-4 mb-6">
             <div>
-              <h1 className="text-xl font-bold text-green-700">{entreprise?.nomEntreprise || 'Votre Entreprise'}</h1>
+              <h1 className="text-xl font-bold text-orange-700">{entreprise?.nomEntreprise || 'Votre Entreprise'}</h1>
               <p className="text-sm text-gray-600">
                 {entreprise?.adresseEntreprise}<br />
                 {entreprise?.villeEntreprise}<br />
@@ -121,7 +121,7 @@ export function PrintDocument({ open, onOpenChange, documentType, documentData, 
             </div>
             <div className="text-right">
               <h2 className="text-lg font-bold">{getTitle()}</h2>
-              <p className="font-bold text-green-700">{getNumero()}</p>
+              <p className="font-bold text-orange-700">{getNumero()}</p>
               <p className="text-sm">Date: {formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement)}</p>
               {documentData.dateEcheance && (
                 <p className="text-sm">Échéance: {formatDate(documentData.dateEcheance)}</p>
@@ -142,7 +142,7 @@ export function PrintDocument({ open, onOpenChange, documentType, documentData, 
           {lignes.length > 0 && (
             <table className="w-full border-collapse mb-6">
               <thead>
-                <tr className="bg-green-700 text-white">
+                <tr className="bg-orange-700 text-white">
                   <th className="p-2 text-left text-xs">Désignation</th>
                   <th className="p-2 text-right text-xs w-20">Qté</th>
                   <th className="p-2 text-right text-xs w-24">P.U. HT</th>
@@ -176,13 +176,13 @@ export function PrintDocument({ open, onOpenChange, documentType, documentData, 
               <p>TVA: <span className="font-bold">{formatCurrency(documentData.montantTVA)}</span></p>
             )}
             {documentData.totalTTC !== undefined && (
-              <p className="text-lg font-bold text-green-700">Total TTC: {formatCurrency(documentData.totalTTC)}</p>
+              <p className="text-lg font-bold text-orange-700">Total TTC: {formatCurrency(documentData.totalTTC)}</p>
             )}
             {documentData.montantTTC !== undefined && (
-              <p className="text-lg font-bold text-green-700">Total TTC: {formatCurrency(documentData.montantTTC)}</p>
+              <p className="text-lg font-bold text-orange-700">Total TTC: {formatCurrency(documentData.montantTTC)}</p>
             )}
             {documentData.montant !== undefined && (
-              <p className="text-lg font-bold text-green-700">Montant: {formatCurrency(documentData.montant)}</p>
+              <p className="text-lg font-bold text-orange-700">Montant: {formatCurrency(documentData.montant)}</p>
             )}
           </div>
 
