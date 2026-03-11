@@ -105,12 +105,20 @@ export function PrintDocument({
               width: 210mm;
               height: 297mm;
               position: relative;
-              ${letterheadImage ? `background-image: url('${letterheadImage}'); background-size: 210mm 297mm; background-position: top left; background-repeat: no-repeat;` : ''}
+            }
+            .letterhead-img {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 210mm;
+              height: 297mm;
+              z-index: 0;
             }
             .page {
               position: relative;
               width: 210mm;
               height: 297mm;
+              z-index: 1;
             }
             .doc-info {
               position: absolute;
@@ -165,6 +173,7 @@ export function PrintDocument({
           </style>
         </head>
         <body>
+          ${letterheadImage ? `<img src="${letterheadImage}" class="letterhead-img" alt="" />` : ''}
           <div class="page">
             ${layout.docInfo.visible ? `
               <div class="doc-info">
