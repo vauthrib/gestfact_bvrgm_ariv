@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, Download, Settings } from 'lucide-react';
+import { Printer, Settings } from 'lucide-react';
 
 interface LayoutElement {
   x: number;
@@ -60,92 +60,13 @@ export function PrintDocument({
   printLayout,
   letterheadImage
 }: PrintDocumentProps) {
-  const printRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const [useCustomLayout, setUseCustomLayout] = useState(true);
   const layout = printLayout || DEFAULT_LAYOUT;
 
-  const mmToPx = (mm: number) => `${mm * 3.779527559}px`;
-
-  const handlePrint = () => {
-    if (printRef.current) {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        const customStyles = useCustomLayout && printLayout ? `
-          /* Custom layout styles */
-          .doc-info { position: absolute; left: ${mmToPx(layout.docInfo.x)}; top: ${mmToPx(layout.docInfo.y)}; width: ${mmToPx(layout.docInfo.width)}; }
-          .client-info { position: absolute; left: ${mmToPx(layout.clientInfo.x)}; top: ${mmToPx(layout.clientInfo.y)}; width: ${mmToPx(layout.clientInfo.width)}; }
-          .table-container { position: absolute; left: ${mmToPx(layout.tableStart.x)}; top: ${mmToPx(layout.tableStart.y)}; width: ${mmToPx(layout.tableStart.width)}; }
-          .totals-section { position: absolute; left: ${mmToPx(layout.totals.x)}; top: ${mmToPx(layout.totals.y)}; width: ${mmToPx(layout.totals.width)}; }
-          .footer-section { position: absolute; left: ${mmToPx(layout.footer.x)}; top: ${mmToPx(layout.footer.y)}; width: ${mmToPx(layout.footer.width)}; }
-        ` : '';
-
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Impression</title>
-            <style>
-              @page { size: A4; margin: 0; }
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: Arial, sans-serif;
-                font-size: 10pt;
-                width: 210mm;
-                height: 297mm;
-                position: relative;
-                ${letterheadImage && useCustomLayout ? `background-image: url(${letterheadImage}); background-size: cover; background-position: center;` : ''}
-              }
-              .page-container {
-                position: relative;
-                width: 210mm;
-                height: 297mm;
-                padding: ${layout.margins.top}mm ${layout.margins.right}mm ${layout.margins.bottom}mm ${layout.margins.left}mm;
-              }
-              ${useCustomLayout && printLayout ? `
-                .doc-info { position: absolute; left: ${mmToPx(layout.docInfo.x)}; top: ${mmToPx(layout.docInfo.y)}; width: ${mmToPx(layout.docInfo.width)}; text-align: right; }
-                .client-info { position: absolute; left: ${mmToPx(layout.clientInfo.x)}; top: ${mmToPx(layout.clientInfo.y)}; width: ${mmToPx(layout.clientInfo.width)}; }
-                .table-container { position: absolute; left: ${mmToPx(layout.tableStart.x)}; top: ${mmToPx(layout.tableStart.y)}; width: ${mmToPx(layout.tableStart.width)}; }
-                .totals-section { position: absolute; left: ${mmToPx(layout.totals.x)}; top: ${mmToPx(layout.totals.y)}; width: ${mmToPx(layout.totals.width)}; text-align: right; }
-                .footer-section { position: absolute; left: ${mmToPx(layout.footer.x)}; top: ${mmToPx(layout.footer.y)}; width: ${mmToPx(layout.footer.width)}; font-size: 8pt; }
-              ` : `
-                .header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px; }
-                .company { text-align: left; }
-                .company h1 { font-size: 18pt; color: #db2777; margin-bottom: 5px; }
-                .company p { font-size: 10pt; color: #666; }
-                .doc-info { text-align: right; }
-                .doc-info h2 { font-size: 16pt; color: #333; margin-bottom: 5px; }
-                .doc-info p { font-size: 10pt; }
-                .parties { display: flex; justify-content: space-between; margin: 20px 0; }
-                .client-info { width: 48%; padding: 10px; background: #f8f9fa; border-radius: 5px; }
-                .client-info h3 { font-size: 10pt; color: #666; margin-bottom: 5px; }
-                .client-info p { font-size: 11pt; font-weight: bold; }
-                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                th { background: #db2777; color: white; padding: 10px; text-align: left; font-size: 10pt; }
-                td { padding: 8px 10px; border-bottom: 1px solid #ddd; font-size: 10pt; }
-                tr:nth-child(even) { background: #f8f9fa; }
-                .totals-section { text-align: right; margin-top: 20px; }
-                .totals-section p { margin: 5px 0; font-size: 11pt; }
-                .totals-section .total-ttc { font-size: 14pt; font-weight: bold; color: #db2777; }
-                .footer-section { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 9pt; color: #666; }
-              `}
-              @media print { body { padding: 0; } }
-            </style>
-          </head>
-          <body>
-            <div class="page-container">
-              ${printRef.current.innerHTML}
-            </div>
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
-        setTimeout(() => {
-          printWindow.print();
-          printWindow.close();
-        }, 250);
-      }
-    }
-  };
+  // Convert mm to px (96 DPI)
+  const mmToPx = (mm: number) => Math.round(mm * 3.779527559);
+  const mmToPxStr = (mm: number) => `${mmToPx(mm)}px`;
 
   if (!documentData) return null;
 
@@ -161,10 +82,290 @@ export function PrintDocument({
   };
 
   const getNumero = () => documentData.numero || documentData.numeroFacture || '';
-
   const getTiers = () => documentData.client || documentData.fournisseur || {};
-
   const lignes = documentData.lignes || [];
+
+  // Generate HTML for print window
+  const generatePrintHTML = () => {
+    const docDate = formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement);
+    
+    if (useCustomLayout && printLayout) {
+      // Custom Layout Mode
+      return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${getTitle()} - ${getNumero()}</title>
+          <style>
+            @page { size: A4; margin: 0; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: Arial, sans-serif;
+              font-size: 10pt;
+              width: 210mm;
+              height: 297mm;
+              position: relative;
+              ${letterheadImage ? `background-image: url('${letterheadImage}'); background-size: 210mm 297mm; background-position: top left; background-repeat: no-repeat;` : ''}
+            }
+            .page {
+              position: relative;
+              width: 210mm;
+              height: 297mm;
+            }
+            .doc-info {
+              position: absolute;
+              left: ${mmToPxStr(layout.docInfo.x)};
+              top: ${mmToPxStr(layout.docInfo.y)};
+              width: ${mmToPxStr(layout.docInfo.width)};
+              text-align: right;
+            }
+            .doc-info h2 { font-size: 14pt; margin-bottom: 5px; }
+            .doc-info .numero { font-size: 12pt; font-weight: bold; color: #db2777; }
+            .doc-info p { font-size: 10pt; margin: 2px 0; }
+            .client-info {
+              position: absolute;
+              left: ${mmToPxStr(layout.clientInfo.x)};
+              top: ${mmToPxStr(layout.clientInfo.y)};
+              width: ${mmToPxStr(layout.clientInfo.width)};
+            }
+            .client-info h3 { font-size: 8pt; color: #666; margin-bottom: 3px; }
+            .client-info p { font-size: 10pt; margin: 1px 0; }
+            .client-info .name { font-weight: bold; font-size: 11pt; }
+            .table-container {
+              position: absolute;
+              left: ${mmToPxStr(layout.tableStart.x)};
+              top: ${mmToPxStr(layout.tableStart.y)};
+              width: ${mmToPxStr(layout.tableStart.width)};
+            }
+            table { width: 100%; border-collapse: collapse; }
+            th { background: #db2777; color: white; padding: 8px; text-align: left; font-size: 9pt; }
+            th:last-child, td:last-child { text-align: right; }
+            td { padding: 6px 8px; border-bottom: 1px solid #ddd; font-size: 9pt; }
+            .totals-section {
+              position: absolute;
+              left: ${mmToPxStr(layout.totals.x)};
+              top: ${mmToPxStr(layout.totals.y)};
+              width: ${mmToPxStr(layout.totals.width)};
+              text-align: right;
+            }
+            .totals-section p { font-size: 10pt; margin: 3px 0; }
+            .totals-section .total-ttc { font-size: 12pt; font-weight: bold; color: #db2777; }
+            .footer-section {
+              position: absolute;
+              left: ${mmToPxStr(layout.footer.x)};
+              top: ${mmToPxStr(layout.footer.y)};
+              width: ${mmToPxStr(layout.footer.width)};
+              font-size: 8pt;
+              color: #666;
+            }
+            .footer-section p { margin: 1px 0; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            ${layout.docInfo.visible ? `
+              <div class="doc-info">
+                <h2>${getTitle()}</h2>
+                <p class="numero">${getNumero()}</p>
+                <p>Date: ${docDate}</p>
+                ${documentData.dateEcheance ? `<p>Échéance: ${formatDate(documentData.dateEcheance)}</p>` : ''}
+              </div>
+            ` : ''}
+            
+            ${layout.clientInfo.visible ? `
+              <div class="client-info">
+                <h3>${documentType === 'FF' || documentType === 'RF' ? 'FOURNISSEUR' : 'CLIENT'}</h3>
+                <p class="name">${getTiers()?.raisonSociale || ''}</p>
+                ${getTiers()?.adresse ? `<p>${getTiers().adresse}</p>` : ''}
+                ${getTiers()?.ville ? `<p>${getTiers().ville}</p>` : ''}
+                ${getTiers()?.ice ? `<p>ICE: ${getTiers().ice}</p>` : ''}
+              </div>
+            ` : ''}
+            
+            ${layout.tableStart.visible && lignes.length > 0 ? `
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Désignation</th>
+                      <th style="width: 60px; text-align: right;">Qté</th>
+                      <th style="width: 80px; text-align: right;">P.U. HT</th>
+                      ${documentType !== 'BL' ? '<th style="width: 50px; text-align: right;">TVA</th>' : ''}
+                      <th style="width: 90px; text-align: right;">Total HT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${lignes.map((l: any) => `
+                      <tr>
+                        <td>${l.designation}</td>
+                        <td style="text-align: right;">${l.quantite}</td>
+                        <td style="text-align: right;">${formatCurrency(l.prixUnitaire)}</td>
+                        ${documentType !== 'BL' ? `<td style="text-align: right;">${l.tauxTVA}%</td>` : ''}
+                        <td style="text-align: right;">${formatCurrency(l.totalHT)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : ''}
+            
+            ${layout.totals.visible ? `
+              <div class="totals-section">
+                ${documentData.totalHT !== undefined ? `<p>Total HT: <strong>${formatCurrency(documentData.totalHT)}</strong></p>` : ''}
+                ${documentData.totalTVA !== undefined && documentData.totalTVA > 0 ? `<p>TVA: <strong>${formatCurrency(documentData.totalTVA)}</strong></p>` : ''}
+                ${documentData.montantTVA !== undefined && documentData.montantTVA > 0 ? `<p>TVA: <strong>${formatCurrency(documentData.montantTVA)}</strong></p>` : ''}
+                ${documentData.totalTTC !== undefined ? `<p class="total-ttc">Total TTC: ${formatCurrency(documentData.totalTTC)}</p>` : ''}
+                ${documentData.montantTTC !== undefined ? `<p class="total-ttc">Total TTC: ${formatCurrency(documentData.montantTTC)}</p>` : ''}
+                ${documentData.montant !== undefined ? `<p class="total-ttc">Montant: ${formatCurrency(documentData.montant)}</p>` : ''}
+              </div>
+            ` : ''}
+            
+            ${layout.footer.visible ? `
+              <div class="footer-section">
+                <p>${entreprise?.nomEntreprise || ''} ${entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
+                ${entreprise?.ice ? `<p>ICE: ${entreprise.ice}</p>` : ''}
+                ${entreprise?.rc ? `<p>RC: ${entreprise.rc} ${entreprise?.rcLieu || ''}</p>` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </body>
+        </html>
+      `;
+    } else {
+      // Standard Layout Mode
+      return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${getTitle()} - ${getNumero()}</title>
+          <style>
+            @page { size: A4; margin: 10mm; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: Arial, sans-serif;
+              font-size: 10pt;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              border-bottom: 2px solid #db2777;
+              padding-bottom: 15px;
+              margin-bottom: 20px;
+            }
+            .company h1 { font-size: 18pt; color: #db2777; margin-bottom: 5px; }
+            .company p { font-size: 9pt; color: #666; margin: 2px 0; }
+            .doc-info { text-align: right; }
+            .doc-info h2 { font-size: 14pt; margin-bottom: 5px; }
+            .doc-info .numero { font-size: 12pt; font-weight: bold; color: #db2777; }
+            .doc-info p { font-size: 10pt; margin: 2px 0; }
+            .client-box {
+              background: #f8f9fa;
+              padding: 10px 15px;
+              border-radius: 5px;
+              margin-bottom: 20px;
+            }
+            .client-box h3 { font-size: 8pt; color: #666; margin-bottom: 5px; }
+            .client-box p { font-size: 10pt; margin: 1px 0; }
+            .client-box .name { font-weight: bold; font-size: 11pt; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th { background: #db2777; color: white; padding: 10px; text-align: left; font-size: 9pt; }
+            th:last-child, td:last-child { text-align: right; }
+            td { padding: 8px 10px; border-bottom: 1px solid #ddd; font-size: 9pt; }
+            tr:nth-child(even) { background: #f8f9fa; }
+            .totals { text-align: right; margin-bottom: 30px; }
+            .totals p { font-size: 10pt; margin: 5px 0; }
+            .totals .total-ttc { font-size: 14pt; font-weight: bold; color: #db2777; }
+            .footer { border-top: 1px solid #ddd; padding-top: 15px; font-size: 8pt; color: #666; }
+            .footer p { margin: 2px 0; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company">
+              <h1>${entreprise?.nomEntreprise || 'Votre Entreprise'}</h1>
+              ${entreprise?.adresseEntreprise ? `<p>${entreprise.adresseEntreprise}</p>` : ''}
+              ${entreprise?.villeEntreprise ? `<p>${entreprise.villeEntreprise}</p>` : ''}
+              ${entreprise?.telephoneEntreprise ? `<p>Tél: ${entreprise.telephoneEntreprise}</p>` : ''}
+              ${entreprise?.emailEntreprise ? `<p>Email: ${entreprise.emailEntreprise}</p>` : ''}
+            </div>
+            <div class="doc-info">
+              <h2>${getTitle()}</h2>
+              <p class="numero">${getNumero()}</p>
+              <p>Date: ${docDate}</p>
+              ${documentData.dateEcheance ? `<p>Échéance: ${formatDate(documentData.dateEcheance)}</p>` : ''}
+            </div>
+          </div>
+          
+          <div class="client-box">
+            <h3>${documentType === 'FF' || documentType === 'RF' ? 'FOURNISSEUR' : 'CLIENT'}</h3>
+            <p class="name">${getTiers()?.raisonSociale || ''}</p>
+            ${getTiers()?.adresse ? `<p>${getTiers().adresse}</p>` : ''}
+            ${getTiers()?.ville ? `<p>${getTiers().ville}</p>` : ''}
+            ${getTiers()?.ice ? `<p>ICE: ${getTiers().ice}</p>` : ''}
+          </div>
+          
+          ${lignes.length > 0 ? `
+            <table>
+              <thead>
+                <tr>
+                  <th>Désignation</th>
+                  <th style="width: 60px; text-align: right;">Qté</th>
+                  <th style="width: 80px; text-align: right;">P.U. HT</th>
+                  ${documentType !== 'BL' ? '<th style="width: 50px; text-align: right;">TVA</th>' : ''}
+                  <th style="width: 90px; text-align: right;">Total HT</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${lignes.map((l: any) => `
+                  <tr>
+                    <td>${l.designation}</td>
+                    <td style="text-align: right;">${l.quantite}</td>
+                    <td style="text-align: right;">${formatCurrency(l.prixUnitaire)}</td>
+                    ${documentType !== 'BL' ? `<td style="text-align: right;">${l.tauxTVA}%</td>` : ''}
+                    <td style="text-align: right;">${formatCurrency(l.totalHT)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : ''}
+          
+          <div class="totals">
+            ${documentData.totalHT !== undefined ? `<p>Total HT: <strong>${formatCurrency(documentData.totalHT)}</strong></p>` : ''}
+            ${documentData.totalTVA !== undefined && documentData.totalTVA > 0 ? `<p>TVA: <strong>${formatCurrency(documentData.totalTVA)}</strong></p>` : ''}
+            ${documentData.montantTVA !== undefined && documentData.montantTVA > 0 ? `<p>TVA: <strong>${formatCurrency(documentData.montantTVA)}</strong></p>` : ''}
+            ${documentData.totalTTC !== undefined ? `<p class="total-ttc">Total TTC: ${formatCurrency(documentData.totalTTC)}</p>` : ''}
+            ${documentData.montantTTC !== undefined ? `<p class="total-ttc">Total TTC: ${formatCurrency(documentData.montantTTC)}</p>` : ''}
+            ${documentData.montant !== undefined ? `<p class="total-ttc">Montant: ${formatCurrency(documentData.montant)}</p>` : ''}
+          </div>
+          
+          <div class="footer">
+            <p>${entreprise?.nomEntreprise || ''} ${entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
+            ${entreprise?.ice ? `<p>ICE: ${entreprise.ice}</p>` : ''}
+            ${entreprise?.rc ? `<p>RC: ${entreprise.rc} ${entreprise?.rcLieu || ''}</p>` : ''}
+          </div>
+        </body>
+        </html>
+      `;
+    }
+  };
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(generatePrintHTML());
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 300);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -194,38 +395,39 @@ export function PrintDocument({
 
         {/* Preview */}
         <div
-          ref={printRef}
+          ref={previewRef}
           className="border rounded-lg bg-white relative overflow-hidden"
           style={{
             width: '210mm',
             height: '297mm',
             transform: 'scale(0.5)',
             transformOrigin: 'top left',
-            marginBottom: '-148.5mm', // Compensate for scale
+            marginBottom: '-148.5mm',
             marginRight: '-105mm'
           }}
         >
           {/* Background image if letterhead */}
           {letterheadImage && useCustomLayout && (
             <div
-              className="absolute inset-0 opacity-30 pointer-events-none"
+              className="absolute inset-0 pointer-events-none"
               style={{
                 backgroundImage: `url(${letterheadImage})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
+                backgroundSize: '210mm 297mm',
+                backgroundPosition: 'top left',
+                backgroundRepeat: 'no-repeat',
+                opacity: 0.3
               }}
             />
           )}
 
           {useCustomLayout && printLayout ? (
-            /* Custom Layout Mode */
+            /* Custom Layout Mode Preview */
             <>
-              {/* Document Info */}
               {layout.docInfo.visible && (
-                <div className="doc-info absolute text-right" style={{
-                  left: mmToPx(layout.docInfo.x),
-                  top: mmToPx(layout.docInfo.y),
-                  width: mmToPx(layout.docInfo.width)
+                <div className="absolute text-right" style={{
+                  left: mmToPxStr(layout.docInfo.x),
+                  top: mmToPxStr(layout.docInfo.y),
+                  width: mmToPxStr(layout.docInfo.width)
                 }}>
                   <h2 className="text-lg font-bold">{getTitle()}</h2>
                   <p className="font-bold text-pink-700">{getNumero()}</p>
@@ -236,12 +438,11 @@ export function PrintDocument({
                 </div>
               )}
 
-              {/* Client Info */}
               {layout.clientInfo.visible && (
-                <div className="client-info absolute" style={{
-                  left: mmToPx(layout.clientInfo.x),
-                  top: mmToPx(layout.clientInfo.y),
-                  width: mmToPx(layout.clientInfo.width)
+                <div className="absolute" style={{
+                  left: mmToPxStr(layout.clientInfo.x),
+                  top: mmToPxStr(layout.clientInfo.y),
+                  width: mmToPxStr(layout.clientInfo.width)
                 }}>
                   <h3 className="text-xs text-gray-500 mb-1">{documentType === 'FF' || documentType === 'RF' ? 'FOURNISSEUR' : 'CLIENT'}</h3>
                   <p className="font-bold">{getTiers()?.raisonSociale}</p>
@@ -251,12 +452,11 @@ export function PrintDocument({
                 </div>
               )}
 
-              {/* Table */}
               {layout.tableStart.visible && lignes.length > 0 && (
-                <div className="table-container absolute" style={{
-                  left: mmToPx(layout.tableStart.x),
-                  top: mmToPx(layout.tableStart.y),
-                  width: mmToPx(layout.tableStart.width)
+                <div className="absolute" style={{
+                  left: mmToPxStr(layout.tableStart.x),
+                  top: mmToPxStr(layout.tableStart.y),
+                  width: mmToPxStr(layout.tableStart.width)
                 }}>
                   <table className="w-full border-collapse">
                     <thead>
@@ -283,12 +483,11 @@ export function PrintDocument({
                 </div>
               )}
 
-              {/* Totals */}
               {layout.totals.visible && (
-                <div className="totals-section absolute text-right" style={{
-                  left: mmToPx(layout.totals.x),
-                  top: mmToPx(layout.totals.y),
-                  width: mmToPx(layout.totals.width)
+                <div className="absolute text-right" style={{
+                  left: mmToPxStr(layout.totals.x),
+                  top: mmToPxStr(layout.totals.y),
+                  width: mmToPxStr(layout.totals.width)
                 }}>
                   {documentData.totalHT !== undefined && (
                     <p>Total HT: <span className="font-bold">{formatCurrency(documentData.totalHT)}</span></p>
@@ -311,12 +510,11 @@ export function PrintDocument({
                 </div>
               )}
 
-              {/* Footer */}
               {layout.footer.visible && (
-                <div className="footer-section absolute text-xs text-gray-500" style={{
-                  left: mmToPx(layout.footer.x),
-                  top: mmToPx(layout.footer.y),
-                  width: mmToPx(layout.footer.width)
+                <div className="absolute text-xs text-gray-500" style={{
+                  left: mmToPxStr(layout.footer.x),
+                  top: mmToPxStr(layout.footer.y),
+                  width: mmToPxStr(layout.footer.width)
                 }}>
                   <p>{entreprise?.nomEntreprise} - {entreprise?.villeEntreprise || ''}</p>
                   {entreprise?.ice && <p>ICE: {entreprise.ice}</p>}
@@ -325,9 +523,8 @@ export function PrintDocument({
               )}
             </>
           ) : (
-            /* Standard Layout Mode */
+            /* Standard Layout Mode Preview */
             <>
-              {/* Header */}
               <div className="flex justify-between border-b-2 border-pink-700 pb-4 mb-6 p-6">
                 <div>
                   <h1 className="text-xl font-bold text-pink-700">{entreprise?.nomEntreprise || 'Votre Entreprise'}</h1>
@@ -348,7 +545,6 @@ export function PrintDocument({
                 </div>
               </div>
 
-              {/* Client/Fournisseur */}
               <div className="mb-6 p-4 bg-gray-50 rounded mx-6">
                 <h3 className="text-xs text-gray-500 mb-1">{documentType === 'FF' || documentType === 'RF' ? 'FOURNISSEUR' : 'CLIENT'}</h3>
                 <p className="font-bold">{getTiers()?.raisonSociale}</p>
@@ -357,7 +553,6 @@ export function PrintDocument({
                 {getTiers()?.ice && <p className="text-sm">ICE: {getTiers()?.ice}</p>}
               </div>
 
-              {/* Lines table */}
               {lignes.length > 0 && (
                 <table className="w-full border-collapse mb-6 mx-6">
                   <thead>
@@ -383,7 +578,6 @@ export function PrintDocument({
                 </table>
               )}
 
-              {/* Totals */}
               <div className="text-right space-y-1 mx-6">
                 {documentData.totalHT !== undefined && (
                   <p>Total HT: <span className="font-bold">{formatCurrency(documentData.totalHT)}</span></p>
@@ -405,7 +599,6 @@ export function PrintDocument({
                 )}
               </div>
 
-              {/* Footer */}
               <div className="mt-8 pt-4 border-t text-xs text-gray-500 mx-6">
                 <p>{entreprise?.nomEntreprise} - {entreprise?.villeEntreprise || ''}</p>
                 {entreprise?.ice && <p>ICE: {entreprise.ice}</p>}
