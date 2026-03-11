@@ -28,12 +28,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Ce BL a déjà été converti en facture', facture: existingFacture }, { status: 400 });
     }
 
-    // Get the last facture number
-    const lastFacture = await prisma.factureClient.findFirst({
-      orderBy: { createdAt: 'desc' }
-    });
-    const nextNum = lastFacture ? parseInt(lastFacture.numero.replace(/\D/g, '')) + 1 : 1;
-    const numeroFacture = `FC${nextNum.toString().padStart(5, '0')}`;
+    // Get parameters for prefix and starting number
+    const parametres = await prisma.parametres.findFirst();
+    const prefixe = parametres?.prefixeFacture || 'FC';
+    const numeroDepart = parametres?.numeroFactureDepart || 1;
+
+    // Count existing factures to calculate next number
+    const facturesCount = await prisma.factureClient.count();
+    const nextNum = numeroDepart + facturesCount;
+    const numeroFacture = `${prefixe}${nextNum.toString().padStart(5, '0')}`;
 
     // Calculate totals with TVA
     let totalHT = 0;
