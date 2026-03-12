@@ -14,7 +14,7 @@ import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
 
 interface LigneFacture { id?: string; articleId?: string; designation: string; quantite: string; prixUnitaire: string; tauxTVA: string; totalHT: number; }
-interface FactureClient { id: string; numero: string; dateFacture: string; clientId: string; dateEcheance: string; statut: string; infoLibre: string | null; notes: string | null; totalHT: number; totalTVA: number; totalTTC: number; client: { raisonSociale: string; adresse?: string; ville?: string; ice?: string }; lignes?: LigneFacture[]; }
+interface FactureClient { id: string; numero: string; dateFacture: string; clientId: string; bonCommande: string | null; numeroBL: string | null; dateEcheance: string; statut: string; infoLibre: string | null; notes: string | null; totalHT: number; totalTVA: number; totalTTC: number; client: { raisonSociale: string; adresse?: string; ville?: string; ice?: string }; lignes?: LigneFacture[]; }
 interface Tiers { id: string; code: string; raisonSociale: string; type: string; }
 interface Article { id: string; code: string; designation: string; prixUnitaire: number; tauxTVA: number; }
 interface Parametres { 
@@ -43,7 +43,7 @@ export function FacturesClientsView() {
   const [selectedFacture, setSelectedFacture] = useState<FactureClient | null>(null);
   const [editing, setEditing] = useState<FactureClient | null>(null);
   const [lignes, setLignes] = useState<LigneFacture[]>([{ designation: '', quantite: '1', prixUnitaire: '0', tauxTVA: '20', totalHT: 0 }]);
-  const [formData, setFormData] = useState({ numero: '', dateFacture: new Date().toISOString().split('T')[0], clientId: '', dateEcheance: '', infoLibre: '', notes: '' });
+  const [formData, setFormData] = useState({ numero: '', dateFacture: new Date().toISOString().split('T')[0], clientId: '', bonCommande: '', numeroBL: '', dateEcheance: '', infoLibre: '', notes: '' });
   
   // Sorting and filtering
   const [sortField, setSortField] = useState<SortField>('dateFacture');
@@ -68,6 +68,8 @@ export function FacturesClientsView() {
           numero: editing.numero,
           dateFacture: new Date(editing.dateFacture).toISOString().split('T')[0],
           clientId: editing.clientId,
+          bonCommande: editing.bonCommande || '',
+          numeroBL: editing.numeroBL || '',
           dateEcheance: editing.dateEcheance ? new Date(editing.dateEcheance).toISOString().split('T')[0] : '',
           infoLibre: editing.infoLibre || '',
           notes: editing.notes || ''
@@ -182,7 +184,7 @@ export function FacturesClientsView() {
   };
 
   const resetForm = () => { 
-    setFormData({ numero: '', dateFacture: new Date().toISOString().split('T')[0], clientId: '', dateEcheance: '', infoLibre: '', notes: '' }); 
+    setFormData({ numero: '', dateFacture: new Date().toISOString().split('T')[0], clientId: '', bonCommande: '', numeroBL: '', dateEcheance: '', infoLibre: '', notes: '' }); 
     setLignes([{ designation: '', quantite: '1', prixUnitaire: '0', tauxTVA: '20', totalHT: 0 }]); 
     setEditing(null); 
   };
@@ -308,7 +310,7 @@ export function FacturesClientsView() {
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>N° Facture</Label>
                 {editing ? (
@@ -322,7 +324,11 @@ export function FacturesClientsView() {
               </div>
               <div><Label>Date</Label><Input type="date" value={formData.dateFacture} onChange={(e) => setFormData({ ...formData, dateFacture: e.target.value })} required /></div>
               <div><Label>Échéance</Label><Input type="date" value={formData.dateEcheance} onChange={(e) => setFormData({ ...formData, dateEcheance: e.target.value })} /></div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
               <div><Label>Client</Label><Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
+              <div><Label>Bon de commande</Label><Input placeholder="N° BC client" value={formData.bonCommande} onChange={(e) => setFormData({ ...formData, bonCommande: e.target.value })} /></div>
+              <div><Label>N° BL</Label><Input placeholder="N° Bon de livraison" value={formData.numeroBL} onChange={(e) => setFormData({ ...formData, numeroBL: e.target.value })} /></div>
             </div>
             <div className="border rounded-lg p-4">
               <div className="flex justify-between items-center mb-2"><Label>Lignes</Label><Button type="button" size="sm" variant="outline" onClick={addLigne}>+ Ajouter</Button></div>

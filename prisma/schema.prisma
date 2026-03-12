@@ -56,7 +56,8 @@ model FactureClient {
   numero          String   @unique
   dateFacture     DateTime
   clientId        String
-  numeroBL        String?
+  bonCommande     String?  // Numéro de bon de commande client
+  numeroBL        String?  // Numéro de BL (auto-rempli si converti depuis BL)
   dateEcheance    DateTime
   statut          String   @default("BROUILLON")
   notes           String?
@@ -158,6 +159,7 @@ model BonLivraison {
   numero          String   @unique
   dateBL          DateTime
   clientId        String
+  bonCommande     String?  // Numéro de bon de commande client
   statut          String   @default("BROUILLON")
   infoLibre       String?
   notesLivraison  String?

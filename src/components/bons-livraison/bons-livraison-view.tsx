@@ -14,7 +14,7 @@ import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
 
 interface LigneBL { id?: string; articleId?: string; designation: string; quantite: number; prixUnitaire: number; totalHT: number; }
-interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; }
+interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; bonCommande: string | null; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; }
 interface Tiers { id: string; code: string; raisonSociale: string; type: string; }
 interface Article { id: string; code: string; designation: string; prixUnitaire: number; }
 interface Parametres { 
@@ -43,7 +43,7 @@ export function BonsLivraisonView() {
   const [selectedBL, setSelectedBL] = useState<BonLivraison | null>(null);
   const [editing, setEditing] = useState<BonLivraison | null>(null);
   const [lignes, setLignes] = useState<LigneBL[]>([{ designation: '', quantite: 1, prixUnitaire: 0, totalHT: 0 }]);
-  const [formData, setFormData] = useState({ numero: '', dateBL: new Date().toISOString().split('T')[0], clientId: '', infoLibre: '', notesLivraison: '' });
+  const [formData, setFormData] = useState({ numero: '', dateBL: new Date().toISOString().split('T')[0], clientId: '', bonCommande: '', infoLibre: '', notesLivraison: '' });
   
   // Sorting and filtering
   const [sortField, setSortField] = useState<SortField>('dateBL');
@@ -67,6 +67,7 @@ export function BonsLivraisonView() {
           numero: editing.numero,
           dateBL: new Date(editing.dateBL).toISOString().split('T')[0],
           clientId: editing.clientId,
+          bonCommande: editing.bonCommande || '',
           infoLibre: editing.infoLibre || '',
           notesLivraison: editing.notesLivraison || ''
         });
@@ -170,7 +171,7 @@ export function BonsLivraisonView() {
   };
 
   const resetForm = () => {
-    setFormData({ numero: '', dateBL: new Date().toISOString().split('T')[0], clientId: '', infoLibre: '', notesLivraison: '' });
+    setFormData({ numero: '', dateBL: new Date().toISOString().split('T')[0], clientId: '', bonCommande: '', infoLibre: '', notesLivraison: '' });
     setLignes([{ designation: '', quantite: 1, prixUnitaire: 0, totalHT: 0 }]);
     setEditing(null);
   };
@@ -330,7 +331,7 @@ export function BonsLivraisonView() {
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label>N° Bon</Label>
                 {editing ? (
@@ -344,6 +345,7 @@ export function BonsLivraisonView() {
               </div>
               <div><Label>Date</Label><Input type="date" value={formData.dateBL} onChange={(e) => setFormData({ ...formData, dateBL: e.target.value })} required /></div>
               <div><Label>Client</Label><Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
+              <div><Label>Bon de commande</Label><Input placeholder="N° BC client" value={formData.bonCommande} onChange={(e) => setFormData({ ...formData, bonCommande: e.target.value })} /></div>
             </div>
             <div className="border rounded-lg p-4">
               <div className="flex justify-between items-center mb-2"><Label>Lignes</Label><Button type="button" size="sm" variant="outline" onClick={addLigne}>+ Ajouter</Button></div>

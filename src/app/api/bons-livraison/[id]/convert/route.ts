@@ -78,6 +78,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         dateFacture: new Date(),
         dateEcheance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 days
         clientId: bl.clientId,
+        bonCommande: bl.bonCommande, // Copier le bon de commande depuis le BL
         numeroBL: bl.numero,
         totalHT,
         totalTVA,

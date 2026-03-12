@@ -41,7 +41,7 @@ const formatDate = (d: string | Date) => {
   return date.toLocaleDateString('fr-FR');
 };
 
-// Couleur verte pâle pour V1.75
+// Couleur verte pâle pour V1.76
 const PRIMARY_COLOR = '#16a34a'; // green-600
 const PRIMARY_LIGHT = '#dcfce7'; // green-100
 const PRIMARY_TEXT = '#15803d'; // green-700
@@ -188,6 +188,8 @@ export function PrintDocument({
                 <h2>${getTitle()}</h2>
                 <p class="numero">${getNumero()}</p>
                 <p>Date: ${docDate}</p>
+                ${documentData.bonCommande ? `<p>BC: ${documentData.bonCommande}</p>` : ''}
+                ${documentData.numeroBL ? `<p>BL: ${documentData.numeroBL}</p>` : ''}
                 ${documentData.dateEcheance ? `<p>Échéance: ${formatDate(documentData.dateEcheance)}</p>` : ''}
               </div>
             ` : ''}
@@ -319,6 +321,8 @@ export function PrintDocument({
               <h2>${getTitle()}</h2>
               <p class="numero">${getNumero()}</p>
               <p>Date: ${docDate}</p>
+              ${documentData.bonCommande ? `<p>BC: ${documentData.bonCommande}</p>` : ''}
+              ${documentData.numeroBL ? `<p>BL: ${documentData.numeroBL}</p>` : ''}
               ${documentData.dateEcheance ? `<p>Échéance: ${formatDate(documentData.dateEcheance)}</p>` : ''}
             </div>
           </div>
@@ -475,6 +479,12 @@ export function PrintDocument({
                   <h2 className="text-lg font-bold">{getTitle()}</h2>
                   <p className="font-bold text-green-700">{getNumero()}</p>
                   <p className="text-sm">Date: {formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement)}</p>
+                  {documentData.bonCommande && (
+                    <p className="text-sm">BC: {documentData.bonCommande}</p>
+                  )}
+                  {documentData.numeroBL && (
+                    <p className="text-sm">BL: {documentData.numeroBL}</p>
+                  )}
                   {documentData.dateEcheance && (
                     <p className="text-sm">Échéance: {formatDate(documentData.dateEcheance)}</p>
                   )}
@@ -590,6 +600,12 @@ export function PrintDocument({
                   <h2 className="text-lg font-bold">{getTitle()}</h2>
                   <p className="font-bold text-green-700">{getNumero()}</p>
                   <p className="text-sm">Date: {formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement)}</p>
+                  {documentData.bonCommande && (
+                    <p className="text-sm">BC: {documentData.bonCommande}</p>
+                  )}
+                  {documentData.numeroBL && (
+                    <p className="text-sm">BL: {documentData.numeroBL}</p>
+                  )}
                   {documentData.dateEcheance && (
                     <p className="text-sm">Échéance: {formatDate(documentData.dateEcheance)}</p>
                   )}
