@@ -160,10 +160,10 @@ export function ParametresView() {
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-pink-700">Paramètres</h1>
+          <h1 className="text-3xl font-bold text-green-700">Paramètres</h1>
           <p className="text-muted-foreground">Configuration de l'application</p>
         </div>
-        <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01</span>
+        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01</span>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
@@ -221,8 +221,8 @@ export function ParametresView() {
         </Card>
 
         <div className="flex justify-end gap-4 flex-wrap">
-          {saved && <span className="text-pink-600 self-center">Paramètres enregistrés!</span>}
-          <Button type="button" variant="outline" onClick={() => setLayoutEditorOpen(true)} className="border-pink-300 text-pink-700 hover:bg-pink-50">
+          {saved && <span className="text-green-600 self-center">Paramètres enregistrés!</span>}
+          <Button type="button" variant="outline" onClick={() => setLayoutEditorOpen(true)} className="border-green-300 text-green-700 hover:bg-green-50">
             <Printer className="w-4 h-4 mr-2" />
             Mise en page impression
           </Button>
@@ -234,7 +234,7 @@ export function ParametresView() {
             <Upload className="w-4 h-4 mr-2" />
             Imports
           </Button>
-          <Button type="submit" className="bg-pink-600 hover:bg-pink-700">Enregistrer</Button>
+          <Button type="submit" className="bg-green-600 hover:bg-green-700">Enregistrer</Button>
         </div>
       </form>
       <ImportCentralDialog open={importOpen} onOpenChange={setImportOpen} />

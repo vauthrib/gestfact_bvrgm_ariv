@@ -239,11 +239,11 @@ export function FacturesClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-pink-700">Factures Clients</h1><p className="text-muted-foreground">Gérez vos factures</p></div>
+        <div><h1 className="text-3xl font-bold text-green-700">Factures Clients</h1><p className="text-muted-foreground">Gérez vos factures</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
+          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-pink-600 hover:bg-pink-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -287,9 +287,9 @@ export function FacturesClientsView() {
                 <TableCell>{formatCurrency(f.totalHT)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTVA)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTTC)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-pink-100 text-pink-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
-                  {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-pink-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(f)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
                   <Button size="sm" variant="outline" onClick={() => openEditDialog(f)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
                   <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)} disabled={f.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
@@ -304,7 +304,7 @@ export function FacturesClientsView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Facture</DialogTitle>
-              <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DLG</span>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -315,7 +315,7 @@ export function FacturesClientsView() {
                   <Input value={formData.numero} disabled className="bg-gray-100" />
                 ) : (
                   <div className="space-y-1">
-                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-pink-700" />
+                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-green-700" />
                     <span className="text-xs text-muted-foreground">(Numéro automatique)</span>
                   </div>
                 )}
@@ -348,7 +348,7 @@ export function FacturesClientsView() {
               <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
               <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} /></div>
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-pink-600 hover:bg-pink-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -373,7 +373,7 @@ export function FacturesClientsView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCodeDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-pink-600 hover:bg-pink-700" onClick={handleCodeSubmit}>Confirmer</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleCodeSubmit}>Confirmer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

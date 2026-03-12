@@ -195,11 +195,11 @@ export function ReglementsClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-pink-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus</p></div>
+        <div><h1 className="text-3xl font-bold text-green-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
+          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-pink-600 hover:bg-pink-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
         </div>
       </div>
       <Card>
@@ -243,9 +243,9 @@ export function ReglementsClientsView() {
                 <TableCell>{r.facture?.numero}</TableCell>
                 <TableCell>{formatCurrency(r.montant)}</TableCell>
                 <TableCell>{r.modePaiement}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-pink-100 text-pink-800' : 'bg-yellow-100 text-yellow-800'}`}>{r.statut === 'VALIDE' ? 'Validé' : 'En attente'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{r.statut === 'VALIDE' ? 'Validé' : 'En attente'}</span></TableCell>
                 <TableCell><div className="flex gap-2">
-                  {r.statut === 'ENREGISTRE' && <Button size="sm" variant="outline" className="text-pink-600" onClick={() => handleValidate(r.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  {r.statut === 'ENREGISTRE' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
                   <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier"><Pencil className="h-4 w-4" /></Button>
                   <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
                 </div></TableCell>
@@ -259,7 +259,7 @@ export function ReglementsClientsView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingReglement ? 'Modifier' : 'Nouveau'} Règlement</DialogTitle>
-              <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01-DLG</span>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -279,11 +279,11 @@ export function ReglementsClientsView() {
               </Select>
             </div>
             {selectedFacture && resteAPayer !== null && (
-              <div className={`p-4 rounded-lg border ${resteAPayer > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-pink-50 border-pink-200'}`}>
+              <div className={`p-4 rounded-lg border ${resteAPayer > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div><span className="text-muted-foreground">Total Facture:</span><div className="font-bold text-lg">{formatCurrency(selectedFacture.totalTTC)}</div></div>
                   <div><span className="text-muted-foreground">Déjà réglé (validé):</span><div className="font-bold text-lg">{formatCurrency(selectedFacture.totalTTC - resteAPayer)}</div></div>
-                  <div><span className="text-muted-foreground">Reste à payer:</span><div className="font-bold text-lg text-pink-600">{formatCurrency(resteAPayer)}{resteAPayer <= 0 && <span className="ml-2 text-sm">(Soldée)</span>}</div></div>
+                  <div><span className="text-muted-foreground">Reste à payer:</span><div className="font-bold text-lg text-green-600">{formatCurrency(resteAPayer)}{resteAPayer <= 0 && <span className="ml-2 text-sm">(Soldée)</span>}</div></div>
                 </div>
               </div>
             )}
@@ -293,7 +293,7 @@ export function ReglementsClientsView() {
                 <Label className="text-base font-semibold">Montant</Label>
                 <Input type="text" value={formData.montant} onChange={(e) => setFormData({ ...formData, montant: e.target.value })} required />
                 {resteAPayer !== null && parseNumber(formData.montant) > resteAPayer && (
-                  <div className="flex items-center gap-2 mt-1 text-pink-600 text-sm"><AlertTriangle className="w-4 h-4" />Dépassement de {formatCurrency(parseNumber(formData.montant) - resteAPayer)}</div>
+                  <div className="flex items-center gap-2 mt-1 text-green-600 text-sm"><AlertTriangle className="w-4 h-4" />Dépassement de {formatCurrency(parseNumber(formData.montant) - resteAPayer)}</div>
                 )}
               </div>
             </div>
@@ -313,7 +313,7 @@ export function ReglementsClientsView() {
             <div><Label className="text-base font-semibold">Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} placeholder="Informations complémentaires..." /></div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-              <Button type="submit" className="bg-pink-600 hover:bg-pink-700">{editingReglement ? 'Modifier' : 'Créer'}</Button>
+              <Button type="submit" className="bg-green-600 hover:bg-green-700">{editingReglement ? 'Modifier' : 'Créer'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// Fonction pour générer un numéro unique
+async function genererNumeroUnique(): Promise<string> {
+  const parametres = await prisma.parametres.findFirst();
+  const prefixe = parametres?.prefixeFacture || 'FC';
+  const numeroDepart = parametres?.numeroFactureDepart || 1;
+
+  // Compter les factures existantes
+  const count = await prisma.factureClient.count();
+  let prochainNumero = numeroDepart + count;
+  let numero = `${prefixe}${prochainNumero.toString().padStart(5, '0')}`;
+
+  // Vérifier si le numéro existe déjà et incrémenter si nécessaire
+  let existe = await prisma.factureClient.findUnique({ where: { numero } });
+  while (existe) {
+    prochainNumero++;
+    numero = `${prefixe}${prochainNumero.toString().padStart(5, '0')}`;
+    existe = await prisma.factureClient.findUnique({ where: { numero } });
+  }
+
+  return numero;
+}
+
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -28,15 +50,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Ce BL a déjà été converti en facture', facture: existingFacture }, { status: 400 });
     }
 
-    // Get parameters for prefix and starting number
-    const parametres = await prisma.parametres.findFirst();
-    const prefixe = parametres?.prefixeFacture || 'FC';
-    const numeroDepart = parametres?.numeroFactureDepart || 1;
-
-    // Count existing factures to calculate next number
-    const facturesCount = await prisma.factureClient.count();
-    const nextNum = numeroDepart + facturesCount;
-    const numeroFacture = `${prefixe}${nextNum.toString().padStart(5, '0')}`;
+    // Générer un numéro unique
+    const numeroFacture = await genererNumeroUnique();
 
     // Calculate totals with TVA
     let totalHT = 0;

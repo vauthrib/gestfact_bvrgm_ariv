@@ -26,14 +26,14 @@ export function SecretCodeGate({ children }: SecretCodeGateProps) {
   if (isAuthenticated) return <>{children}</>;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-pink-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <h1 className="text-3xl font-bold text-pink-700">GestFact</h1>
-            <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">AUT01</span>
+            <h1 className="text-3xl font-bold text-green-700">GestFact</h1>
+            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">AUT01</span>
           </div>
-          <p className="text-sm text-muted-foreground">V1.74</p>
+          <p className="text-sm text-muted-foreground">V1.75</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -44,7 +44,7 @@ export function SecretCodeGate({ children }: SecretCodeGateProps) {
             className={`text-center text-xl ${error ? 'border-red-500 animate-shake' : ''}`}
             autoFocus
           />
-          <Button type="submit" className="w-full bg-pink-600 hover:bg-pink-700">
+          <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
             Entrer
           </Button>
         </form>

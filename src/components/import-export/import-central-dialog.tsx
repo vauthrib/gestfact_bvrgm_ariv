@@ -129,14 +129,14 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
               <Upload className="w-5 h-5" />
               Importation Centralisée
             </DialogTitle>
-            <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01-IMP</span>
+            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01-IMP</span>
           </div>
         </DialogHeader>
 
         {step === 'code' && (
           <div className="space-y-4">
             <div className="flex flex-col items-center py-6">
-              <Lock className="w-12 h-12 text-pink-600 mb-4" />
+              <Lock className="w-12 h-12 text-green-600 mb-4" />
               <p className="text-center text-muted-foreground mb-4">
                 Veuillez entrer le code d'accès pour accéder aux fonctions d'importation
               </p>
@@ -157,7 +157,7 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
-              <Button className="bg-pink-600 hover:bg-pink-700" onClick={handleCodeSubmit}>Valider</Button>
+              <Button className="bg-green-600 hover:bg-green-700" onClick={handleCodeSubmit}>Valider</Button>
             </DialogFooter>
           </div>
         )}
@@ -207,24 +207,24 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
                 </div>
 
                 {file && (
-                  <div className="flex items-center gap-2 p-3 bg-pink-50 rounded-lg">
+                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
                     {file.name.endsWith('.csv') ? (
                       <FileText className="w-5 h-5 text-blue-600" />
                     ) : (
-                      <FileSpreadsheet className="w-5 h-5 text-pink-600" />
+                      <FileSpreadsheet className="w-5 h-5 text-green-600" />
                     )}
                     <span className="text-sm font-medium">{file.name}</span>
                   </div>
                 )}
 
                 {result && (
-                  <div className={`flex items-center gap-2 p-3 rounded-lg ${result.success ? 'bg-pink-50' : 'bg-red-50'}`}>
+                  <div className={`flex items-center gap-2 p-3 rounded-lg ${result.success ? 'bg-green-50' : 'bg-red-50'}`}>
                     {result.success ? (
-                      <CheckCircle className="w-5 h-5 text-pink-600" />
+                      <CheckCircle className="w-5 h-5 text-green-600" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-red-600" />
                     )}
-                    <span className={`text-sm ${result.success ? 'text-pink-700' : 'text-red-700'}`}>
+                    <span className={`text-sm ${result.success ? 'text-green-700' : 'text-red-700'}`}>
                       {result.message} {result.count !== undefined && `(${result.count} enregistrements)`}
                     </span>
                   </div>
@@ -249,7 +249,7 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
               <Button variant="outline" onClick={() => handleOpenChange(false)}>Fermer</Button>
               {selectedType && file && (
                 <Button
-                  className="bg-pink-600 hover:bg-pink-700"
+                  className="bg-green-600 hover:bg-green-700"
                   onClick={handleImport}
                   disabled={!file || loading}
                 >
