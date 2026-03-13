@@ -266,15 +266,11 @@ export function ReglementsClientsView() {
             <div>
               <Label className="text-base font-semibold">Facture (non soldée)</Label>
               <Select value={formData.factureId} onValueChange={handleFactureChange} disabled={!!editingReglement}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner une facture non soldée" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={facturesDisponibles.length === 0 ? "Aucune facture disponible" : "Sélectionner une facture non soldée"} /></SelectTrigger>
                 <SelectContent>
-                  {facturesDisponibles.length === 0 ? (
-                    <SelectItem value="" disabled>Aucune facture disponible</SelectItem>
-                  ) : (
-                    facturesDisponibles.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>{f.numero} - {f.client?.raisonSociale} ({formatCurrency(f.totalTTC)})</SelectItem>
-                    ))
-                  )}
+                  {facturesDisponibles.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.numero} - {f.client?.raisonSociale} ({formatCurrency(f.totalTTC)})</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
