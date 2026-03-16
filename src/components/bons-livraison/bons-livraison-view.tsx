@@ -86,6 +86,10 @@ export function BonsLivraisonView() {
   const fetchArticles = async () => { try { const res = await fetch('/api/articles'); const d = await res.json(); setArticles(Array.isArray(d) ? d : []); } catch (e) { } };
   const fetchParametres = async () => { try { const res = await fetch('/api/parametres'); const d = await res.json(); setParametres(d); } catch (e) { } };
 
+  // Sorted lists for dropdowns
+  const sortedClients = [...clients].sort((a, b) => a.raisonSociale.localeCompare(b.raisonSociale));
+  const sortedArticles = [...articles].sort((a, b) => a.designation.localeCompare(b.designation));
+
   const calcTotal = () => lignes.reduce((s, l) => s + (l.totalHT || 0), 0);
 
   const updateLigne = (idx: number, field: keyof LigneBL, val: string | number) => {
@@ -344,7 +348,7 @@ export function BonsLivraisonView() {
                 )}
               </div>
               <div><Label>Date</Label><Input type="date" value={formData.dateBL} onChange={(e) => setFormData({ ...formData, dateBL: e.target.value })} required /></div>
-              <div><Label>Client</Label><Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
+              <div><Label>Client</Label><Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{sortedClients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
               <div><Label>Bon de commande</Label><Input placeholder="N° BC client" value={formData.bonCommande} onChange={(e) => setFormData({ ...formData, bonCommande: e.target.value })} /></div>
             </div>
             <div className="border rounded-lg p-4">
@@ -352,7 +356,7 @@ export function BonsLivraisonView() {
               <Table>
                 <TableHeader><TableRow><TableHead>Article</TableHead><TableHead className="w-[400px]">Désignation</TableHead><TableHead>Qté</TableHead><TableHead>P.U.</TableHead><TableHead>Total HT</TableHead><TableHead></TableHead></TableRow></TableHeader>
                 <TableBody>{lignes.map((l, idx) => (<TableRow key={idx}>
-                  <TableCell><Select value={l.articleId || ''} onValueChange={(v) => updateLigne(idx, 'articleId', v)}><SelectTrigger className="w-32"><SelectValue placeholder="..." /></SelectTrigger><SelectContent>{articles.map((a) => (<SelectItem key={a.id} value={a.id}>{a.code}</SelectItem>))}</SelectContent></Select></TableCell>
+                  <TableCell><Select value={l.articleId || ''} onValueChange={(v) => updateLigne(idx, 'articleId', v)}><SelectTrigger className="w-32"><SelectValue placeholder="..." /></SelectTrigger><SelectContent>{sortedArticles.map((a) => (<SelectItem key={a.id} value={a.id}>{a.code}</SelectItem>))}</SelectContent></Select></TableCell>
                   <TableCell><Textarea value={l.designation} onChange={(e) => updateLigne(idx, 'designation', e.target.value)} className="min-h-[40px] min-w-[300px]" /></TableCell>
                   <TableCell><Input type="number" value={l.quantite} onChange={(e) => updateLigne(idx, 'quantite', e.target.value)} className="w-20" /></TableCell>
                   <TableCell><Input type="number" step="0.01" value={l.prixUnitaire} onChange={(e) => updateLigne(idx, 'prixUnitaire', e.target.value)} className="w-24" /></TableCell>

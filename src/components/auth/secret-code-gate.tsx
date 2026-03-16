@@ -33,7 +33,7 @@ export function SecretCodeGate({ children }: SecretCodeGateProps) {
             <h1 className="text-3xl font-bold text-orange-600">GestFact</h1>
             <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-mono font-bold border border-orange-300">AUT01</span>
           </div>
-          <p className="text-sm text-muted-foreground">V1.80</p>
+          <p className="text-sm text-muted-foreground">V1.81</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

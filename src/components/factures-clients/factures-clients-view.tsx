@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, ArrowUp, ArrowDown, ArrowUpDown, ListPlus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
 
@@ -57,6 +58,10 @@ export function FacturesClientsView() {
   const [codeError, setCodeError] = useState(false);
   const [pendingEdit, setPendingEdit] = useState<FactureClient | null>(null);
 
+  // Multi-article dialog
+  const [multiArticleDialogOpen, setMultiArticleDialogOpen] = useState(false);
+  const [selectedArticles, setSelectedArticles] = useState<string[]>([]);
+
   useEffect(() => { fetchFactures(); fetchClients(); fetchArticles(); fetchParametres(); }, []);
   
   useEffect(() => {
@@ -90,6 +95,10 @@ export function FacturesClientsView() {
   const fetchArticles = async () => { try { const res = await fetch('/api/articles'); const d = await res.json(); setArticles(Array.isArray(d) ? d : []); } catch (e) { } };
   const fetchParametres = async () => { try { const res = await fetch('/api/parametres'); const d = await res.json(); setParametres(d); } catch (e) { } };
 
+  // Sorted lists for dropdowns
+  const sortedClients = [...clients].sort((a, b) => a.raisonSociale.localeCompare(b.raisonSociale));
+  const sortedArticles = [...articles].sort((a, b) => a.designation.localeCompare(b.designation));
+
   const calcTotalHT = () => lignes.reduce((s, l) => s + (l.totalHT || 0), 0);
   const calcTotalTVA = () => lignes.reduce((s, l) => s + ((l.totalHT || 0) * parseNumber(l.tauxTVA) / 100), 0);
   const calcTotalTTC = () => calcTotalHT() + calcTotalTVA();
@@ -110,6 +119,36 @@ export function FacturesClientsView() {
 
   const addLigne = () => setLignes([...lignes, { designation: '', quantite: '1', prixUnitaire: '0', tauxTVA: '20', totalHT: 0 }]);
   const removeLigne = (i: number) => { if (lignes.length > 1) setLignes(lignes.filter((_, idx) => idx !== i)); };
+
+  // Add multiple articles
+  const handleAddMultipleArticles = () => {
+    const newLignes = selectedArticles.map(articleId => {
+      const art = articles.find(a => a.id === articleId);
+      if (art) {
+        return {
+          articleId: art.id,
+          designation: art.designation,
+          quantite: '1',
+          prixUnitaire: art.prixUnitaire.toString(),
+          tauxTVA: art.tauxTVA.toString(),
+          totalHT: art.prixUnitaire
+        };
+      }
+      return null;
+    }).filter((l): l is LigneFacture => l !== null);
+    
+    setLignes([...lignes, ...newLignes]);
+    setSelectedArticles([]);
+    setMultiArticleDialogOpen(false);
+  };
+
+  const toggleArticleSelection = (articleId: string) => {
+    setSelectedArticles(prev => 
+      prev.includes(articleId) 
+        ? prev.filter(id => id !== articleId)
+        : [...prev, articleId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -326,16 +365,22 @@ export function FacturesClientsView() {
               <div><Label>Échéance</Label><Input type="date" value={formData.dateEcheance} onChange={(e) => setFormData({ ...formData, dateEcheance: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div><Label>Client</Label><Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
+              <div><Label>Client</Label><Select value={formData.clientId} onValueChange={(v) => setFormData({ ...formData, clientId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{sortedClients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
               <div><Label>Bon de commande</Label><Input placeholder="N° BC client" value={formData.bonCommande} onChange={(e) => setFormData({ ...formData, bonCommande: e.target.value })} /></div>
               <div><Label>N° BL</Label><Input placeholder="N° Bon de livraison" value={formData.numeroBL} onChange={(e) => setFormData({ ...formData, numeroBL: e.target.value })} /></div>
             </div>
             <div className="border rounded-lg p-4">
-              <div className="flex justify-between items-center mb-2"><Label>Lignes</Label><Button type="button" size="sm" variant="outline" onClick={addLigne}>+ Ajouter</Button></div>
+              <div className="flex justify-between items-center mb-2">
+                <Label>Lignes</Label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={() => { setSelectedArticles([]); setMultiArticleDialogOpen(true); }}><ListPlus className="w-4 h-4 mr-1" />Ajouter plusieurs</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={addLigne}>+ Ajouter</Button>
+                </div>
+              </div>
               <Table>
                 <TableHeader><TableRow><TableHead>Article</TableHead><TableHead className="w-[400px]">Désignation</TableHead><TableHead>Qté</TableHead><TableHead>P.U.</TableHead><TableHead>TVA%</TableHead><TableHead>Total HT</TableHead><TableHead></TableHead></TableRow></TableHeader>
                 <TableBody>{lignes.map((l, idx) => (<TableRow key={idx}>
-                  <TableCell><Select value={l.articleId || ''} onValueChange={(v) => updateLigne(idx, 'articleId', v)}><SelectTrigger className="w-32"><SelectValue placeholder="..." /></SelectTrigger><SelectContent>{articles.map((a) => (<SelectItem key={a.id} value={a.id}>{a.code}</SelectItem>))}</SelectContent></Select></TableCell>
+                  <TableCell><Select value={l.articleId || ''} onValueChange={(v) => updateLigne(idx, 'articleId', v)}><SelectTrigger className="w-32"><SelectValue placeholder="..." /></SelectTrigger><SelectContent>{sortedArticles.map((a) => (<SelectItem key={a.id} value={a.id}>{a.code}</SelectItem>))}</SelectContent></Select></TableCell>
                   <TableCell><Textarea value={l.designation} onChange={(e) => updateLigne(idx, 'designation', e.target.value)} className="min-h-[40px] min-w-[300px]" /></TableCell>
                   <TableCell><Input type="text" value={l.quantite} onChange={(e) => updateLigne(idx, 'quantite', e.target.value)} className="w-20" /></TableCell>
                   <TableCell><Input type="text" value={l.prixUnitaire} onChange={(e) => updateLigne(idx, 'prixUnitaire', e.target.value)} className="w-24" /></TableCell>
@@ -356,6 +401,52 @@ export function FacturesClientsView() {
             </div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* Multi-article dialog */}
+      <Dialog open={multiArticleDialogOpen} onOpenChange={setMultiArticleDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ajouter plusieurs articles</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="mb-4 text-sm text-muted-foreground">
+              Cochez les articles à ajouter ({selectedArticles.length} sélectionné{selectedArticles.length > 1 ? 's' : ''})
+            </div>
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12"></TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Désignation</TableHead>
+                    <TableHead>P.U.</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedArticles.map((a) => (
+                    <TableRow key={a.id} className="cursor-pointer hover:bg-gray-50" onClick={() => toggleArticleSelection(a.id)}>
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedArticles.includes(a.id)}
+                          onCheckedChange={() => toggleArticleSelection(a.id)}
+                        />
+                      </TableCell>
+                      <TableCell>{a.code}</TableCell>
+                      <TableCell>{a.designation}</TableCell>
+                      <TableCell>{formatCurrency(a.prixUnitaire)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMultiArticleDialogOpen(false)}>Annuler</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleAddMultipleArticles} disabled={selectedArticles.length === 0}>
+              Ajouter {selectedArticles.length} article{selectedArticles.length > 1 ? 's' : ''}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       {/* Code dialog for validated documents */}
