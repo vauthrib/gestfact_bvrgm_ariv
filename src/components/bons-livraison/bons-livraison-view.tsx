@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown, ListPlus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
 
@@ -56,6 +57,10 @@ export function BonsLivraisonView() {
   const [codeInput, setCodeInput] = useState('');
   const [codeError, setCodeError] = useState(false);
   const [pendingEdit, setPendingEdit] = useState<BonLivraison | null>(null);
+
+  // Multi-article dialog
+  const [multiArticleDialogOpen, setMultiArticleDialogOpen] = useState(false);
+  const [selectedArticles, setSelectedArticles] = useState<string[]>([]);
 
   useEffect(() => { fetchBons(); fetchClients(); fetchArticles(); fetchParametres(); }, []);
   
@@ -108,6 +113,35 @@ export function BonsLivraisonView() {
 
   const addLigne = () => setLignes([...lignes, { designation: '', quantite: 1, prixUnitaire: 0, totalHT: 0 }]);
   const removeLigne = (i: number) => { if (lignes.length > 1) setLignes(lignes.filter((_, idx) => idx !== i)); };
+
+  // Add multiple articles
+  const handleAddMultipleArticles = () => {
+    const newLignes = selectedArticles.map(articleId => {
+      const art = articles.find(a => a.id === articleId);
+      if (art) {
+        return {
+          articleId: art.id,
+          designation: art.designation,
+          quantite: 1,
+          prixUnitaire: art.prixUnitaire,
+          totalHT: art.prixUnitaire
+        };
+      }
+      return null;
+    }).filter((l): l is LigneBL => l !== null);
+    
+    setLignes([...lignes, ...newLignes]);
+    setSelectedArticles([]);
+    setMultiArticleDialogOpen(false);
+  };
+
+  const toggleArticleSelection = (articleId: string) => {
+    setSelectedArticles(prev => 
+      prev.includes(articleId) 
+        ? prev.filter(id => id !== articleId)
+        : [...prev, articleId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,7 +386,13 @@ export function BonsLivraisonView() {
               <div><Label>Bon de commande</Label><Input placeholder="N° BC client" value={formData.bonCommande} onChange={(e) => setFormData({ ...formData, bonCommande: e.target.value })} /></div>
             </div>
             <div className="border rounded-lg p-4">
-              <div className="flex justify-between items-center mb-2"><Label>Lignes</Label><Button type="button" size="sm" variant="outline" onClick={addLigne}>+ Ajouter</Button></div>
+              <div className="flex justify-between items-center mb-2">
+                <Label>Lignes</Label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={() => { setSelectedArticles([]); setMultiArticleDialogOpen(true); }}><ListPlus className="w-4 h-4 mr-1" />Ajouter plusieurs</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={addLigne}>+ Ajouter</Button>
+                </div>
+              </div>
               <Table>
                 <TableHeader><TableRow><TableHead>Article</TableHead><TableHead className="w-[400px]">Désignation</TableHead><TableHead>Qté</TableHead><TableHead>P.U.</TableHead><TableHead>Total HT</TableHead><TableHead></TableHead></TableRow></TableHeader>
                 <TableBody>{lignes.map((l, idx) => (<TableRow key={idx}>
@@ -372,6 +412,52 @@ export function BonsLivraisonView() {
             </div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* Multi-article dialog */}
+      <Dialog open={multiArticleDialogOpen} onOpenChange={setMultiArticleDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ajouter plusieurs articles</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="mb-4 text-sm text-muted-foreground">
+              Cochez les articles à ajouter ({selectedArticles.length} sélectionné{selectedArticles.length > 1 ? 's' : ''})
+            </div>
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12"></TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Désignation</TableHead>
+                    <TableHead>P.U.</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedArticles.map((a) => (
+                    <TableRow key={a.id} className="cursor-pointer hover:bg-gray-50" onClick={() => toggleArticleSelection(a.id)}>
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedArticles.includes(a.id)}
+                          onCheckedChange={() => toggleArticleSelection(a.id)}
+                        />
+                      </TableCell>
+                      <TableCell>{a.code}</TableCell>
+                      <TableCell>{a.designation}</TableCell>
+                      <TableCell>{formatCurrency(a.prixUnitaire)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMultiArticleDialogOpen(false)}>Annuler</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleAddMultipleArticles} disabled={selectedArticles.length === 0}>
+              Ajouter {selectedArticles.length} article{selectedArticles.length > 1 ? 's' : ''}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       {/* Code dialog for validated documents */}
