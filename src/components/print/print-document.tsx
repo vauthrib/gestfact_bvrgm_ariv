@@ -232,6 +232,8 @@ export function PrintDocument({
                     `).join('')}
                   </tbody>
                 </table>
+                ${documentData.infoLibre ? `<p style="margin-top: 10px; font-size: 9pt;"><strong>Info:</strong> ${documentData.infoLibre}</p>` : ''}
+                ${documentData.notes ? `<p style="margin-top: 5px; font-size: 9pt;"><strong>Notes:</strong> ${documentData.notes}</p>` : ''}
               </div>
             ` : ''}
             
@@ -362,6 +364,8 @@ export function PrintDocument({
                 `).join('')}
               </tbody>
             </table>
+            ${documentData.infoLibre ? `<p style="margin-top: 10px; font-size: 9pt;"><strong>Info:</strong> ${documentData.infoLibre}</p>` : ''}
+            ${documentData.notes ? `<p style="margin-top: 5px; font-size: 9pt;"><strong>Notes:</strong> ${documentData.notes}</p>` : ''}
           ` : ''}
           
           ${showPrices ? `
@@ -541,6 +545,12 @@ export function PrintDocument({
                       ))}
                     </tbody>
                   </table>
+                  {documentData.infoLibre && (
+                    <p className="mt-2 text-xs"><strong>Info:</strong> {documentData.infoLibre}</p>
+                  )}
+                  {documentData.notes && (
+                    <p className="mt-1 text-xs"><strong>Notes:</strong> {documentData.notes}</p>
+                  )}
                 </div>
               )}
 
@@ -651,6 +661,17 @@ export function PrintDocument({
                     ))}
                   </tbody>
                 </table>
+              )}
+              
+              {(documentData.infoLibre || documentData.notes) && (
+                <div className="mx-6 mb-4">
+                  {documentData.infoLibre && (
+                    <p className="text-sm"><strong>Info:</strong> {documentData.infoLibre}</p>
+                  )}
+                  {documentData.notes && (
+                    <p className="text-sm"><strong>Notes:</strong> {documentData.notes}</p>
+                  )}
+                </div>
               )}
 
               {showPrices && (
