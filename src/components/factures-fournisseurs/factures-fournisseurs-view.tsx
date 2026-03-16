@@ -58,6 +58,9 @@ export function FacturesFournisseursView() {
   const fetchFactures = async () => { try { const res = await fetch('/api/factures-fournisseurs'); const d = await res.json(); setFactures(Array.isArray(d) ? d : []); } catch (e) { console.error(e); } finally { setLoading(false); } };
   const fetchFournisseurs = async () => { try { const res = await fetch('/api/tiers'); const d = await res.json(); setFournisseurs((Array.isArray(d) ? d : []).filter((t: any) => t.type === 'FOURNISSEUR')); } catch (e) { } };
 
+  // Sorted list for dropdown
+  const sortedFournisseurs = [...fournisseurs].sort((a, b) => a.raisonSociale.localeCompare(b.raisonSociale));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fournisseurId) { alert('Sélectionnez un fournisseur'); return; }
@@ -239,7 +242,7 @@ export function FacturesFournisseursView() {
             <div className="grid grid-cols-3 gap-4">
               <div><Label>N° Facture</Label><Input value={formData.numeroFacture} onChange={(e) => setFormData({ ...formData, numeroFacture: e.target.value })} required /></div>
               <div><Label>Date</Label><Input type="date" value={formData.dateFacture} onChange={(e) => setFormData({ ...formData, dateFacture: e.target.value })} required /></div>
-              <div><Label>Fournisseur</Label><Select value={formData.fournisseurId} onValueChange={(v) => setFormData({ ...formData, fournisseurId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{fournisseurs.map((f) => (<SelectItem key={f.id} value={f.id}>{f.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
+              <div><Label>Fournisseur</Label><Select value={formData.fournisseurId} onValueChange={(v) => setFormData({ ...formData, fournisseurId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{sortedFournisseurs.map((f) => (<SelectItem key={f.id} value={f.id}>{f.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div><Label>Échéance</Label><Input type="date" value={formData.dateEcheance} onChange={(e) => setFormData({ ...formData, dateEcheance: e.target.value })} /></div>
