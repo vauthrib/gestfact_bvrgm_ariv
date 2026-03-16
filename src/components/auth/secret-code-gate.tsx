@@ -30,10 +30,10 @@ export function SecretCodeGate({ children }: SecretCodeGateProps) {
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-2 border-orange-300">
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <h1 className="text-3xl font-bold text-orange-600">GestFact</h1>
-            <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-mono font-bold border border-orange-300">AUT01</span>
+            <h1 className="text-3xl font-bold text-orange-600">RGM GF</h1>
+            <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-mono font-bold border border-orange-300">V1.82</span>
           </div>
-          <p className="text-sm text-muted-foreground">V1.81</p>
+          <p className="text-sm text-muted-foreground">Gestion de Facturation</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
