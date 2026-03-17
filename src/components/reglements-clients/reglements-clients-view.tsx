@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Search, Download, AlertTriangle, CheckCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 
@@ -43,6 +42,8 @@ interface MultiFacturePayment {
   numero: string;
 }
 
+const ALL_CLIENTS = '__ALL__';
+
 export function ReglementsClientsView() {
   const [reglements, setReglements] = useState<ReglementClient[]>([]);
   const [factures, setFactures] = useState<FactureClient[]>([]);
@@ -57,7 +58,7 @@ export function ReglementsClientsView() {
   
   // Multi-facture payment
   const [isMultiPayment, setIsMultiPayment] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedClientId, setSelectedClientId] = useState<string>(ALL_CLIENTS);
   const [multiPayments, setMultiPayments] = useState<MultiFacturePayment[]>([]);
   
   const [formData, setFormData] = useState({
@@ -80,7 +81,6 @@ export function ReglementsClientsView() {
   const calculerResteAPayer = (factureId: string, excludeReglementId?: string) => {
     const facture = factures.find(f => f.id === factureId);
     if (!facture) return 0;
-    // Include both validated and pending payments
     const totalReglements = reglements
       .filter(r => r.factureId === factureId && (!excludeReglementId || r.id !== excludeReglementId))
       .reduce((sum, r) => sum + r.montant, 0);
@@ -90,21 +90,18 @@ export function ReglementsClientsView() {
   const isFactureSoldee = (factureId: string) => {
     const facture = factures.find(f => f.id === factureId);
     if (!facture) return false;
-    // Include both VALIDE and ENREGISTRE payments when checking if soldée
     const totalReglements = reglements
       .filter(r => r.factureId === factureId)
       .reduce((sum, r) => sum + r.montant, 0);
     return totalReglements >= facture.totalTTC;
   };
 
-  // Filter factures by selected client and exclude solded ones
   const facturesDisponibles = factures.filter(f => 
     f.statut === 'VALIDEE' && 
     !isFactureSoldee(f.id) &&
-    (!selectedClientId || f.clientId === selectedClientId)
+    (selectedClientId === ALL_CLIENTS || f.clientId === selectedClientId)
   );
 
-  // Get factures for selected client with their remaining amounts
   const getFacturesForClient = (clientId: string) => {
     return factures
       .filter(f => f.statut === 'VALIDEE' && f.clientId === clientId && !isFactureSoldee(f.id))
@@ -132,7 +129,7 @@ export function ReglementsClientsView() {
     setFormData({ ...formData, factureId: '', montant: '' });
     setResteAPayer(null);
     
-    if (clientId && isMultiPayment) {
+    if (clientId !== ALL_CLIENTS && isMultiPayment) {
       const clientFactures = getFacturesForClient(clientId);
       setMultiPayments(clientFactures);
     } else {
@@ -154,14 +151,12 @@ export function ReglementsClientsView() {
     e.preventDefault();
     
     if (isMultiPayment) {
-      // Multi-facture payment
       const totalMontant = calculateTotalMultiPayment();
       if (totalMontant <= 0) { alert('Montant total invalide'); return; }
       
       const paymentsToCreate = multiPayments.filter(p => parseNumber(p.montant) > 0);
       if (paymentsToCreate.length === 0) { alert('Aucun montant saisi'); return; }
       
-      // Validate each payment doesn't exceed remaining
       for (const p of paymentsToCreate) {
         const montant = parseNumber(p.montant);
         if (montant > p.resteAPayer + 10) {
@@ -169,7 +164,6 @@ export function ReglementsClientsView() {
         }
       }
       
-      // Create each payment
       let successCount = 0;
       for (const p of paymentsToCreate) {
         const montant = parseNumber(p.montant);
@@ -204,7 +198,6 @@ export function ReglementsClientsView() {
       return;
     }
     
-    // Single payment
     if (!formData.factureId) { alert('Sélectionnez une facture'); return; }
     const montant = parseNumber(formData.montant);
     if (montant <= 0) { alert('Montant invalide'); return; }
@@ -219,7 +212,6 @@ export function ReglementsClientsView() {
       if (!confirm(`Petit dépassement détecté: ${formatCurrency(depassement)}.\n\nConfirmer ce règlement?`)) return;
     }
     
-    // Add échéance to infoLibre if EFFET mode
     const infoWithEcheance = formData.modePaiement === 'EFFET' && formData.dateEcheanceEffet
       ? `Échéance: ${formData.dateEcheanceEffet}${formData.infoLibre ? ' | ' + formData.infoLibre : ''}`
       : formData.infoLibre;
@@ -267,7 +259,7 @@ export function ReglementsClientsView() {
     setEditingReglement(null);
     setSelectedFacture(null);
     setResteAPayer(null);
-    setSelectedClientId('');
+    setSelectedClientId(ALL_CLIENTS);
     setIsMultiPayment(false);
     setMultiPayments([]);
   };
@@ -278,11 +270,10 @@ export function ReglementsClientsView() {
     setIsMultiPayment(false);
     const facture = factures.find(f => f.id === r.factureId);
     setSelectedFacture(facture || null);
-    setSelectedClientId(facture?.clientId || '');
+    setSelectedClientId(facture?.clientId || ALL_CLIENTS);
     const reste = calculerResteAPayer(r.factureId, r.id) + r.montant;
     setResteAPayer(reste);
     
-    // Parse échéance from infoLibre if EFFET mode
     let dateEcheanceEffet = '';
     let infoLibre = r.infoLibre || '';
     if (r.modePaiement === 'EFFET' && infoLibre.includes('Échéance:')) {
@@ -432,18 +423,20 @@ export function ReglementsClientsView() {
                 <Label className="text-base font-semibold">Client</Label>
                 {!editingReglement && (
                   <div className="flex items-center gap-2">
-                    <Checkbox 
+                    <input 
+                      type="checkbox" 
                       id="multiPayment" 
                       checked={isMultiPayment} 
-                      onCheckedChange={(checked) => {
-                        setIsMultiPayment(checked as boolean);
-                        if (!checked) {
+                      onChange={(e) => {
+                        setIsMultiPayment(e.target.checked);
+                        if (!e.target.checked) {
                           setMultiPayments([]);
-                        } else if (selectedClientId) {
+                        } else if (selectedClientId !== ALL_CLIENTS) {
                           const clientFactures = getFacturesForClient(selectedClientId);
                           setMultiPayments(clientFactures);
                         }
                       }}
+                      className="w-4 h-4"
                     />
                     <label htmlFor="multiPayment" className="text-sm cursor-pointer">Paiement multi-factures</label>
                   </div>
@@ -458,7 +451,7 @@ export function ReglementsClientsView() {
                   <SelectValue placeholder="Sélectionner un client (optionnel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les clients</SelectItem>
+                  <SelectItem value={ALL_CLIENTS}>Tous les clients</SelectItem>
                   {tiers.map((t) => (
                     <SelectItem key={t.id} value={t.id}>{t.raisonSociale}</SelectItem>
                   ))}
@@ -472,7 +465,7 @@ export function ReglementsClientsView() {
                 <Label className="text-base font-semibold mb-2 block">Répartition du paiement</Label>
                 {multiPayments.length === 0 ? (
                   <div className="text-center text-muted-foreground py-4">
-                    {selectedClientId ? 'Aucune facture impayée pour ce client' : 'Sélectionnez un client pour voir ses factures'}
+                    {selectedClientId !== ALL_CLIENTS ? 'Aucune facture impayée pour ce client' : 'Sélectionnez un client pour voir ses factures'}
                   </div>
                 ) : (
                   <>
@@ -522,7 +515,7 @@ export function ReglementsClientsView() {
                     <SelectTrigger><SelectValue placeholder="Sélectionner une facture non soldée" /></SelectTrigger>
                     <SelectContent>
                       {facturesDisponibles.length === 0 ? (
-                        <SelectItem value="" disabled>Aucune facture disponible</SelectItem>
+                        <SelectItem value="__NONE__" disabled>Aucune facture disponible</SelectItem>
                       ) : (
                         facturesDisponibles.map((f) => (
                           <SelectItem key={f.id} value={f.id}>{f.numero} - {f.client?.raisonSociale} ({formatCurrency(f.totalTTC)})</SelectItem>

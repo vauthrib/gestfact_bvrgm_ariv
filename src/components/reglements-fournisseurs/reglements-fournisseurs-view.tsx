@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Pencil, Trash2, Search, Download, AlertTriangle, CheckCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExportDialog } from '@/components/import-export/export-dialog';
@@ -42,6 +41,8 @@ interface MultiFacturePayment {
   numeroFacture: string;
 }
 
+const ALL_FOURNISSEURS = '__ALL__';
+
 export function ReglementsFournisseursView() {
   const [reglements, setReglements] = useState<ReglementFournisseur[]>([]);
   const [factures, setFactures] = useState<FactureFournisseur[]>([]);
@@ -56,7 +57,7 @@ export function ReglementsFournisseursView() {
   
   // Multi-facture payment
   const [isMultiPayment, setIsMultiPayment] = useState(false);
-  const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>('');
+  const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>(ALL_FOURNISSEURS);
   const [multiPayments, setMultiPayments] = useState<MultiFacturePayment[]>([]);
   
   const [formData, setFormData] = useState({
@@ -79,7 +80,6 @@ export function ReglementsFournisseursView() {
   const calculerResteAPayer = (factureId: string, excludeReglementId?: string) => {
     const facture = factures.find(f => f.id === factureId);
     if (!facture) return 0;
-    // Include both validated and pending payments
     const totalReglements = reglements
       .filter(r => r.factureId === factureId && (!excludeReglementId || r.id !== excludeReglementId))
       .reduce((sum, r) => sum + r.montant, 0);
@@ -89,21 +89,18 @@ export function ReglementsFournisseursView() {
   const isFactureSoldee = (factureId: string) => {
     const facture = factures.find(f => f.id === factureId);
     if (!facture) return false;
-    // Include both VALIDE and ENREGISTRE payments when checking if soldée
     const totalReglements = reglements
       .filter(r => r.factureId === factureId)
       .reduce((sum, r) => sum + r.montant, 0);
     return totalReglements >= facture.montantTTC;
   };
 
-  // Filter factures by selected fournisseur and exclude solded ones
   const facturesDisponibles = factures.filter(f => 
     f.statut === 'VALIDEE' && 
     !isFactureSoldee(f.id) &&
-    (!selectedFournisseurId || f.fournisseurId === selectedFournisseurId)
+    (selectedFournisseurId === ALL_FOURNISSEURS || f.fournisseurId === selectedFournisseurId)
   );
 
-  // Get factures for selected fournisseur with their remaining amounts
   const getFacturesForFournisseur = (fournisseurId: string) => {
     return factures
       .filter(f => f.statut === 'VALIDEE' && f.fournisseurId === fournisseurId && !isFactureSoldee(f.id))
@@ -131,7 +128,7 @@ export function ReglementsFournisseursView() {
     setFormData({ ...formData, factureId: '', montant: '' });
     setResteAPayer(null);
     
-    if (fournisseurId && isMultiPayment) {
+    if (fournisseurId !== ALL_FOURNISSEURS && isMultiPayment) {
       const fournisseurFactures = getFacturesForFournisseur(fournisseurId);
       setMultiPayments(fournisseurFactures);
     } else {
@@ -153,14 +150,12 @@ export function ReglementsFournisseursView() {
     e.preventDefault();
     
     if (isMultiPayment) {
-      // Multi-facture payment
       const totalMontant = calculateTotalMultiPayment();
       if (totalMontant <= 0) { alert('Montant total invalide'); return; }
       
       const paymentsToCreate = multiPayments.filter(p => parseNumber(p.montant) > 0);
       if (paymentsToCreate.length === 0) { alert('Aucun montant saisi'); return; }
       
-      // Validate each payment doesn't exceed remaining
       for (const p of paymentsToCreate) {
         const montant = parseNumber(p.montant);
         if (montant > p.resteAPayer + 10) {
@@ -168,7 +163,6 @@ export function ReglementsFournisseursView() {
         }
       }
       
-      // Create each payment
       let successCount = 0;
       for (const p of paymentsToCreate) {
         const montant = parseNumber(p.montant);
@@ -203,7 +197,6 @@ export function ReglementsFournisseursView() {
       return;
     }
     
-    // Single payment
     if (!formData.factureId) { alert('Sélectionnez une facture'); return; }
     const montant = parseNumber(formData.montant);
     if (montant <= 0) { alert('Montant invalide'); return; }
@@ -213,7 +206,6 @@ export function ReglementsFournisseursView() {
     if (depassement > 10) { if (!confirm(`Dépassement de ${formatCurrency(depassement)}. Continuer?`)) return; }
     else if (depassement > 0) { if (!confirm(`Petit dépassement: ${formatCurrency(depassement)}. Confirmer?`)) return; }
     
-    // Add échéance to infoLibre if EFFET mode
     const infoWithEcheance = formData.modePaiement === 'EFFET' && formData.dateEcheanceEffet
       ? `Échéance: ${formData.dateEcheanceEffet}${formData.infoLibre ? ' | ' + formData.infoLibre : ''}`
       : formData.infoLibre;
@@ -253,7 +245,7 @@ export function ReglementsFournisseursView() {
     setEditingReglement(null); 
     setSelectedFacture(null); 
     setResteAPayer(null);
-    setSelectedFournisseurId('');
+    setSelectedFournisseurId(ALL_FOURNISSEURS);
     setIsMultiPayment(false);
     setMultiPayments([]);
   };
@@ -264,11 +256,10 @@ export function ReglementsFournisseursView() {
     setIsMultiPayment(false);
     const facture = factures.find(f => f.id === r.factureId);
     setSelectedFacture(facture || null);
-    setSelectedFournisseurId(facture?.fournisseurId || '');
+    setSelectedFournisseurId(facture?.fournisseurId || ALL_FOURNISSEURS);
     const reste = calculerResteAPayer(r.factureId, r.id) + r.montant;
     setResteAPayer(reste);
     
-    // Parse échéance from infoLibre if EFFET mode
     let dateEcheanceEffet = '';
     let infoLibre = r.infoLibre || '';
     if (r.modePaiement === 'EFFET' && infoLibre.includes('Échéance:')) {
@@ -407,18 +398,20 @@ export function ReglementsFournisseursView() {
                 <Label className="text-base font-semibold">Fournisseur</Label>
                 {!editingReglement && (
                   <div className="flex items-center gap-2">
-                    <Checkbox 
+                    <input 
+                      type="checkbox" 
                       id="multiPaymentFourn" 
                       checked={isMultiPayment} 
-                      onCheckedChange={(checked) => {
-                        setIsMultiPayment(checked as boolean);
-                        if (!checked) {
+                      onChange={(e) => {
+                        setIsMultiPayment(e.target.checked);
+                        if (!e.target.checked) {
                           setMultiPayments([]);
-                        } else if (selectedFournisseurId) {
+                        } else if (selectedFournisseurId !== ALL_FOURNISSEURS) {
                           const fournisseurFactures = getFacturesForFournisseur(selectedFournisseurId);
                           setMultiPayments(fournisseurFactures);
                         }
                       }}
+                      className="w-4 h-4"
                     />
                     <label htmlFor="multiPaymentFourn" className="text-sm cursor-pointer">Paiement multi-factures</label>
                   </div>
@@ -433,7 +426,7 @@ export function ReglementsFournisseursView() {
                   <SelectValue placeholder="Sélectionner un fournisseur (optionnel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les fournisseurs</SelectItem>
+                  <SelectItem value={ALL_FOURNISSEURS}>Tous les fournisseurs</SelectItem>
                   {tiers.map((t) => (
                     <SelectItem key={t.id} value={t.id}>{t.raisonSociale}</SelectItem>
                   ))}
@@ -447,7 +440,7 @@ export function ReglementsFournisseursView() {
                 <Label className="text-base font-semibold mb-2 block">Répartition du paiement</Label>
                 {multiPayments.length === 0 ? (
                   <div className="text-center text-muted-foreground py-4">
-                    {selectedFournisseurId ? 'Aucune facture impayée pour ce fournisseur' : 'Sélectionnez un fournisseur pour voir ses factures'}
+                    {selectedFournisseurId !== ALL_FOURNISSEURS ? 'Aucune facture impayée pour ce fournisseur' : 'Sélectionnez un fournisseur pour voir ses factures'}
                   </div>
                 ) : (
                   <>
@@ -496,7 +489,7 @@ export function ReglementsFournisseursView() {
                   <Select value={formData.factureId} onValueChange={handleFactureChange} disabled={!!editingReglement}>
                     <SelectTrigger><SelectValue placeholder="Sélectionner une facture non soldée" /></SelectTrigger>
                     <SelectContent>
-                      {facturesDisponibles.length === 0 ? <SelectItem value="" disabled>Aucune facture disponible</SelectItem>
+                      {facturesDisponibles.length === 0 ? <SelectItem value="__NONE__" disabled>Aucune facture disponible</SelectItem>
                         : facturesDisponibles.map((f) => (<SelectItem key={f.id} value={f.id}>{f.numeroFacture} - {f.fournisseur?.raisonSociale} ({formatCurrency(f.montantTTC)})</SelectItem>))}
                     </SelectContent>
                   </Select>
