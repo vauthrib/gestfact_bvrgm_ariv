@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, FileSpreadsheet, FileText, AlertCircle, CheckCircle, Users, Package, FileText as FactureIcon, CreditCard, Truck, Lock } from 'lucide-react';
+import { Upload, FileSpreadsheet, FileText, AlertCircle, CheckCircle, Users, Package, FileText as FactureIcon, CreditCard, Truck, Lock, Download, Database } from 'lucide-react';
 
 interface ImportCentralDialogProps {
   open: boolean;
@@ -35,6 +35,12 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Import All state
+  const [importAllFile, setImportAllFile] = useState<File | null>(null);
+  const [importAllLoading, setImportAllLoading] = useState(false);
+  const [importAllResult, setImportAllResult] = useState<{ success: boolean; message: string; results?: any[] } | null>(null);
+  const importAllInputRef = useRef<HTMLInputElement>(null);
 
   const handleCodeSubmit = () => {
     if (codeInput === SECRET_CODE) {
@@ -92,6 +98,64 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
     }
   };
 
+  // Export All handler
+  const handleExportAll = () => {
+    window.open('/api/export-all', '_blank');
+  };
+
+  // Import All handlers
+  const handleImportAllFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase();
+      if (ext === 'csv') {
+        setImportAllFile(selectedFile);
+        setImportAllResult(null);
+      } else {
+        alert('Format non supporté. Utilisez un fichier .csv exporté avec "Export All"');
+      }
+    }
+  };
+
+  const handleImportAll = async () => {
+    if (!importAllFile) return;
+
+    setImportAllLoading(true);
+    setImportAllResult(null);
+
+    const formData = new FormData();
+    formData.append('file', importAllFile);
+
+    try {
+      const res = await fetch('/api/import-all', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        const totalCount = data.results?.reduce((sum: number, r: any) => sum + r.count, 0) || 0;
+        setImportAllResult({ 
+          success: true, 
+          message: `Import réussi: ${totalCount} enregistrements`, 
+          results: data.results 
+        });
+        setTimeout(() => {
+          setImportAllFile(null);
+          setImportAllResult(null);
+          if (importAllInputRef.current) importAllInputRef.current.value = '';
+        }, 3000);
+      } else {
+        setImportAllResult({ success: false, message: data.error || 'Erreur lors de l\'import' });
+      }
+    } catch (e) {
+      setImportAllResult({ success: false, message: 'Erreur serveur' });
+    } finally {
+      setImportAllLoading(false);
+    }
+  };
+
   const resetImportForm = () => {
     setFile(null);
     setResult(null);
@@ -106,6 +170,8 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
       setCodeInput('');
       setCodeError(false);
       resetImportForm();
+      setImportAllFile(null);
+      setImportAllResult(null);
     }
     onOpenChange(open);
   };
@@ -164,8 +230,79 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
 
         {step === 'imports' && (
           <div className="space-y-4">
+            {/* EXPORT ALL / IMPORT ALL Buttons */}
+            <div className="border-b pb-4 mb-4">
+              <Label className="text-base font-semibold text-green-700 mb-3 block">Actions globales</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  className="bg-green-600 hover:bg-green-700 h-auto py-3 flex-col"
+                  onClick={handleExportAll}
+                >
+                  <Download className="w-5 h-5 mb-1" />
+                  <span className="text-sm font-semibold">EXPORT ALL</span>
+                  <span className="text-xs opacity-80">Toutes les données</span>
+                </Button>
+                
+                <div className="space-y-2">
+                  <input
+                    ref={importAllInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleImportAllFileChange}
+                    className="hidden"
+                    id="file-import-all"
+                  />
+                  {!importAllFile ? (
+                    <label htmlFor="file-import-all" className="cursor-pointer">
+                      <Button
+                        variant="outline"
+                        className="w-full border-green-300 text-green-700 hover:bg-green-50 h-auto py-3 flex-col"
+                        asChild
+                      >
+                        <span>
+                          <Database className="w-5 h-5 mb-1" />
+                          <span className="text-sm font-semibold">IMPORT ALL</span>
+                          <span className="text-xs opacity-80">Restaurer les données</span>
+                        </span>
+                      </Button>
+                    </label>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-2 bg-green-50 rounded text-sm">
+                        <FileText className="w-4 h-4 text-green-600" />
+                        <span className="truncate flex-1">{importAllFile.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setImportAllFile(null); setImportAllResult(null); }}
+                          className="h-6 w-6 p-0"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                      <Button
+                        className="w-full bg-green-600 hover:bg-green-700"
+                        onClick={handleImportAll}
+                        disabled={importAllLoading}
+                      >
+                        {importAllLoading ? 'Import en cours...' : 'Importer tout'}
+                      </Button>
+                    </div>
+                  )}
+                  {importAllResult && (
+                    <div className={`flex items-center gap-2 p-2 rounded text-sm ${importAllResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {importAllResult.success ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      {importAllResult.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Individual imports */}
             {!selectedType ? (
               <>
+                <Label className="text-base font-semibold text-muted-foreground">Import individuel</Label>
                 <p className="text-sm text-muted-foreground mb-2">Sélectionnez le type de données à importer :</p>
                 <div className="grid grid-cols-2 gap-2">
                   {importOptions.map((option) => (

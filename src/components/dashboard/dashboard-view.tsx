@@ -245,7 +245,7 @@ export function DashboardView() {
         }
       }
 
-      // Sort by date
+      // Sort by date ascending first to calculate running balance correctly
       lines.sort((a, b) => a.date.getTime() - b.date.getTime());
 
       // Calculate running balance
@@ -260,6 +260,9 @@ export function DashboardView() {
         }
         line.solde = runningSolde;
       });
+
+      // Sort by date descending for display (most recent first)
+      lines.sort((a, b) => b.date.getTime() - a.date.getTime());
 
       setReleveData(lines);
       setReleveDialogOpen(false);
@@ -277,7 +280,8 @@ export function DashboardView() {
     const isClient = releveForm.tierType === 'CLIENT';
     const totalDebit = releveData.reduce((s, l) => s + l.debit, 0);
     const totalCredit = releveData.reduce((s, l) => s + l.credit, 0);
-    const finalSolde = releveData.length > 0 ? releveData[releveData.length - 1].solde : 0;
+    // Since data is sorted descending (most recent first), first element has the final solde
+    const finalSolde = releveData.length > 0 ? releveData[0].solde : 0;
 
     const html = `
       <!DOCTYPE html>
@@ -403,7 +407,8 @@ export function DashboardView() {
 
   const totalDebit = releveData.reduce((s, l) => s + l.debit, 0);
   const totalCredit = releveData.reduce((s, l) => s + l.credit, 0);
-  const finalSolde = releveData.length > 0 ? releveData[releveData.length - 1].solde : 0;
+  // Since data is sorted descending (most recent first), first element has the final solde
+  const finalSolde = releveData.length > 0 ? releveData[0].solde : 0;
   const isClient = releveForm.tierType === 'CLIENT';
 
   return (
@@ -411,7 +416,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V1.87</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V1.91</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
