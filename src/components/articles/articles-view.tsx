@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, Package, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Package, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 
 interface Article {
@@ -18,6 +18,9 @@ interface Article {
 
 const parseNumber = (v: string) => { if (!v) return 0; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}\tDH`;
+
+type SortField = 'code' | 'designation' | 'prixUnitaire' | 'tauxTVA' | 'statut';
+type SortDirection = 'asc' | 'desc';
 
 export function ArticlesView() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -29,6 +32,10 @@ export function ArticlesView() {
   const [formData, setFormData] = useState({
     code: '', designation: '', prixUnitaire: '', unite: 'pièce', tauxTVA: '20', infoLibre: '', actif: true
   });
+  
+  // Sorting - default by designation ascending
+  const [sortField, setSortField] = useState<SortField>('designation');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   useEffect(() => { fetchArticles(); }, []);
 
@@ -80,7 +87,39 @@ export function ArticlesView() {
   };
 
   const generateCode = () => setFormData({ ...formData, code: `ART${(articles.length + 1).toString().padStart(4, '0')}` });
-  const filteredArticles = articles.filter(a => a.designation?.toLowerCase().includes(search.toLowerCase()) || a.code?.toLowerCase().includes(search.toLowerCase()));
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 ml-1 inline opacity-50" />;
+    return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4 ml-1 inline" /> : <ArrowDown className="w-4 h-4 ml-1 inline" />;
+  };
+
+  // Filter and sort
+  const filteredArticles = articles
+    .filter(a => a.designation?.toLowerCase().includes(search.toLowerCase()) || a.code?.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      let valA: any, valB: any;
+      switch (sortField) {
+        case 'code': valA = a.code || ''; valB = b.code || ''; break;
+        case 'designation': valA = a.designation || ''; valB = b.designation || ''; break;
+        case 'prixUnitaire': valA = a.prixUnitaire; valB = b.prixUnitaire; break;
+        case 'tauxTVA': valA = a.tauxTVA; valB = b.tauxTVA; break;
+        case 'statut': valA = a.actif ? 1 : 0; valB = b.actif ? 1 : 0; break;
+        default: return 0;
+      }
+      if (typeof valA === 'string') {
+        return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      return sortDirection === 'asc' ? valA - valB : valB - valA;
+    });
 
   if (loading) return <div className="p-8">Chargement...</div>;
 
@@ -100,7 +139,17 @@ export function ArticlesView() {
           <div className="mb-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" /></div></div>
           {filteredArticles.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucun article</div> : (
             <Table>
-              <TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Désignation</TableHead><TableHead>P.U. HT</TableHead><TableHead>Unité</TableHead><TableHead>TVA</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('code')}>Code <SortIcon field="code" /></TableHead>
+                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('designation')}>Désignation <SortIcon field="designation" /></TableHead>
+                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('prixUnitaire')}>P.U. HT <SortIcon field="prixUnitaire" /></TableHead>
+                  <TableHead>Unité</TableHead>
+                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('tauxTVA')}>TVA <SortIcon field="tauxTVA" /></TableHead>
+                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('statut')}>Statut <SortIcon field="statut" /></TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>{filteredArticles.map((a) => (<TableRow key={a.id}>
                 <TableCell className="font-medium">{a.code}</TableCell>
                 <TableCell>{a.designation}</TableCell>
