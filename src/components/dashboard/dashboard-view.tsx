@@ -180,23 +180,24 @@ export function DashboardView() {
             const matchTier = f[tierField] === releveForm.tierId;
             const date = new Date(f.dateFacture);
             const matchDate = (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
-            // Only include validated factures (VALIDEE)
-            return matchTier && matchDate && f.statut === 'VALIDEE';
+            // Include ALL factures (not just validated)
+            return matchTier && matchDate;
           })
           .forEach((f: any) => {
+            const isValidated = f.statut === 'VALIDEE';
             // Pour les clients: factures = crédit (ils nous doivent), règlements = débit
             // Pour les fournisseurs: factures = débit (on leur doit), règlements = crédit
             lines.push({
               date: new Date(f.dateFacture),
               dateStr: formatDate(f.dateFacture),
-              type: 'Facture',
+              type: isValidated ? 'Facture' : 'Facture (en attente)',
               numero: f.numero,
               debit: isClient ? 0 : (f.totalTTC || 0),
               credit: isClient ? (f.totalTTC || 0) : 0,
               soldeReel: 0,
               soldeEnCours: 0,
               statut: f.statut,
-              isValidated: true
+              isValidated: isValidated
             });
           });
       }
@@ -436,7 +437,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V1.92</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V1.93</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
