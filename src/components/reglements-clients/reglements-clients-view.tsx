@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, Download, AlertTriangle, CheckCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Download, AlertTriangle, CheckCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight } from 'lucide-react';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 
 interface ReglementClient {
@@ -42,6 +42,17 @@ interface MultiFacturePayment {
   numero: string;
 }
 
+interface GroupedReglement {
+  baseNumber: string;
+  dateReglement: string;
+  client: string;
+  modePaiement: string;
+  reference: string | null;
+  statut: string;
+  totalMontant: number;
+  reglements: ReglementClient[];
+}
+
 const ALL_CLIENTS = '__ALL__';
 
 export function ReglementsClientsView() {
@@ -55,6 +66,7 @@ export function ReglementsClientsView() {
   const [editingReglement, setEditingReglement] = useState<ReglementClient | null>(null);
   const [selectedFacture, setSelectedFacture] = useState<FactureClient | null>(null);
   const [resteAPayer, setResteAPayer] = useState<number | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   
   // Multi-facture payment
   const [isMultiPayment, setIsMultiPayment] = useState(false);
@@ -115,6 +127,75 @@ export function ReglementsClientsView() {
       .filter(f => f.resteAPayer > 0);
   };
 
+  // Group reglements by base number
+  const groupReglements = (reglements: ReglementClient[]): (GroupedReglement | ReglementClient)[] => {
+    const groups: { [key: string]: GroupedReglement } = {};
+    const singles: (GroupedReglement | ReglementClient)[] = [];
+    
+    // Sort by numero to group properly
+    const sorted = [...reglements].sort((a, b) => a.numero.localeCompare(b.numero));
+    
+    for (const r of sorted) {
+      // Check if numero has a suffix (e.g., RC00001-a)
+      const match = r.numero.match(/^(.+)-([a-z])$/);
+      if (match) {
+        const baseNumber = match[1];
+        if (!groups[baseNumber]) {
+          groups[baseNumber] = {
+            baseNumber,
+            dateReglement: r.dateReglement,
+            client: r.facture?.client?.raisonSociale || '',
+            modePaiement: r.modePaiement,
+            reference: r.reference,
+            statut: r.statut,
+            totalMontant: 0,
+            reglements: []
+          };
+        }
+        groups[baseNumber].totalMontant += r.montant;
+        groups[baseNumber].reglements.push(r);
+        // Update statut if any is pending
+        if (r.statut === 'ENREGISTRE') {
+          groups[baseNumber].statut = 'ENREGISTRE';
+        }
+      } else {
+        // Single reglement (no suffix)
+        singles.push(r);
+      }
+    }
+    
+    // Combine groups and singles
+    const result: (GroupedReglement | ReglementClient)[] = [];
+    
+    // Add groups first
+    for (const baseNumber of Object.keys(groups).sort((a, b) => b.localeCompare(a))) {
+      result.push(groups[baseNumber]);
+    }
+    
+    // Add singles that are not part of a group
+    const groupBaseNumbers = new Set(Object.keys(groups));
+    for (const r of sorted) {
+      const match = r.numero.match(/^(.+)-([a-z])$/);
+      if (!match && !groupBaseNumbers.has(r.numero)) {
+        result.push(r);
+      }
+    }
+    
+    return result;
+  };
+
+  const toggleGroup = (baseNumber: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(baseNumber)) {
+        next.delete(baseNumber);
+      } else {
+        next.add(baseNumber);
+      }
+      return next;
+    });
+  };
+
   const handleFactureChange = (factureId: string) => {
     const facture = factures.find(f => f.id === factureId);
     setSelectedFacture(facture || null);
@@ -164,40 +245,39 @@ export function ReglementsClientsView() {
         }
       }
       
-      let successCount = 0;
-      for (const p of paymentsToCreate) {
-        const montant = parseNumber(p.montant);
-        const infoWithEcheance = formData.modePaiement === 'EFFET' && formData.dateEcheanceEffet
-          ? `Échéance: ${formData.dateEcheanceEffet}${formData.infoLibre ? ' | ' + formData.infoLibre : ''}`
-          : formData.infoLibre;
+      try {
+        const res = await fetch('/api/reglements-clients', {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            multiPayments: paymentsToCreate.map(p => ({
+              factureId: p.factureId,
+              montant: parseNumber(p.montant)
+            })),
+            dateReglement: formData.dateReglement,
+            modePaiement: formData.modePaiement,
+            reference: formData.reference,
+            infoLibre: formData.infoLibre,
+            notes: formData.notes,
+            dateEcheanceEffet: formData.dateEcheanceEffet
+          })
+        });
         
-        try {
-          const res = await fetch('/api/reglements-clients', {
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              factureId: p.factureId, 
-              dateReglement: formData.dateReglement,
-              montant,
-              modePaiement: formData.modePaiement,
-              reference: formData.reference,
-              infoLibre: infoWithEcheance,
-              notes: formData.notes
-            })
-          });
-          if (res.ok) successCount++;
-        } catch (e) { console.error(e); }
-      }
-      
-      if (successCount > 0) {
-        setDialogOpen(false);
-        resetForm();
-        fetchReglements();
-        alert(`${successCount} règlement(s) créé(s) avec succès`);
-      }
+        if (res.ok) {
+          const result = await res.json();
+          setDialogOpen(false);
+          resetForm();
+          fetchReglements();
+          alert(`Règlement groupé ${result.baseNumber} créé avec ${result.count} éclaté(s)`);
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Erreur');
+        }
+      } catch (e) { console.error(e); alert('Erreur serveur'); }
       return;
     }
     
+    // Single payment
     if (!formData.factureId) { alert('Sélectionnez une facture'); return; }
     const montant = parseNumber(formData.montant);
     if (montant <= 0) { alert('Montant invalide'); return; }
@@ -241,6 +321,20 @@ export function ReglementsClientsView() {
     } catch (e) { console.error(e); }
   };
 
+  const handleValidateGroup = async (baseNumber: string, reglements: ReglementClient[]) => {
+    if (!confirm(`Valider tous les règlements du groupe ${baseNumber} ?`)) return;
+    let successCount = 0;
+    for (const r of reglements) {
+      if (r.statut === 'ENREGISTRE') {
+        try {
+          const res = await fetch(`/api/reglements-clients/${r.id}/validate`, { method: 'POST' });
+          if (res.ok) successCount++;
+        } catch (e) { console.error(e); }
+      }
+    }
+    if (successCount > 0) fetchReglements();
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce règlement ?')) return;
     try {
@@ -248,6 +342,20 @@ export function ReglementsClientsView() {
       if (res.ok) fetchReglements();
       else { const err = await res.json(); alert(err.error || 'Erreur'); }
     } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteGroup = async (baseNumber: string, reglements: ReglementClient[]) => {
+    if (!confirm(`Supprimer tous les règlements du groupe ${baseNumber} ?`)) return;
+    let successCount = 0;
+    for (const r of reglements) {
+      if (r.statut !== 'VALIDE') {
+        try {
+          const res = await fetch(`/api/reglements-clients?id=${r.id}`, { method: 'DELETE' });
+          if (res.ok) successCount++;
+        } catch (e) { console.error(e); }
+      }
+    }
+    if (successCount > 0) fetchReglements();
   };
 
   const resetForm = () => {
@@ -344,6 +452,10 @@ export function ReglementsClientsView() {
       return sortDirection === 'asc' ? valA - valB : valB - valA;
     });
 
+  // Group the filtered reglements
+  const groupedData = groupReglements(filteredReglements);
+  const isGroupedReglement = (item: any): item is GroupedReglement => 'reglements' in item;
+
   if (loading) return <div className="p-8">Chargement...</div>;
 
   return (
@@ -376,10 +488,11 @@ export function ReglementsClientsView() {
               <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>Effacer</Button>
             )}
           </div>
-          {filteredReglements.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucun règlement</div> : (
+          {groupedData.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucun règlement</div> : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8"></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('numero')}>N° <SortIcon field="numero" /></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('dateReglement')}>Date <SortIcon field="dateReglement" /></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('client')}>Client <SortIcon field="client" /></TableHead>
@@ -390,20 +503,117 @@ export function ReglementsClientsView() {
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>{filteredReglements.map((r) => (<TableRow key={r.id}>
-                <TableCell className="font-medium">{r.numero}</TableCell>
-                <TableCell>{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
-                <TableCell>{r.facture?.client?.raisonSociale}</TableCell>
-                <TableCell>{r.facture?.numero}</TableCell>
-                <TableCell>{formatCurrency(r.montant)}</TableCell>
-                <TableCell>{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{r.statut === 'VALIDE' ? 'Validé' : 'En attente'}</span></TableCell>
-                <TableCell><div className="flex gap-2">
-                  {r.statut === 'ENREGISTRE' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
-                  <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier"><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
-                </div></TableCell>
-              </TableRow>))}</TableBody>
+              <TableBody>
+                {groupedData.map((item) => {
+                  if (isGroupedReglement(item)) {
+                    // Grouped reglement row
+                    const isExpanded = expandedGroups.has(item.baseNumber);
+                    const hasPending = item.statut === 'ENREGISTRE';
+                    
+                    return (
+                      <>
+                        <TableRow key={item.baseNumber} className="bg-green-50 font-semibold">
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => toggleGroup(item.baseNumber)}>
+                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="font-bold text-green-700">{item.baseNumber}</TableCell>
+                          <TableCell>{new Date(item.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
+                          <TableCell>{item.client}</TableCell>
+                          <TableCell className="text-green-600 italic">{item.reglements.length} facture(s)</TableCell>
+                          <TableCell className="font-bold text-green-700">{formatCurrency(item.totalMontant)}</TableCell>
+                          <TableCell>{getModePaiementDisplay(item.modePaiement, null)}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded text-xs ${item.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              {item.statut === 'VALIDE' ? 'Validé' : 'En attente'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {hasPending && (
+                                <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidateGroup(item.baseNumber, item.reglements)} title="Valider tout">
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {!item.reglements.some(r => r.statut === 'VALIDE') && (
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteGroup(item.baseNumber, item.reglements)} title="Supprimer tout">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && item.reglements.map((r) => (
+                          <TableRow key={r.id} className="bg-gray-50">
+                            <TableCell></TableCell>
+                            <TableCell className="pl-8 text-sm text-muted-foreground">{r.numero}</TableCell>
+                            <TableCell className="text-sm">{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
+                            <TableCell className="text-sm">{r.facture?.client?.raisonSociale}</TableCell>
+                            <TableCell className="text-sm">{r.facture?.numero}</TableCell>
+                            <TableCell className="text-sm">{formatCurrency(r.montant)}</TableCell>
+                            <TableCell className="text-sm">{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
+                            <TableCell className="text-sm">
+                              <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                {r.statut === 'VALIDE' ? 'Validé' : 'En attente'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                {r.statut === 'ENREGISTRE' && (
+                                  <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)} title="Valider">
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    );
+                  } else {
+                    // Single reglement row
+                    const r = item as ReglementClient;
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell></TableCell>
+                        <TableCell className="font-medium">{r.numero}</TableCell>
+                        <TableCell>{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
+                        <TableCell>{r.facture?.client?.raisonSociale}</TableCell>
+                        <TableCell>{r.facture?.numero}</TableCell>
+                        <TableCell>{formatCurrency(r.montant)}</TableCell>
+                        <TableCell>{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {r.statut === 'VALIDE' ? 'Validé' : 'En attente'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {r.statut === 'ENREGISTRE' && (
+                              <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)} title="Valider">
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                })}
+              </TableBody>
             </Table>
           )}
         </CardContent>

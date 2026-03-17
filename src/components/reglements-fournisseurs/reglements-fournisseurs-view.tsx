@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, Download, AlertTriangle, CheckCircle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Download, AlertTriangle, CheckCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 
@@ -41,6 +41,17 @@ interface MultiFacturePayment {
   numeroFacture: string;
 }
 
+interface GroupedReglement {
+  baseNumber: string;
+  dateReglement: string;
+  fournisseur: string;
+  modePaiement: string;
+  reference: string | null;
+  statut: string;
+  totalMontant: number;
+  reglements: ReglementFournisseur[];
+}
+
 const ALL_FOURNISSEURS = '__ALL__';
 
 export function ReglementsFournisseursView() {
@@ -54,8 +65,8 @@ export function ReglementsFournisseursView() {
   const [editingReglement, setEditingReglement] = useState<ReglementFournisseur | null>(null);
   const [selectedFacture, setSelectedFacture] = useState<FactureFournisseur | null>(null);
   const [resteAPayer, setResteAPayer] = useState<number | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   
-  // Multi-facture payment
   const [isMultiPayment, setIsMultiPayment] = useState(false);
   const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>(ALL_FOURNISSEURS);
   const [multiPayments, setMultiPayments] = useState<MultiFacturePayment[]>([]);
@@ -66,7 +77,6 @@ export function ReglementsFournisseursView() {
     dateEcheanceEffet: ''
   });
   
-  // Sorting and filtering
   const [sortField, setSortField] = useState<SortField>('dateReglement');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [dateFrom, setDateFrom] = useState('');
@@ -89,9 +99,7 @@ export function ReglementsFournisseursView() {
   const isFactureSoldee = (factureId: string) => {
     const facture = factures.find(f => f.id === factureId);
     if (!facture) return false;
-    const totalReglements = reglements
-      .filter(r => r.factureId === factureId)
-      .reduce((sum, r) => sum + r.montant, 0);
+    const totalReglements = reglements.filter(r => r.factureId === factureId).reduce((sum, r) => sum + r.montant, 0);
     return totalReglements >= facture.montantTTC;
   };
 
@@ -114,6 +122,51 @@ export function ReglementsFournisseursView() {
       .filter(f => f.resteAPayer > 0);
   };
 
+  const groupReglements = (reglements: ReglementFournisseur[]): (GroupedReglement | ReglementFournisseur)[] => {
+    const groups: { [key: string]: GroupedReglement } = {};
+    const singles: (GroupedReglement | ReglementFournisseur)[] = [];
+    const sorted = [...reglements].sort((a, b) => (a.facture?.numeroFacture || '').localeCompare(b.facture?.numeroFacture || ''));
+    
+    for (const r of sorted) {
+      let isGrouped = false;
+      if (r.infoLibre && r.infoLibre.includes('GROUPE:')) {
+        const match = r.infoLibre.match(/GROUPE:([A-Z0-9-]+)/);
+        if (match) {
+          const baseNumber = match[1];
+          if (!groups[baseNumber]) {
+            groups[baseNumber] = {
+              baseNumber, dateReglement: r.dateReglement, fournisseur: r.facture?.fournisseur?.raisonSociale || '',
+              modePaiement: r.modePaiement, reference: r.reference, statut: r.statut,
+              totalMontant: 0, reglements: []
+            };
+          }
+          groups[baseNumber].totalMontant += r.montant;
+          groups[baseNumber].reglements.push(r);
+          if (r.statut === 'ENREGISTRE') groups[baseNumber].statut = 'ENREGISTRE';
+          isGrouped = true;
+        }
+      }
+      if (!isGrouped) singles.push(r);
+    }
+    
+    const result: (GroupedReglement | ReglementFournisseur)[] = [];
+    for (const baseNumber of Object.keys(groups).sort((a, b) => b.localeCompare(a))) result.push(groups[baseNumber]);
+    for (const r of sorted) {
+      const match = r.infoLibre?.match(/GROUPE:([A-Z0-9-]+)/);
+      if (!match) result.push(r);
+    }
+    return result;
+  };
+
+  const toggleGroup = (baseNumber: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(baseNumber)) next.delete(baseNumber);
+      else next.add(baseNumber);
+      return next;
+    });
+  };
+
   const handleFactureChange = (factureId: string) => {
     const facture = factures.find(f => f.id === factureId);
     setSelectedFacture(facture || null);
@@ -127,24 +180,18 @@ export function ReglementsFournisseursView() {
     setSelectedFacture(null);
     setFormData({ ...formData, factureId: '', montant: '' });
     setResteAPayer(null);
-    
     if (fournisseurId !== ALL_FOURNISSEURS && isMultiPayment) {
-      const fournisseurFactures = getFacturesForFournisseur(fournisseurId);
-      setMultiPayments(fournisseurFactures);
+      setMultiPayments(getFacturesForFournisseur(fournisseurId));
     } else {
       setMultiPayments([]);
     }
   };
 
   const handleMultiPaymentChange = (factureId: string, montant: string) => {
-    setMultiPayments(prev => 
-      prev.map(p => p.factureId === factureId ? { ...p, montant } : p)
-    );
+    setMultiPayments(prev => prev.map(p => p.factureId === factureId ? { ...p, montant } : p));
   };
 
-  const calculateTotalMultiPayment = () => {
-    return multiPayments.reduce((sum, p) => sum + parseNumber(p.montant), 0);
-  };
+  const calculateTotalMultiPayment = () => multiPayments.reduce((sum, p) => sum + parseNumber(p.montant), 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +199,6 @@ export function ReglementsFournisseursView() {
     if (isMultiPayment) {
       const totalMontant = calculateTotalMultiPayment();
       if (totalMontant <= 0) { alert('Montant total invalide'); return; }
-      
       const paymentsToCreate = multiPayments.filter(p => parseNumber(p.montant) > 0);
       if (paymentsToCreate.length === 0) { alert('Aucun montant saisi'); return; }
       
@@ -163,37 +209,22 @@ export function ReglementsFournisseursView() {
         }
       }
       
-      let successCount = 0;
-      for (const p of paymentsToCreate) {
-        const montant = parseNumber(p.montant);
-        const infoWithEcheance = formData.modePaiement === 'EFFET' && formData.dateEcheanceEffet
-          ? `Échéance: ${formData.dateEcheanceEffet}${formData.infoLibre ? ' | ' + formData.infoLibre : ''}`
-          : formData.infoLibre;
-        
-        try {
-          const res = await fetch('/api/reglements-fournisseurs', {
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              factureId: p.factureId, 
-              dateReglement: formData.dateReglement,
-              montant,
-              modePaiement: formData.modePaiement,
-              reference: formData.reference,
-              infoLibre: infoWithEcheance,
-              notes: formData.notes
-            })
-          });
-          if (res.ok) successCount++;
-        } catch (e) { console.error(e); }
-      }
-      
-      if (successCount > 0) {
-        setDialogOpen(false);
-        resetForm();
-        fetchReglements();
-        alert(`${successCount} règlement(s) créé(s) avec succès`);
-      }
+      try {
+        const res = await fetch('/api/reglements-fournisseurs', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            multiPayments: paymentsToCreate.map(p => ({ factureId: p.factureId, montant: parseNumber(p.montant) })),
+            dateReglement: formData.dateReglement, modePaiement: formData.modePaiement,
+            reference: formData.reference, infoLibre: formData.infoLibre, notes: formData.notes,
+            dateEcheanceEffet: formData.dateEcheanceEffet
+          })
+        });
+        if (res.ok) {
+          const result = await res.json();
+          setDialogOpen(false); resetForm(); fetchReglements();
+          alert(`Règlement groupé ${result.baseNumber} créé avec ${result.count} éclaté(s)`);
+        } else { const err = await res.json(); alert(err.error || 'Erreur'); }
+      } catch (e) { console.error(e); alert('Erreur serveur'); }
       return;
     }
     
@@ -212,14 +243,8 @@ export function ReglementsFournisseursView() {
     
     try {
       const res = await fetch('/api/reglements-fournisseurs', {
-        method: editingReglement ? 'PUT' : 'POST', 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ...formData, 
-          id: editingReglement?.id, 
-          montant,
-          infoLibre: infoWithEcheance
-        })
+        method: editingReglement ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, id: editingReglement?.id, montant, infoLibre: infoWithEcheance })
       });
       if (res.ok) { setDialogOpen(false); resetForm(); fetchReglements(); }
       else { const err = await res.json(); alert(err.error || 'Erreur'); }
@@ -231,29 +256,40 @@ export function ReglementsFournisseursView() {
     try { const res = await fetch(`/api/reglements-fournisseurs/${id}/validate`, { method: 'POST' }); if (res.ok) fetchReglements(); else { const err = await res.json(); alert(err.error || 'Erreur'); } } catch (e) { }
   };
 
+  const handleValidateGroup = async (baseNumber: string, reglements: ReglementFournisseur[]) => {
+    if (!confirm(`Valider tous les règlements du groupe ${baseNumber} ?`)) return;
+    for (const r of reglements) {
+      if (r.statut === 'ENREGISTRE') {
+        try { await fetch(`/api/reglements-fournisseurs/${r.id}/validate`, { method: 'POST' }); } catch (e) { }
+      }
+    }
+    fetchReglements();
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer ce règlement ?')) return;
     try { const res = await fetch(`/api/reglements-fournisseurs?id=${id}`, { method: 'DELETE' }); if (res.ok) fetchReglements(); else { const err = await res.json(); alert(err.error || 'Erreur'); } } catch (e) { }
   };
 
+  const handleDeleteGroup = async (baseNumber: string, reglements: ReglementFournisseur[]) => {
+    if (!confirm(`Supprimer tous les règlements du groupe ${baseNumber} ?`)) return;
+    for (const r of reglements) {
+      if (r.statut !== 'VALIDE') {
+        try { await fetch(`/api/reglements-fournisseurs?id=${r.id}`, { method: 'DELETE' }); } catch (e) { }
+      }
+    }
+    fetchReglements();
+  };
+
   const resetForm = () => {
-    setFormData({
-      factureId: '', dateReglement: new Date().toISOString().split('T')[0],
-      montant: '', modePaiement: 'VIREMENT', reference: '', infoLibre: '', notes: '',
-      dateEcheanceEffet: ''
-    });
-    setEditingReglement(null); 
-    setSelectedFacture(null); 
-    setResteAPayer(null);
-    setSelectedFournisseurId(ALL_FOURNISSEURS);
-    setIsMultiPayment(false);
-    setMultiPayments([]);
+    setFormData({ factureId: '', dateReglement: new Date().toISOString().split('T')[0], montant: '', modePaiement: 'VIREMENT', reference: '', infoLibre: '', notes: '', dateEcheanceEffet: '' });
+    setEditingReglement(null); setSelectedFacture(null); setResteAPayer(null);
+    setSelectedFournisseurId(ALL_FOURNISSEURS); setIsMultiPayment(false); setMultiPayments([]);
   };
 
   const openEditDialog = (r: ReglementFournisseur) => {
     if (r.statut === 'VALIDE') { alert('Ce règlement est validé et ne peut plus être modifié.'); return; }
-    setEditingReglement(r);
-    setIsMultiPayment(false);
+    setEditingReglement(r); setIsMultiPayment(false);
     const facture = factures.find(f => f.id === r.factureId);
     setSelectedFacture(facture || null);
     setSelectedFournisseurId(facture?.fournisseurId || ALL_FOURNISSEURS);
@@ -264,23 +300,19 @@ export function ReglementsFournisseursView() {
     let infoLibre = r.infoLibre || '';
     if (r.modePaiement === 'EFFET' && infoLibre.includes('Échéance:')) {
       const match = infoLibre.match(/Échéance:\s*(\d{4}-\d{2}-\d{2})/);
-      if (match) {
-        dateEcheanceEffet = match[1];
-        infoLibre = infoLibre.replace(/Échéance:\s*\d{4}-\d{2}-\d{2}\s*\|?\s*/g, '').trim();
-      }
+      if (match) { dateEcheanceEffet = match[1]; infoLibre = infoLibre.replace(/Échéance:\s*\d{4}-\d{2}-\d{2}\s*\|?\s*/g, '').trim(); }
     }
     
     setFormData({
       factureId: r.factureId, dateReglement: new Date(r.dateReglement).toISOString().split('T')[0],
-      montant: r.montant.toString(), modePaiement: r.modePaiement,
-      reference: r.reference || '', infoLibre: infoLibre, notes: r.notes || '',
-      dateEcheanceEffet
+      montant: r.montant.toString(), modePaiement: r.modePaiement, reference: r.reference || '',
+      infoLibre: infoLibre, notes: r.notes || '', dateEcheanceEffet
     });
     setDialogOpen(true);
   };
 
   const handleSort = (field: SortField) => {
-    if (sortField === field) { setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc'); }
+    if (sortField === field) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDirection('desc'); }
   };
 
@@ -292,9 +324,7 @@ export function ReglementsFournisseursView() {
   const getModePaiementDisplay = (mode: string, infoLibre: string | null) => {
     if (mode === 'EFFET') {
       const match = infoLibre?.match(/Échéance:\s*(\d{4}-\d{2}-\d{2})/);
-      if (match) {
-        return `Effet (Éch: ${new Date(match[1]).toLocaleDateString('fr-FR')})`;
-      }
+      if (match) return `Effet (Éch: ${new Date(match[1]).toLocaleDateString('fr-FR')})`;
       return 'Effet';
     }
     return mode;
@@ -319,9 +349,12 @@ export function ReglementsFournisseursView() {
         case 'statut': valA = a.statut; valB = b.statut; break;
         default: return 0;
       }
-      if (typeof valA === 'string') { return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA); }
+      if (typeof valA === 'string') return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
       return sortDirection === 'asc' ? valA - valB : valB - valA;
     });
+
+  const groupedData = groupReglements(filteredReglements);
+  const isGroupedReglement = (item: any): item is GroupedReglement => 'reglements' in item;
 
   if (loading) return <div className="p-8">Chargement...</div>;
 
@@ -353,10 +386,11 @@ export function ReglementsFournisseursView() {
             </div>
             {(dateFrom || dateTo) && <Button variant="ghost" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>Effacer</Button>}
           </div>
-          {filteredReglements.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucun règlement</div> : (
+          {groupedData.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucun règlement</div> : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8"></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('dateReglement')}>Date <SortIcon field="dateReglement" /></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('fournisseur')}>Fournisseur <SortIcon field="fournisseur" /></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('facture')}>Facture <SortIcon field="facture" /></TableHead>
@@ -366,19 +400,110 @@ export function ReglementsFournisseursView() {
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>{filteredReglements.map((r) => (<TableRow key={r.id}>
-                <TableCell>{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
-                <TableCell>{r.facture?.fournisseur?.raisonSociale}</TableCell>
-                <TableCell>{r.facture?.numeroFacture}</TableCell>
-                <TableCell>{formatCurrency(r.montant)}</TableCell>
-                <TableCell>{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{r.statut === 'VALIDE' ? 'Validé' : 'En attente'}</span></TableCell>
-                <TableCell><div className="flex gap-2">
-                  {r.statut === 'ENREGISTRE' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)}><CheckCircle className="h-4 w-4" /></Button>}
-                  <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'}><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'}><Trash2 className="h-4 w-4" /></Button>
-                </div></TableCell>
-              </TableRow>))}</TableBody>
+              <TableBody>
+                {groupedData.map((item, idx) => {
+                  if (isGroupedReglement(item)) {
+                    const isExpanded = expandedGroups.has(item.baseNumber);
+                    return (
+                      <>
+                        <TableRow key={item.baseNumber} className="bg-green-50 font-semibold">
+                          <TableCell>
+                            <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => toggleGroup(item.baseNumber)}>
+                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </Button>
+                          </TableCell>
+                          <TableCell>{new Date(item.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
+                          <TableCell className="font-bold text-green-700">{item.fournisseur}</TableCell>
+                          <TableCell className="text-green-600 italic">{item.reglements.length} facture(s)</TableCell>
+                          <TableCell className="font-bold text-green-700">{formatCurrency(item.totalMontant)}</TableCell>
+                          <TableCell>{getModePaiementDisplay(item.modePaiement, null)}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded text-xs ${item.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              {item.statut === 'VALIDE' ? 'Validé' : 'En attente'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {item.statut === 'ENREGISTRE' && (
+                                <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidateGroup(item.baseNumber, item.reglements)} title="Valider tout">
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {!item.reglements.some(r => r.statut === 'VALIDE') && (
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteGroup(item.baseNumber, item.reglements)} title="Supprimer tout">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && item.reglements.map((r) => (
+                          <TableRow key={r.id} className="bg-gray-50">
+                            <TableCell></TableCell>
+                            <TableCell className="text-sm">{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
+                            <TableCell className="text-sm">{r.facture?.fournisseur?.raisonSociale}</TableCell>
+                            <TableCell className="text-sm pl-8 text-muted-foreground">{r.facture?.numeroFacture}</TableCell>
+                            <TableCell className="text-sm">{formatCurrency(r.montant)}</TableCell>
+                            <TableCell className="text-sm">{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
+                            <TableCell className="text-sm">
+                              <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                {r.statut === 'VALIDE' ? 'Validé' : 'En attente'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                {r.statut === 'ENREGISTRE' && (
+                                  <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)} title="Valider">
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    );
+                  } else {
+                    const r = item as ReglementFournisseur;
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell></TableCell>
+                        <TableCell>{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
+                        <TableCell>{r.facture?.fournisseur?.raisonSociale}</TableCell>
+                        <TableCell>{r.facture?.numeroFacture}</TableCell>
+                        <TableCell>{formatCurrency(r.montant)}</TableCell>
+                        <TableCell>{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {r.statut === 'VALIDE' ? 'Validé' : 'En attente'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {r.statut === 'ENREGISTRE' && (
+                              <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)} title="Valider">
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                })}
+              </TableBody>
             </Table>
           )}
         </CardContent>
@@ -392,49 +517,30 @@ export function ReglementsFournisseursView() {
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Fournisseur Selection */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label className="text-base font-semibold">Fournisseur</Label>
                 {!editingReglement && (
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
-                      id="multiPaymentFourn" 
-                      checked={isMultiPayment} 
+                    <input type="checkbox" id="multiPaymentFourn" checked={isMultiPayment} 
                       onChange={(e) => {
                         setIsMultiPayment(e.target.checked);
-                        if (!e.target.checked) {
-                          setMultiPayments([]);
-                        } else if (selectedFournisseurId !== ALL_FOURNISSEURS) {
-                          const fournisseurFactures = getFacturesForFournisseur(selectedFournisseurId);
-                          setMultiPayments(fournisseurFactures);
-                        }
-                      }}
-                      className="w-4 h-4"
-                    />
+                        if (!e.target.checked) setMultiPayments([]);
+                        else if (selectedFournisseurId !== ALL_FOURNISSEURS) setMultiPayments(getFacturesForFournisseur(selectedFournisseurId));
+                      }} className="w-4 h-4" />
                     <label htmlFor="multiPaymentFourn" className="text-sm cursor-pointer">Paiement multi-factures</label>
                   </div>
                 )}
               </div>
-              <Select 
-                value={selectedFournisseurId} 
-                onValueChange={handleFournisseurChange}
-                disabled={!!editingReglement}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un fournisseur (optionnel)" />
-                </SelectTrigger>
+              <Select value={selectedFournisseurId} onValueChange={handleFournisseurChange} disabled={!!editingReglement}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner un fournisseur (optionnel)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL_FOURNISSEURS}>Tous les fournisseurs</SelectItem>
-                  {tiers.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.raisonSociale}</SelectItem>
-                  ))}
+                  {tiers.map((t) => (<SelectItem key={t.id} value={t.id}>{t.raisonSociale}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             
-            {/* Multi-facture payment */}
             {isMultiPayment && !editingReglement && (
               <div className="border rounded-lg p-4 bg-green-50">
                 <Label className="text-base font-semibold mb-2 block">Répartition du paiement</Label>
@@ -460,13 +566,7 @@ export function ReglementsFournisseursView() {
                             <TableCell>{formatCurrency(p.montantTTC)}</TableCell>
                             <TableCell className="text-green-600 font-semibold">{formatCurrency(p.resteAPayer)}</TableCell>
                             <TableCell>
-                              <Input
-                                type="text"
-                                value={p.montant}
-                                onChange={(e) => handleMultiPaymentChange(p.factureId, e.target.value)}
-                                placeholder="0.00"
-                                className="w-32"
-                              />
+                              <Input type="text" value={p.montant} onChange={(e) => handleMultiPaymentChange(p.factureId, e.target.value)} placeholder="0.00" className="w-32" />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -481,7 +581,6 @@ export function ReglementsFournisseursView() {
               </div>
             )}
             
-            {/* Single facture selection */}
             {!isMultiPayment && (
               <>
                 <div>
@@ -514,7 +613,6 @@ export function ReglementsFournisseursView() {
               </>
             )}
             
-            {/* Common fields for both modes */}
             {(isMultiPayment || formData.factureId) && (
               <>
                 {isMultiPayment && (
@@ -535,19 +633,12 @@ export function ReglementsFournisseursView() {
                     </SelectContent>
                   </Select>
                 </div>
-                
                 {formData.modePaiement === 'EFFET' && (
                   <div>
                     <Label className="text-base font-semibold">Date d'échéance</Label>
-                    <Input 
-                      type="date" 
-                      value={formData.dateEcheanceEffet} 
-                      onChange={(e) => setFormData({ ...formData, dateEcheanceEffet: e.target.value })} 
-                      required 
-                    />
+                    <Input type="date" value={formData.dateEcheanceEffet} onChange={(e) => setFormData({ ...formData, dateEcheanceEffet: e.target.value })} required />
                   </div>
                 )}
-                
                 <div><Label className="text-base font-semibold">Référence</Label><Input value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} placeholder="N° chèque, virement, effet..." /></div>
                 <div><Label className="text-base font-semibold">Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} placeholder="Informations complémentaires..." /></div>
               </>
