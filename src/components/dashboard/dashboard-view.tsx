@@ -532,7 +532,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V1.95</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V1.96</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
@@ -666,7 +666,7 @@ export function DashboardView() {
                         </TableCell>
                         <TableCell>{line.numero}</TableCell>
                         <TableCell className="text-right">{line.montantTTC > 0 ? formatCurrency(line.montantTTC) : ''}</TableCell>
-                        <TableCell className={`text-right font-medium ${line.montant < 0 ? 'text-red-600' : line.montant > 0 ? 'text-green-600' : ''}`}>
+                        <TableCell className={`text-right font-medium ${line.type.includes('Règlement') ? 'text-green-600' : line.type.includes('Facture') ? 'text-red-600' : ''}`}>
                           {line.montant !== 0 ? `${line.montant < 0 ? '-' : '+'}${formatCurrency(Math.abs(line.montant))}` : ''}
                         </TableCell>
                         <TableCell className="text-right font-bold">
