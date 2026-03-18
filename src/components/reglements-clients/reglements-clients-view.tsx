@@ -88,7 +88,7 @@ export function ReglementsClientsView() {
   useEffect(() => { fetchReglements(); fetchFactures(); fetchTiers(); }, []);
   const fetchReglements = async () => { try { const res = await fetch('/api/reglements-clients'); const data = await res.json(); setReglements(Array.isArray(data) ? data : []); } catch (e) { console.error(e); } finally { setLoading(false); } };
   const fetchFactures = async () => { try { const res = await fetch('/api/factures-clients'); const data = await res.json(); setFactures(Array.isArray(data) ? data : []); } catch (e) { console.error(e); } };
-  const fetchTiers = async () => { try { const res = await fetch('/api/tiers'); const data = await res.json(); setTiers(Array.isArray(data) ? data.filter((t: Tiers) => t.type === 'CLIENT') : []); } catch (e) { console.error(e); } };
+  const fetchTiers = async () => { try { const res = await fetch('/api/tiers'); const data = await res.json(); setTiers(Array.isArray(data) ? data.filter((t: Tiers) => t.type === 'CLIENT').sort((a, b) => a.raisonSociale.localeCompare(b.raisonSociale)) : []); } catch (e) { console.error(e); } };
 
   const calculerResteAPayer = (factureId: string, excludeReglementId?: string) => {
     const facture = factures.find(f => f.id === factureId);
@@ -461,7 +461,7 @@ export function ReglementsClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-green-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus</p></div>
+        <div><h1 className="text-3xl font-bold text-green-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V1.97</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
