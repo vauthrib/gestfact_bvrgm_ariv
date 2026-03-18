@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Users, Package, Truck, CreditCard, Receipt, Calculator, Printer, Download } from 'lucide-react';
+import { FileText, Users, Package, Truck, CreditCard, Receipt, Calculator, Printer, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH`;
 
@@ -44,14 +44,16 @@ interface ReleveLine {
   dateStr: string;
   type: string;
   numero: string;
-  debit: number;
-  credit: number;
-  soldeReel: number;      // Solde réel (uniquement éléments validés)
-  soldeEnCours: number;   // Solde en cours (inclut règlements non validés)
-  statut: string;         // Statut de l'élément
-  isValidated: boolean;   // Si l'élément est validé
-  isInfo?: boolean;       // Si c'est juste pour info (BL) - pas dans le calcul des soldes
+  montant: number;         // Montant avec signe (positif = crédit, négatif = débit)
+  montantTTC: number;      // Montant TTC de la facture (pour les lignes facture)
+  solde: number;           // Solde cumulé
+  statut: string;          // Statut de l'élément
+  isValidated: boolean;    // Si l'élément est validé
+  isInfo?: boolean;        // Si c'est juste pour info (BL) - pas dans le calcul des soldes
 }
+
+type SortField = 'date' | 'type' | 'numero' | 'montant' | 'solde';
+type SortDirection = 'asc' | 'desc';
 
 export function DashboardView() {
   const [stats, setStats] = useState({
@@ -77,6 +79,10 @@ export function DashboardView() {
   });
   const [releveData, setReleveData] = useState<ReleveLine[]>([]);
   const [releveTier, setReleveTier] = useState<Tiers | null>(null);
+  
+  // Sorting state for relevé
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -181,22 +187,22 @@ export function DashboardView() {
             const matchTier = f[tierField] === releveForm.tierId;
             const date = new Date(f.dateFacture);
             const matchDate = (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
-            // Include ALL factures (validated and in progress)
             return matchTier && matchDate;
           })
           .forEach((f: any) => {
             const isValidated = f.statut === 'VALIDEE';
-            // Pour les clients: factures = crédit (ils nous doivent), règlements = débit
-            // Pour les fournisseurs: factures = débit (on leur doit), règlements = crédit
+            // Pour les clients: factures = crédit (montant positif)
+            // Pour les fournisseurs: factures = débit (montant négatif)
+            const montantTTC = f.totalTTC || 0;
+            const montant = isClient ? montantTTC : -montantTTC;
             lines.push({
               date: new Date(f.dateFacture),
               dateStr: formatDate(f.dateFacture),
               type: isValidated ? 'Facture' : 'Facture (en attente)',
               numero: f.numero,
-              debit: isClient ? 0 : (f.totalTTC || 0),
-              credit: isClient ? (f.totalTTC || 0) : 0,
-              soldeReel: 0,
-              soldeEnCours: 0,
+              montant: montant,
+              montantTTC: montantTTC,
+              solde: 0,
               statut: f.statut,
               isValidated: isValidated,
               isInfo: false
@@ -204,35 +210,35 @@ export function DashboardView() {
           });
       }
 
-      // Fetch règlements - IMPORTANT: le clientId/fournisseurId est dans la facture liée
+      // Fetch règlements
       const reglementsUrl = isClient ? '/api/reglements-clients' : '/api/reglements-fournisseurs';
       const reglements = await fetch(reglementsUrl).then(r => r.json()).catch(() => []);
       
       if (Array.isArray(reglements)) {
         reglements
           .filter((r: any) => {
-            // Le règlement est lié à une facture, qui est liée au client/fournisseur
             const facture = r.facture;
             if (!facture) return false;
-            
             const tierField = isClient ? 'clientId' : 'fournisseurId';
             const matchTier = facture[tierField] === releveForm.tierId;
             const date = new Date(r.dateReglement);
             const matchDate = (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
-            // Include ALL règlements (validated and in progress)
             return matchTier && matchDate;
           })
           .forEach((r: any) => {
             const isValidated = r.statut === 'VALIDE';
+            // Pour les clients: règlements = débit (montant négatif)
+            // Pour les fournisseurs: règlements = crédit (montant positif)
+            const montantRgl = r.montant || 0;
+            const montant = isClient ? -montantRgl : montantRgl;
             lines.push({
               date: new Date(r.dateReglement),
               dateStr: formatDate(r.dateReglement),
               type: isValidated ? 'Règlement' : 'Règlement (en attente)',
               numero: r.numero || r.reference || '-',
-              debit: isClient ? (r.montant || 0) : 0,
-              credit: isClient ? 0 : (r.montant || 0),
-              soldeReel: 0,
-              soldeEnCours: 0,
+              montant: montant,
+              montantTTC: 0, // Pas de TTC pour les règlements
+              solde: 0,
               statut: r.statut,
               isValidated: isValidated,
               isInfo: false
@@ -258,13 +264,12 @@ export function DashboardView() {
                 dateStr: formatDate(b.dateBL),
                 type: 'Bon de Livraison (info)',
                 numero: b.numero,
-                debit: 0,
-                credit: 0, // BL ne compte pas dans le solde
-                soldeReel: 0,
-                soldeEnCours: 0,
+                montant: 0,
+                montantTTC: 0,
+                solde: 0,
                 statut: b.statut,
-                isValidated: true, // BL always visible
-                isInfo: true // Mark as info only
+                isValidated: true,
+                isInfo: true
               });
             });
         }
@@ -273,47 +278,33 @@ export function DashboardView() {
       // Sort by date ascending first to calculate running balance correctly
       lines.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-      // Calculate running balances
-      // Pour client: solde = crédit - débit (ce qu'ils nous doivent)
-      // - Facture (crédit) augmente le solde
-      // - Règlement (débit) diminue le solde
-      // Pour fournisseur: solde = débit - crédit (ce qu'on leur doit)
-      // - Facture (débit) augmente le solde
-      // - Règlement (crédit) diminue le solde
-      let runningSoldeReel = 0;
-      let runningSoldeEnCours = 0;
-      
+      // Calculate running balance
+      let runningSolde = 0;
       lines.forEach(line => {
-        // Les BL ne comptent pas dans le solde
-        if (line.isInfo) {
-          line.soldeReel = runningSoldeReel;
-          line.soldeEnCours = runningSoldeEnCours;
-          return;
+        if (!line.isInfo) {
+          runningSolde += line.montant;
         }
-        
-        // Solde en cours: prend en compte tous les éléments
-        if (isClient) {
-          runningSoldeEnCours = runningSoldeEnCours + line.credit - line.debit;
-        } else {
-          runningSoldeEnCours = runningSoldeEnCours + line.debit - line.credit;
-        }
-        line.soldeEnCours = runningSoldeEnCours;
-        
-        // Solde réel: ne prend en compte que les éléments validés
-        if (line.isValidated) {
-          if (isClient) {
-            runningSoldeReel = runningSoldeReel + line.credit - line.debit;
-          } else {
-            runningSoldeReel = runningSoldeReel + line.debit - line.credit;
-          }
-        }
-        line.soldeReel = runningSoldeReel;
+        line.solde = runningSolde;
       });
 
-      // Sort by date descending for display (most recent first)
-      lines.sort((a, b) => b.date.getTime() - a.date.getTime());
+      // Apply sorting
+      const sorted = [...lines].sort((a, b) => {
+        let valA: any, valB: any;
+        switch (sortField) {
+          case 'date': valA = a.date.getTime(); valB = b.date.getTime(); break;
+          case 'type': valA = a.type; valB = b.type; break;
+          case 'numero': valA = a.numero; valB = b.numero; break;
+          case 'montant': valA = a.montant; valB = b.montant; break;
+          case 'solde': valA = a.solde; valB = b.solde; break;
+          default: return 0;
+        }
+        if (typeof valA === 'string') {
+          return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        return sortDirection === 'asc' ? valA - valB : valB - valA;
+      });
 
-      setReleveData(lines);
+      setReleveData(sorted);
       setReleveDialogOpen(false);
       setReleveResultOpen(true);
     } catch (e) {
@@ -322,13 +313,45 @@ export function DashboardView() {
     }
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    // Re-sort the data
+    setReleveData(prev => {
+      const sorted = [...prev].sort((a, b) => {
+        let valA: any, valB: any;
+        switch (field) {
+          case 'date': valA = a.date.getTime(); valB = b.date.getTime(); break;
+          case 'type': valA = a.type; valB = b.type; break;
+          case 'numero': valA = a.numero; valB = b.numero; break;
+          case 'montant': valA = a.montant; valB = b.montant; break;
+          case 'solde': valA = a.solde; valB = b.solde; break;
+          default: return 0;
+        }
+        const newDirection = sortField === field ? (sortDirection === 'asc' ? 'desc' : 'asc') : 'desc';
+        if (typeof valA === 'string') {
+          return newDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        return newDirection === 'asc' ? valA - valB : valB - valA;
+      });
+      return sorted;
+    });
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 ml-1 inline opacity-50" />;
+    return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4 ml-1 inline" /> : <ArrowDown className="w-4 h-4 ml-1 inline" />;
+  };
+
   const exportReleveCSV = () => {
     if (releveData.length === 0) return;
     
-    const isClient = releveForm.tierType === 'CLIENT';
-    
     // CSV header
-    const headers = ['Date', 'Type', 'Numéro', 'Débit', 'Crédit', 'Solde Réel', 'Solde En Cours', 'Statut'];
+    const headers = ['Date', 'Type', 'Numéro', 'Montant', 'Montant TTC', 'Solde', 'Statut'];
     const csvRows = [headers.join(';')];
     
     // Add data rows
@@ -337,19 +360,17 @@ export function DashboardView() {
         line.dateStr,
         line.type,
         line.numero,
-        line.debit > 0 ? line.debit.toString().replace('.', ',') : '',
-        line.credit > 0 ? line.credit.toString().replace('.', ',') : '',
-        line.soldeReel.toString().replace('.', ','),
-        line.soldeEnCours.toString().replace('.', ','),
+        line.montant.toString().replace('.', ','),
+        line.montantTTC > 0 ? line.montantTTC.toString().replace('.', ',') : '',
+        line.solde.toString().replace('.', ','),
         line.isInfo ? 'INFO' : (line.isValidated ? 'Validé' : 'En attente')
       ];
       csvRows.push(row.join(';'));
     });
     
     // Add totals
-    const totalDebit = releveData.reduce((s, l) => s + l.debit, 0);
-    const totalCredit = releveData.reduce((s, l) => s + l.credit, 0);
-    csvRows.push(['', 'TOTAUX', '', totalDebit.toString().replace('.', ','), totalCredit.toString().replace('.', ','), '', '', ''].join(';'));
+    const totalMontant = releveData.reduce((s, l) => s + l.montant, 0);
+    csvRows.push(['', 'TOTAL', '', totalMontant.toString().replace('.', ','), '', '', ''].join(';'));
     
     // Create and download file
     const csvContent = csvRows.join('\n');
@@ -367,11 +388,7 @@ export function DashboardView() {
     if (!printWindow) return;
 
     const isClient = releveForm.tierType === 'CLIENT';
-    const totalDebit = releveData.reduce((s, l) => s + l.debit, 0);
-    const totalCredit = releveData.reduce((s, l) => s + l.credit, 0);
-    // Since data is sorted descending (most recent first), first element has the final soldes
-    const finalSoldeReel = releveData.length > 0 ? releveData[0].soldeReel : 0;
-    const finalSoldeEnCours = releveData.length > 0 ? releveData[0].soldeEnCours : 0;
+    const finalSolde = releveData.length > 0 ? releveData[0].solde : 0;
 
     const html = `
       <!DOCTYPE html>
@@ -392,6 +409,8 @@ export function DashboardView() {
           .footer { margin-top: 30px; font-size: 10pt; color: #666; }
           .soldes { margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px; }
           .soldes-row { display: flex; justify-content: space-between; margin: 5px 0; }
+          .negative { color: #dc2626; }
+          .positive { color: #16a34a; }
         </style>
       </head>
       <body>
@@ -404,10 +423,9 @@ export function DashboardView() {
               <th>Date</th>
               <th>Type</th>
               <th>N°</th>
-              <th class="text-right">Débit</th>
-              <th class="text-right">Crédit</th>
-              <th class="text-right">Solde Réel</th>
-              <th class="text-right">Solde En Cours</th>
+              <th class="text-right">Montant TTC</th>
+              <th class="text-right">Montant</th>
+              <th class="text-right">Solde</th>
             </tr>
           </thead>
           <tbody>
@@ -416,28 +434,23 @@ export function DashboardView() {
                 <td>${l.dateStr}</td>
                 <td>${l.type}</td>
                 <td>${l.numero}</td>
-                <td class="text-right">${l.debit > 0 ? formatCurrency(l.debit) : ''}</td>
-                <td class="text-right">${l.credit > 0 ? formatCurrency(l.credit) : ''}</td>
-                <td class="text-right">${formatCurrency(Math.abs(l.soldeReel))} ${l.soldeReel >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</td>
-                <td class="text-right">${formatCurrency(Math.abs(l.soldeEnCours))} ${l.soldeEnCours >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</td>
+                <td class="text-right">${l.montantTTC > 0 ? formatCurrency(l.montantTTC) : ''}</td>
+                <td class="text-right ${l.montant < 0 ? 'negative' : 'positive'}">${l.montant !== 0 ? formatCurrency(Math.abs(l.montant)) + (l.montant < 0 ? ' (D)' : ' (C)') : ''}</td>
+                <td class="text-right font-bold">${formatCurrency(Math.abs(l.solde))} ${l.solde >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</td>
               </tr>
             `).join('')}
             <tr class="total-row">
-              <td colspan="3">TOTAUX</td>
-              <td class="text-right">${formatCurrency(totalDebit)}</td>
-              <td class="text-right">${formatCurrency(totalCredit)}</td>
-              <td colspan="2"></td>
+              <td colspan="3">TOTAL</td>
+              <td></td>
+              <td class="text-right">${formatCurrency(Math.abs(releveData.reduce((s, l) => s + l.montant, 0)))}</td>
+              <td></td>
             </tr>
           </tbody>
         </table>
         <div class="soldes">
           <div class="soldes-row">
-            <strong>Solde Réel (validés uniquement):</strong>
-            <span>${formatCurrency(Math.abs(finalSoldeReel))} ${finalSoldeReel >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
-          </div>
-          <div class="soldes-row">
-            <strong>Solde En Cours (avec règlements en attente):</strong>
-            <span>${formatCurrency(Math.abs(finalSoldeEnCours))} ${finalSoldeEnCours >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
+            <strong>Solde Final:</strong>
+            <span>${formatCurrency(Math.abs(finalSolde))} ${finalSolde >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
           </div>
         </div>
         <div class="footer">
@@ -511,11 +524,7 @@ export function DashboardView() {
     },
   ];
 
-  const totalDebit = releveData.reduce((s, l) => s + l.debit, 0);
-  const totalCredit = releveData.reduce((s, l) => s + l.credit, 0);
-  // Since data is sorted descending (most recent first), first element has the final soldes
-  const finalSoldeReel = releveData.length > 0 ? releveData[0].soldeReel : 0;
-  const finalSoldeEnCours = releveData.length > 0 ? releveData[0].soldeEnCours : 0;
+  const finalSolde = releveData.length > 0 ? releveData[0].solde : 0;
   const isClient = releveForm.tierType === 'CLIENT';
 
   return (
@@ -523,7 +532,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V1.94</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V1.95</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
@@ -623,22 +632,13 @@ export function DashboardView() {
               <div className="text-center text-muted-foreground py-8">Aucune donnée sur la période</div>
             ) : (
               <>
-                {/* Soldes Summary */}
+                {/* Solde Summary */}
                 <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-sm text-green-600 font-medium">Solde Réel (validés):</span>
-                      <div className="text-xl font-bold text-green-700">
-                        {formatCurrency(Math.abs(finalSoldeReel))}
-                        <span className="text-sm ml-2">{finalSoldeReel >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-sm text-green-600 font-medium">Solde En Cours (avec en attente):</span>
-                      <div className="text-xl font-bold text-green-700">
-                        {formatCurrency(Math.abs(finalSoldeEnCours))}
-                        <span className="text-sm ml-2">{finalSoldeEnCours >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
-                      </div>
+                  <div>
+                    <span className="text-sm text-green-600 font-medium">Solde Final:</span>
+                    <div className="text-xl font-bold text-green-700">
+                      {formatCurrency(Math.abs(finalSolde))}
+                      <span className="text-sm ml-2">{finalSolde >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
                     </div>
                   </div>
                 </div>
@@ -646,13 +646,12 @@ export function DashboardView() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>N°</TableHead>
-                      <TableHead className="text-right">Débit</TableHead>
-                      <TableHead className="text-right">Crédit</TableHead>
-                      <TableHead className="text-right">Solde Réel</TableHead>
-                      <TableHead className="text-right">Solde En Cours</TableHead>
+                      <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('date')}>Date <SortIcon field="date" /></TableHead>
+                      <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('type')}>Type <SortIcon field="type" /></TableHead>
+                      <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('numero')}>N° <SortIcon field="numero" /></TableHead>
+                      <TableHead className="text-right">Montant TTC</TableHead>
+                      <TableHead className="text-right cursor-pointer hover:bg-gray-100" onClick={() => handleSort('montant')}>Montant <SortIcon field="montant" /></TableHead>
+                      <TableHead className="text-right cursor-pointer hover:bg-gray-100" onClick={() => handleSort('solde')}>Solde <SortIcon field="solde" /></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -662,29 +661,25 @@ export function DashboardView() {
                         className={line.isInfo ? 'bg-gray-100' : (!line.isValidated ? 'bg-yellow-50' : '')}
                       >
                         <TableCell>{line.dateStr}</TableCell>
-                        <TableCell 
-                          className={line.isInfo ? 'text-gray-500 italic' : (!line.isValidated ? 'text-yellow-700 italic' : '')}
-                        >
+                        <TableCell className={line.isInfo ? 'text-gray-500 italic' : (!line.isValidated ? 'text-yellow-700 italic' : '')}>
                           {line.type}
                         </TableCell>
                         <TableCell>{line.numero}</TableCell>
-                        <TableCell className="text-right">{line.debit > 0 ? formatCurrency(line.debit) : ''}</TableCell>
-                        <TableCell className="text-right">{line.credit > 0 ? formatCurrency(line.credit) : ''}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(Math.abs(line.soldeReel))}
-                          <span className="text-xs ml-1">{line.soldeReel >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</span>
+                        <TableCell className="text-right">{line.montantTTC > 0 ? formatCurrency(line.montantTTC) : ''}</TableCell>
+                        <TableCell className={`text-right font-medium ${line.montant < 0 ? 'text-red-600' : line.montant > 0 ? 'text-green-600' : ''}`}>
+                          {line.montant !== 0 ? `${line.montant < 0 ? '-' : '+'}${formatCurrency(Math.abs(line.montant))}` : ''}
                         </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(Math.abs(line.soldeEnCours))}
-                          <span className="text-xs ml-1">{line.soldeEnCours >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</span>
+                        <TableCell className="text-right font-bold">
+                          {formatCurrency(Math.abs(line.solde))}
+                          <span className="text-xs ml-1">{line.solde >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</span>
                         </TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="bg-green-50 font-bold">
-                      <TableCell colSpan={3}>TOTAUX</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totalDebit)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totalCredit)}</TableCell>
-                      <TableCell colSpan={2}></TableCell>
+                      <TableCell colSpan={3}>TOTAL</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="text-right">{formatCurrency(Math.abs(releveData.reduce((s, l) => s + l.montant, 0)))}</TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
