@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Users, Package, Truck, CreditCard, Receipt, Calculator, Printer } from 'lucide-react';
+import { FileText, Users, Package, Truck, CreditCard, Receipt, Calculator, Printer, Download } from 'lucide-react';
 
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH`;
 
@@ -50,6 +50,7 @@ interface ReleveLine {
   soldeEnCours: number;   // Solde en cours (inclut règlements non validés)
   statut: string;         // Statut de l'élément
   isValidated: boolean;   // Si l'élément est validé
+  isInfo?: boolean;       // Si c'est juste pour info (BL) - pas dans le calcul des soldes
 }
 
 export function DashboardView() {
@@ -180,7 +181,7 @@ export function DashboardView() {
             const matchTier = f[tierField] === releveForm.tierId;
             const date = new Date(f.dateFacture);
             const matchDate = (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
-            // Include ALL factures (not just validated)
+            // Include ALL factures (validated and in progress)
             return matchTier && matchDate;
           })
           .forEach((f: any) => {
@@ -197,22 +198,28 @@ export function DashboardView() {
               soldeReel: 0,
               soldeEnCours: 0,
               statut: f.statut,
-              isValidated: isValidated
+              isValidated: isValidated,
+              isInfo: false
             });
           });
       }
 
-      // Fetch règlements
+      // Fetch règlements - IMPORTANT: le clientId/fournisseurId est dans la facture liée
       const reglementsUrl = isClient ? '/api/reglements-clients' : '/api/reglements-fournisseurs';
       const reglements = await fetch(reglementsUrl).then(r => r.json()).catch(() => []);
       
       if (Array.isArray(reglements)) {
         reglements
           .filter((r: any) => {
+            // Le règlement est lié à une facture, qui est liée au client/fournisseur
+            const facture = r.facture;
+            if (!facture) return false;
+            
             const tierField = isClient ? 'clientId' : 'fournisseurId';
-            const matchTier = r[tierField] === releveForm.tierId;
+            const matchTier = facture[tierField] === releveForm.tierId;
             const date = new Date(r.dateReglement);
             const matchDate = (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
+            // Include ALL règlements (validated and in progress)
             return matchTier && matchDate;
           })
           .forEach((r: any) => {
@@ -227,9 +234,40 @@ export function DashboardView() {
               soldeReel: 0,
               soldeEnCours: 0,
               statut: r.statut,
-              isValidated: isValidated
+              isValidated: isValidated,
+              isInfo: false
             });
           });
+      }
+
+      // Fetch Bons de Livraison (only for clients, for info only)
+      if (isClient) {
+        const bl = await fetch('/api/bons-livraison').then(r => r.json()).catch(() => []);
+        
+        if (Array.isArray(bl)) {
+          bl
+            .filter((b: any) => {
+              const matchTier = b.clientId === releveForm.tierId;
+              const date = new Date(b.dateBL);
+              const matchDate = (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
+              return matchTier && matchDate;
+            })
+            .forEach((b: any) => {
+              lines.push({
+                date: new Date(b.dateBL),
+                dateStr: formatDate(b.dateBL),
+                type: 'Bon de Livraison (info)',
+                numero: b.numero,
+                debit: 0,
+                credit: 0, // BL ne compte pas dans le solde
+                soldeReel: 0,
+                soldeEnCours: 0,
+                statut: b.statut,
+                isValidated: true, // BL always visible
+                isInfo: true // Mark as info only
+              });
+            });
+        }
       }
 
       // Sort by date ascending first to calculate running balance correctly
@@ -246,6 +284,13 @@ export function DashboardView() {
       let runningSoldeEnCours = 0;
       
       lines.forEach(line => {
+        // Les BL ne comptent pas dans le solde
+        if (line.isInfo) {
+          line.soldeReel = runningSoldeReel;
+          line.soldeEnCours = runningSoldeEnCours;
+          return;
+        }
+        
         // Solde en cours: prend en compte tous les éléments
         if (isClient) {
           runningSoldeEnCours = runningSoldeEnCours + line.credit - line.debit;
@@ -277,6 +322,46 @@ export function DashboardView() {
     }
   };
 
+  const exportReleveCSV = () => {
+    if (releveData.length === 0) return;
+    
+    const isClient = releveForm.tierType === 'CLIENT';
+    
+    // CSV header
+    const headers = ['Date', 'Type', 'Numéro', 'Débit', 'Crédit', 'Solde Réel', 'Solde En Cours', 'Statut'];
+    const csvRows = [headers.join(';')];
+    
+    // Add data rows
+    releveData.forEach(line => {
+      const row = [
+        line.dateStr,
+        line.type,
+        line.numero,
+        line.debit > 0 ? line.debit.toString().replace('.', ',') : '',
+        line.credit > 0 ? line.credit.toString().replace('.', ',') : '',
+        line.soldeReel.toString().replace('.', ','),
+        line.soldeEnCours.toString().replace('.', ','),
+        line.isInfo ? 'INFO' : (line.isValidated ? 'Validé' : 'En attente')
+      ];
+      csvRows.push(row.join(';'));
+    });
+    
+    // Add totals
+    const totalDebit = releveData.reduce((s, l) => s + l.debit, 0);
+    const totalCredit = releveData.reduce((s, l) => s + l.credit, 0);
+    csvRows.push(['', 'TOTAUX', '', totalDebit.toString().replace('.', ','), totalCredit.toString().replace('.', ','), '', '', ''].join(';'));
+    
+    // Create and download file
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `releve_${releveTier?.raisonSociale || 'tiers'}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const printReleve = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -303,6 +388,7 @@ export function DashboardView() {
           .text-right { text-align: right; }
           .total-row { font-weight: bold; background: #dcfce7; }
           .pending { color: #d97706; font-style: italic; }
+          .info { color: #6b7280; font-style: italic; }
           .footer { margin-top: 30px; font-size: 10pt; color: #666; }
           .soldes { margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px; }
           .soldes-row { display: flex; justify-content: space-between; margin: 5px 0; }
@@ -326,7 +412,7 @@ export function DashboardView() {
           </thead>
           <tbody>
             ${releveData.map(l => `
-              <tr class="${!l.isValidated ? 'pending' : ''}">
+              <tr class="${l.isInfo ? 'info' : (!l.isValidated ? 'pending' : '')}">
                 <td>${l.dateStr}</td>
                 <td>${l.type}</td>
                 <td>${l.numero}</td>
@@ -437,7 +523,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V1.93</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V1.94</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
@@ -522,9 +608,14 @@ export function DashboardView() {
                 <DialogTitle>Relevé de compte</DialogTitle>
                 <p className="text-sm text-muted-foreground">{releveTier?.raisonSociale}</p>
               </div>
-              <Button size="sm" variant="outline" onClick={printReleve}>
-                <Printer className="w-4 h-4 mr-1" />Imprimer
-              </Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={exportReleveCSV}>
+                  <Download className="w-4 h-4 mr-1" />Export CSV
+                </Button>
+                <Button size="sm" variant="outline" onClick={printReleve}>
+                  <Printer className="w-4 h-4 mr-1" />Imprimer
+                </Button>
+              </div>
             </div>
           </DialogHeader>
           <div className="py-4">
@@ -566,9 +657,16 @@ export function DashboardView() {
                   </TableHeader>
                   <TableBody>
                     {releveData.map((line, idx) => (
-                      <TableRow key={idx} className={!line.isValidated ? 'bg-yellow-50' : ''}>
+                      <TableRow 
+                        key={idx} 
+                        className={line.isInfo ? 'bg-gray-100' : (!line.isValidated ? 'bg-yellow-50' : '')}
+                      >
                         <TableCell>{line.dateStr}</TableCell>
-                        <TableCell className={!line.isValidated ? 'text-yellow-700 italic' : ''}>{line.type}</TableCell>
+                        <TableCell 
+                          className={line.isInfo ? 'text-gray-500 italic' : (!line.isValidated ? 'text-yellow-700 italic' : '')}
+                        >
+                          {line.type}
+                        </TableCell>
                         <TableCell>{line.numero}</TableCell>
                         <TableCell className="text-right">{line.debit > 0 ? formatCurrency(line.debit) : ''}</TableCell>
                         <TableCell className="text-right">{line.credit > 0 ? formatCurrency(line.credit) : ''}</TableCell>
