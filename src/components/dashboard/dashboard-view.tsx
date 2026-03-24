@@ -18,10 +18,8 @@ const formatDate = (d: string | Date) => {
   return date.toLocaleDateString('fr-FR');
 };
 
-const getMonthName = (monthOffset: number) => {
-  const d = new Date();
-  d.setMonth(d.getMonth() - monthOffset);
-  return d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+const getMonthLabel = (monthOffset: number) => {
+  return `CA m${monthOffset === 0 ? ' en cours' : `-${monthOffset}`}`;
 };
 
 const getMonthRange = (monthOffset: number) => {
@@ -55,6 +53,10 @@ interface ReleveLine {
 type SortField = 'date' | 'type' | 'numero' | 'montant' | 'solde';
 type SortDirection = 'asc' | 'desc';
 
+interface MonthlyData {
+  m6: number; m5: number; m4: number; m3: number; m2: number; m1: number; m0: number;
+}
+
 export function DashboardView() {
   const [stats, setStats] = useState({
     tiers: 0, articles: 0, facturesClients: 0, facturesFournisseurs: 0,
@@ -62,9 +64,9 @@ export function DashboardView() {
   });
   
   const [monthlyStats, setMonthlyStats] = useState({
-    facturesClients: { m2: 0, m1: 0, m0: 0 },
-    facturesFournisseurs: { m2: 0, m1: 0, m0: 0 },
-    blNonFactures: { m2: 0, m1: 0, m0: 0 }
+    facturesClients: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
+    facturesFournisseurs: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
+    blNonFactures: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData
   });
 
   // Relevé dialog state
@@ -107,10 +109,10 @@ export function DashboardView() {
           reglementsFournisseurs: Array.isArray(rf) ? rf.length : 0,
         });
         
-        // Calculate monthly totals
-        const calcMonthlyTotals = (items: any[], dateField: string, valueField: string = 'totalHT') => {
-          const ranges = [getMonthRange(2), getMonthRange(1), getMonthRange(0)];
-          return ranges.map(range => {
+        // Calculate monthly totals - 7 months (M-6 to M en cours)
+        const calcMonthlyTotals = (items: any[], dateField: string, valueField: string = 'totalHT'): MonthlyData => {
+          const ranges = [getMonthRange(6), getMonthRange(5), getMonthRange(4), getMonthRange(3), getMonthRange(2), getMonthRange(1), getMonthRange(0)];
+          const totals = ranges.map(range => {
             return items
               .filter((item: any) => {
                 const date = new Date(item[dateField]);
@@ -118,6 +120,7 @@ export function DashboardView() {
               })
               .reduce((sum: number, item: any) => sum + (item[valueField] || 0), 0);
           });
+          return { m6: totals[0], m5: totals[1], m4: totals[2], m3: totals[3], m2: totals[4], m1: totals[5], m0: totals[6] };
         };
         
         const fcTotals = calcMonthlyTotals(Array.isArray(fc) ? fc : [], 'dateFacture');
@@ -128,9 +131,9 @@ export function DashboardView() {
         const blTotals = calcMonthlyTotals(blNonFacturesData, 'dateBL');
         
         setMonthlyStats({
-          facturesClients: { m2: fcTotals[0], m1: fcTotals[1], m0: fcTotals[2] },
-          facturesFournisseurs: { m2: ffTotals[0], m1: ffTotals[1], m0: ffTotals[2] },
-          blNonFactures: { m2: blTotals[0], m1: blTotals[1], m0: blTotals[2] }
+          facturesClients: fcTotals,
+          facturesFournisseurs: ffTotals,
+          blNonFactures: blTotals
         });
       } catch (e) { console.error(e); }
     };
@@ -360,9 +363,9 @@ export function DashboardView() {
         line.dateStr,
         line.type,
         line.numero,
-        line.montant.toString().replace('.', ','),
-        line.montantTTC > 0 ? line.montantTTC.toString().replace('.', ',') : '',
-        line.solde.toString().replace('.', ','),
+        line.montant.toFixed(2).replace('.', ','),
+        line.montantTTC > 0 ? line.montantTTC.toFixed(2).replace('.', ',') : '',
+        line.solde.toFixed(2).replace('.', ','),
         line.isInfo ? 'INFO' : (line.isValidated ? 'Validé' : 'En attente')
       ];
       csvRows.push(row.join(';'));
@@ -370,7 +373,7 @@ export function DashboardView() {
     
     // Add totals
     const totalMontant = releveData.reduce((s, l) => s + l.montant, 0);
-    csvRows.push(['', 'TOTAL', '', totalMontant.toString().replace('.', ','), '', '', ''].join(';'));
+    csvRows.push(['', 'TOTAL', '', totalMontant.toFixed(2).replace('.', ','), '', '', ''].join(';'));
     
     // Create and download file
     const csvContent = csvRows.join('\n');
@@ -396,19 +399,27 @@ export function DashboardView() {
       <head>
         <title>Relevé ${releveTier?.raisonSociale || ''}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1 { color: #16a34a; }
-          h2 { color: #15803d; font-size: 14pt; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background: #16a34a; color: white; padding: 8px; text-align: left; }
-          td { padding: 8px; border-bottom: 1px solid #ddd; }
+          @media print {
+            body { margin: 0; padding: 0; }
+            @page { margin: 1cm; size: A4; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+          }
+          body { font-family: Arial, sans-serif; padding: 20px; font-size: 10pt; }
+          h1 { color: #16a34a; font-size: 16pt; margin-bottom: 5px; }
+          h2 { color: #15803d; font-size: 12pt; margin-top: 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background: #16a34a; color: white; padding: 6px 4px; text-align: left; font-size: 9pt; }
+          td { padding: 5px 4px; border-bottom: 1px solid #ddd; font-size: 9pt; }
           .text-right { text-align: right; }
           .total-row { font-weight: bold; background: #dcfce7; }
           .pending { color: #d97706; font-style: italic; }
           .info { color: #6b7280; font-style: italic; }
-          .footer { margin-top: 30px; font-size: 10pt; color: #666; }
-          .soldes { margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px; }
-          .soldes-row { display: flex; justify-content: space-between; margin: 5px 0; }
+          .footer { margin-top: 20px; font-size: 8pt; color: #666; }
+          .soldes { margin-top: 15px; padding: 10px; background: #dcfce7; border-radius: 6px; }
+          .soldes-row { display: flex; justify-content: space-between; margin: 3px 0; }
           .negative { color: #dc2626; }
           .positive { color: #16a34a; }
         </style>
@@ -434,15 +445,15 @@ export function DashboardView() {
                 <td>${l.dateStr}</td>
                 <td>${l.type}</td>
                 <td>${l.numero}</td>
-                <td class="text-right">${l.montantTTC > 0 ? formatCurrency(l.montantTTC) : ''}</td>
-                <td class="text-right ${l.montant < 0 ? 'negative' : 'positive'}">${l.montant !== 0 ? formatCurrency(Math.abs(l.montant)) + (l.montant < 0 ? ' (D)' : ' (C)') : ''}</td>
-                <td class="text-right font-bold">${formatCurrency(Math.abs(l.solde))} ${l.solde >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</td>
+                <td class="text-right">${l.montantTTC > 0 ? l.montantTTC.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DH' : ''}</td>
+                <td class="text-right ${l.montant < 0 ? 'negative' : 'positive'}">${l.montant !== 0 ? Math.abs(l.montant).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DH' + (l.montant < 0 ? ' (D)' : ' (C)') : ''}</td>
+                <td class="text-right" style="font-weight:bold;">${Math.abs(l.solde).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH ${l.solde >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</td>
               </tr>
             `).join('')}
             <tr class="total-row">
               <td colspan="3">TOTAL</td>
               <td></td>
-              <td class="text-right">${formatCurrency(Math.abs(releveData.reduce((s, l) => s + l.montant, 0)))}</td>
+              <td class="text-right">${Math.abs(releveData.reduce((s, l) => s + l.montant, 0)).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH</td>
               <td></td>
             </tr>
           </tbody>
@@ -450,7 +461,7 @@ export function DashboardView() {
         <div class="soldes">
           <div class="soldes-row">
             <strong>Solde Final:</strong>
-            <span>${formatCurrency(Math.abs(finalSolde))} ${finalSolde >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
+            <span>${Math.abs(finalSolde).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH ${finalSolde >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
           </div>
         </div>
         <div class="footer">
@@ -467,23 +478,23 @@ export function DashboardView() {
     }, 300);
   };
 
-  // Monthly stats component
-  const MonthlyStatBar = ({ data, label }: { data: { m2: number, m1: number, m0: number }, label: string }) => (
-    <div className="bg-green-50 rounded-lg p-3 mb-3 border border-green-200">
-      <div className="text-xs text-green-600 font-medium mb-2">{label}</div>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div>
-          <div className="text-xs text-muted-foreground">{getMonthName(2)}</div>
-          <div className="text-sm font-bold text-green-700">{formatCurrency(data.m2)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">{getMonthName(1)}</div>
-          <div className="text-sm font-bold text-green-700">{formatCurrency(data.m1)}</div>
-        </div>
-        <div className="bg-green-100 rounded px-1">
-          <div className="text-xs text-green-600 font-medium">{getMonthName(0)}</div>
-          <div className="text-sm font-bold text-green-800">{formatCurrency(data.m0)}</div>
-        </div>
+  // Monthly stats component - 7 months
+  const MonthlyStatBar = ({ data, label }: { data: MonthlyData, label: string }) => (
+    <div className="bg-green-50 rounded-lg p-2 mb-2 border border-green-200">
+      <div className="text-xs text-green-600 font-medium mb-1">{label}</div>
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {[6, 5, 4, 3, 2, 1, 0].map((m) => {
+          const key = `m${m}` as keyof MonthlyData;
+          const isCurrent = m === 0;
+          return (
+            <div key={m} className={isCurrent ? 'bg-green-100 rounded px-1' : ''}>
+              <div className="text-[9px] text-muted-foreground font-medium">{getMonthLabel(m)}</div>
+              <div className={`text-[10px] font-bold ${isCurrent ? 'text-green-800' : 'text-green-700'}`}>
+                {formatCurrency(data[key])}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -532,7 +543,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V1.97</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V1.98</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
