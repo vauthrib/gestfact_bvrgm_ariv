@@ -17,8 +17,10 @@ const formatDate = (d: string | Date) => {
   return date.toLocaleDateString('fr-FR');
 };
 
-const getMonthLabel = (monthOffset: number) => {
-  return `CA m${monthOffset === 0 ? ' en cours' : `-${monthOffset}`}`;
+const getMonthName = (monthOffset: number) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - monthOffset);
+  return d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
 };
 
 const getMonthRange = (monthOffset: number) => {
@@ -58,8 +60,9 @@ interface MonthlyData {
 
 export function DashboardView() {
   const [monthlyStats, setMonthlyStats] = useState({
-    facturesClients: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
-    facturesFournisseurs: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
+    facturesClientsHT: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
+    facturesClientsTTC: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
+    facturesFournisseursTTC: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
     blNonFactures: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData
   });
 
@@ -103,16 +106,21 @@ export function DashboardView() {
           return { m6: totals[0], m5: totals[1], m4: totals[2], m3: totals[3], m2: totals[4], m1: totals[5], m0: totals[6] };
         };
         
-        const fcTotals = calcMonthlyTotals(Array.isArray(fc) ? fc : [], 'dateFacture');
-        const ffTotals = calcMonthlyTotals(Array.isArray(ff) ? ff : [], 'dateFacture');
+        // Factures Clients HT et TTC
+        const fcHTTotals = calcMonthlyTotals(Array.isArray(fc) ? fc : [], 'dateFacture', 'totalHT');
+        const fcTTCTotals = calcMonthlyTotals(Array.isArray(fc) ? fc : [], 'dateFacture', 'totalTTC');
+        
+        // Factures Fournisseurs TTC
+        const ffTTCTotals = calcMonthlyTotals(Array.isArray(ff) ? ff : [], 'dateFacture', 'totalTTC');
         
         // BL non facturés (sans factureId ou statut != 'FACTURE')
         const blNonFacturesData = Array.isArray(bl) ? bl.filter((b: any) => !b.factureId && b.statut !== 'FACTURE') : [];
-        const blTotals = calcMonthlyTotals(blNonFacturesData, 'dateBL');
+        const blTotals = calcMonthlyTotals(blNonFacturesData, 'dateBL', 'totalHT');
         
         setMonthlyStats({
-          facturesClients: fcTotals,
-          facturesFournisseurs: ffTotals,
+          facturesClientsHT: fcHTTotals,
+          facturesClientsTTC: fcTTCTotals,
+          facturesFournisseursTTC: ffTTCTotals,
           blNonFactures: blTotals
         });
       } catch (e) { console.error(e); }
@@ -451,9 +459,10 @@ export function DashboardView() {
 
   // Data for the table rows
   const tableRows = [
-    { label: 'CA Factures Clients', data: monthlyStats.facturesClients, highlight: false },
-    { label: 'CA Factures Fournisseurs', data: monthlyStats.facturesFournisseurs, highlight: false },
-    { label: 'BL non facturés', data: monthlyStats.blNonFactures, highlight: false },
+    { label: 'Factures Clients en DH HT', data: monthlyStats.facturesClientsHT },
+    { label: 'Factures Clients en DH TTC', data: monthlyStats.facturesClientsTTC },
+    { label: 'BL non facturés', data: monthlyStats.blNonFactures },
+    { label: 'Factures Fourn. en DH TTC', data: monthlyStats.facturesFournisseursTTC },
   ];
 
   const finalSolde = releveData.length > 0 ? releveData[0].solde : 0;
@@ -464,7 +473,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V1.99</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V2.00</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
@@ -474,15 +483,27 @@ export function DashboardView() {
         </div>
       </div>
 
-      {/* Monthly CA Table - Rows instead of columns */}
+      {/* Monthly CA Table with month names */}
       <div className="bg-green-50 rounded-lg border border-green-200 overflow-hidden">
         <Table>
           <TableHeader>
+            {/* First header row: Ce mois, m-1, m-2... */}
             <TableRow className="bg-green-100 hover:bg-green-100">
-              <TableHead className="font-bold text-green-700">Libellé</TableHead>
-              {[6, 5, 4, 3, 2, 1, 0].map((m) => (
-                <TableHead key={m} className={`text-right font-bold text-green-700 ${m === 0 ? 'bg-green-200' : ''}`}>
-                  {getMonthLabel(m)}
+              <TableHead className="font-bold text-green-700 border-r border-green-200">Libellé</TableHead>
+              <TableHead className="text-center font-bold text-green-700 bg-green-200">Ce mois</TableHead>
+              <TableHead className="text-center font-bold text-green-700">m-1</TableHead>
+              <TableHead className="text-center font-bold text-green-700">m-2</TableHead>
+              <TableHead className="text-center font-bold text-green-700">m-3</TableHead>
+              <TableHead className="text-center font-bold text-green-700">m-4</TableHead>
+              <TableHead className="text-center font-bold text-green-700">m-5</TableHead>
+              <TableHead className="text-center font-bold text-green-700">m-6</TableHead>
+            </TableRow>
+            {/* Second header row: Month names */}
+            <TableRow className="bg-green-50 hover:bg-green-50">
+              <TableHead className="border-r border-green-200"></TableHead>
+              {[0, 1, 2, 3, 4, 5, 6].map((m) => (
+                <TableHead key={m} className={`text-center text-xs text-green-600 ${m === 0 ? 'bg-green-100' : ''}`}>
+                  {getMonthName(m)}
                 </TableHead>
               ))}
             </TableRow>
@@ -490,8 +511,8 @@ export function DashboardView() {
           <TableBody>
             {tableRows.map((row, idx) => (
               <TableRow key={idx} className="hover:bg-green-100/50">
-                <TableCell className="font-medium text-green-800">{row.label}</TableCell>
-                {[6, 5, 4, 3, 2, 1, 0].map((m) => {
+                <TableCell className="font-medium text-green-800 border-r border-green-200">{row.label}</TableCell>
+                {[0, 1, 2, 3, 4, 5, 6].map((m) => {
                   const key = `m${m}` as keyof MonthlyData;
                   return (
                     <TableCell key={m} className={`text-right font-mono ${m === 0 ? 'bg-green-100 font-bold' : ''}`}>
