@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calculator, Printer, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
-const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH`;
+const formatCurrency = (a: number) => a.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const formatDate = (d: string | Date) => {
   if (!d) return '';
@@ -28,6 +28,13 @@ const getMonthRange = (monthOffset: number) => {
   d.setMonth(d.getMonth() - monthOffset);
   const start = new Date(d.getFullYear(), d.getMonth(), 1);
   const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+  return { start, end };
+};
+
+const getYearRange = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1); // 1er janvier
+  const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59); // 31 décembre
   return { start, end };
 };
 
@@ -58,12 +65,26 @@ interface MonthlyData {
   m6: number; m5: number; m4: number; m3: number; m2: number; m1: number; m0: number;
 }
 
+interface YearlyData {
+  facturesClientsHT: number;
+  facturesClientsTTC: number;
+  facturesFournisseursTTC: number;
+  blNonFactures: number;
+}
+
 export function DashboardView() {
   const [monthlyStats, setMonthlyStats] = useState({
     facturesClientsHT: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
     facturesClientsTTC: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
     facturesFournisseursTTC: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
     blNonFactures: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData
+  });
+
+  const [yearlyStats, setYearlyStats] = useState<YearlyData>({
+    facturesClientsHT: 0,
+    facturesClientsTTC: 0,
+    facturesFournisseursTTC: 0,
+    blNonFactures: 0
   });
 
   // Relevé dialog state
@@ -106,6 +127,17 @@ export function DashboardView() {
           return { m6: totals[0], m5: totals[1], m4: totals[2], m3: totals[3], m2: totals[4], m1: totals[5], m0: totals[6] };
         };
         
+        // Calculate yearly totals
+        const calcYearlyTotal = (items: any[], dateField: string, valueField: string = 'totalHT'): number => {
+          const yearRange = getYearRange();
+          return items
+            .filter((item: any) => {
+              const date = new Date(item[dateField]);
+              return date >= yearRange.start && date <= yearRange.end;
+            })
+            .reduce((sum: number, item: any) => sum + (item[valueField] || 0), 0);
+        };
+        
         // Factures Clients HT et TTC
         const fcHTTotals = calcMonthlyTotals(Array.isArray(fc) ? fc : [], 'dateFacture', 'totalHT');
         const fcTTCTotals = calcMonthlyTotals(Array.isArray(fc) ? fc : [], 'dateFacture', 'totalTTC');
@@ -117,11 +149,24 @@ export function DashboardView() {
         const blNonFacturesData = Array.isArray(bl) ? bl.filter((b: any) => !b.factureId && b.statut !== 'FACTURE') : [];
         const blTotals = calcMonthlyTotals(blNonFacturesData, 'dateBL', 'totalHT');
         
+        // Yearly totals
+        const fcHTYearly = calcYearlyTotal(Array.isArray(fc) ? fc : [], 'dateFacture', 'totalHT');
+        const fcTTCYearly = calcYearlyTotal(Array.isArray(fc) ? fc : [], 'dateFacture', 'totalTTC');
+        const ffTTCYearly = calcYearlyTotal(Array.isArray(ff) ? ff : [], 'dateFacture', 'totalTTC');
+        const blYearly = calcYearlyTotal(blNonFacturesData, 'dateBL', 'totalHT');
+        
         setMonthlyStats({
           facturesClientsHT: fcHTTotals,
           facturesClientsTTC: fcTTCTotals,
           facturesFournisseursTTC: ffTTCTotals,
           blNonFactures: blTotals
+        });
+        
+        setYearlyStats({
+          facturesClientsHT: fcHTYearly,
+          facturesClientsTTC: fcTTCYearly,
+          facturesFournisseursTTC: ffTTCYearly,
+          blNonFactures: blYearly
         });
       } catch (e) { console.error(e); }
     };
@@ -424,15 +469,15 @@ export function DashboardView() {
                 <td>${l.dateStr}</td>
                 <td>${l.type}</td>
                 <td>${l.numero}</td>
-                <td class="text-right">${l.montantTTC > 0 ? l.montantTTC.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DH' : ''}</td>
-                <td class="text-right ${l.montant < 0 ? 'negative' : 'positive'}">${l.montant !== 0 ? Math.abs(l.montant).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DH' + (l.montant < 0 ? ' (D)' : ' (C)') : ''}</td>
-                <td class="text-right" style="font-weight:bold;">${Math.abs(l.solde).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH ${l.solde >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</td>
+                <td class="text-right">${l.montantTTC > 0 ? l.montantTTC.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
+                <td class="text-right ${l.montant < 0 ? 'negative' : 'positive'}">${l.montant !== 0 ? Math.abs(l.montant).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (l.montant < 0 ? ' (D)' : ' (C)') : ''}</td>
+                <td class="text-right" style="font-weight:bold;">${Math.abs(l.solde).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${l.solde >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</td>
               </tr>
             `).join('')}
             <tr class="total-row">
               <td colspan="3">TOTAL</td>
               <td></td>
-              <td class="text-right">${Math.abs(releveData.reduce((s, l) => s + l.montant, 0)).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH</td>
+              <td class="text-right">${Math.abs(releveData.reduce((s, l) => s + l.montant, 0)).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               <td></td>
             </tr>
           </tbody>
@@ -440,7 +485,7 @@ export function DashboardView() {
         <div class="soldes">
           <div class="soldes-row">
             <strong>Solde Final:</strong>
-            <span>${Math.abs(finalSolde).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH ${finalSolde >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
+            <span>${Math.abs(finalSolde).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${finalSolde >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
           </div>
         </div>
         <div class="footer">
@@ -459,10 +504,10 @@ export function DashboardView() {
 
   // Data for the table rows
   const tableRows = [
-    { label: 'Factures Clients en DH HT', data: monthlyStats.facturesClientsHT },
-    { label: 'Factures Clients en DH TTC', data: monthlyStats.facturesClientsTTC },
-    { label: 'BL non facturés', data: monthlyStats.blNonFactures },
-    { label: 'Factures Fourn. en DH TTC', data: monthlyStats.facturesFournisseursTTC },
+    { label: 'Factures Clients HT', data: monthlyStats.facturesClientsHT, yearly: yearlyStats.facturesClientsHT, isTTC: false },
+    { label: 'Factures Clients TTC', data: monthlyStats.facturesClientsTTC, yearly: yearlyStats.facturesClientsTTC, isTTC: true },
+    { label: 'BL non facturés', data: monthlyStats.blNonFactures, yearly: yearlyStats.blNonFactures, isTTC: false },
+    { label: 'Factures Fourn. TTC', data: monthlyStats.facturesFournisseursTTC, yearly: yearlyStats.facturesFournisseursTTC, isTTC: true },
   ];
 
   const finalSolde = releveData.length > 0 ? releveData[0].solde : 0;
@@ -473,7 +518,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V2.00</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V2.01</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
@@ -483,7 +528,7 @@ export function DashboardView() {
         </div>
       </div>
 
-      {/* Monthly CA Table with month names */}
+      {/* Monthly CA Table with month names and yearly total */}
       <div className="bg-green-50 rounded-lg border border-green-200 overflow-hidden">
         <Table>
           <TableHeader>
@@ -497,6 +542,7 @@ export function DashboardView() {
               <TableHead className="text-center font-bold text-green-700">m-4</TableHead>
               <TableHead className="text-center font-bold text-green-700">m-5</TableHead>
               <TableHead className="text-center font-bold text-green-700">m-6</TableHead>
+              <TableHead className="text-center font-bold text-green-700 bg-green-300">Cumul Année</TableHead>
             </TableRow>
             {/* Second header row: Month names */}
             <TableRow className="bg-green-50 hover:bg-green-50">
@@ -506,20 +552,24 @@ export function DashboardView() {
                   {getMonthName(m)}
                 </TableHead>
               ))}
+              <TableHead className="text-center text-xs text-green-600 bg-green-200">{new Date().getFullYear()}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {tableRows.map((row, idx) => (
               <TableRow key={idx} className="hover:bg-green-100/50">
-                <TableCell className="font-medium text-green-800 border-r border-green-200">{row.label}</TableCell>
+                <TableCell className={`font-medium text-green-800 border-r border-green-200 ${row.isTTC ? 'text-xs' : ''}`}>{row.label}</TableCell>
                 {[0, 1, 2, 3, 4, 5, 6].map((m) => {
                   const key = `m${m}` as keyof MonthlyData;
                   return (
-                    <TableCell key={m} className={`text-right font-mono ${m === 0 ? 'bg-green-100 font-bold' : ''}`}>
+                    <TableCell key={m} className={`text-right font-mono ${m === 0 ? 'bg-green-100 font-bold' : ''} ${row.isTTC ? 'text-xs' : ''}`}>
                       {formatCurrency(row.data[key])}
                     </TableCell>
                   );
                 })}
+                <TableCell className={`text-right font-mono bg-green-200 font-bold ${row.isTTC ? 'text-xs' : ''}`}>
+                  {formatCurrency(row.yearly)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

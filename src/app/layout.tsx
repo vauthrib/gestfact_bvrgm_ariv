@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RGM V2.00 - Gestion de Facturation",
+  title: "RGM V2.01 - Gestion de Facturation",
   description: "Application de gestion de facturation",
 };
 
