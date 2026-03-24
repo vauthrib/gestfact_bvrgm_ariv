@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Users, Package, Truck, CreditCard, Receipt, Calculator, Printer, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Calculator, Printer, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH`;
 
@@ -42,12 +41,12 @@ interface ReleveLine {
   dateStr: string;
   type: string;
   numero: string;
-  montant: number;         // Montant avec signe (positif = crédit, négatif = débit)
-  montantTTC: number;      // Montant TTC de la facture (pour les lignes facture)
-  solde: number;           // Solde cumulé
-  statut: string;          // Statut de l'élément
-  isValidated: boolean;    // Si l'élément est validé
-  isInfo?: boolean;        // Si c'est juste pour info (BL) - pas dans le calcul des soldes
+  montant: number;
+  montantTTC: number;
+  solde: number;
+  statut: string;
+  isValidated: boolean;
+  isInfo?: boolean;
 }
 
 type SortField = 'date' | 'type' | 'numero' | 'montant' | 'solde';
@@ -58,11 +57,6 @@ interface MonthlyData {
 }
 
 export function DashboardView() {
-  const [stats, setStats] = useState({
-    tiers: 0, articles: 0, facturesClients: 0, facturesFournisseurs: 0,
-    bonsLivraison: 0, reglementsClients: 0, reglementsFournisseurs: 0
-  });
-  
   const [monthlyStats, setMonthlyStats] = useState({
     facturesClients: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
     facturesFournisseurs: { m6: 0, m5: 0, m4: 0, m3: 0, m2: 0, m1: 0, m0: 0 } as MonthlyData,
@@ -89,25 +83,11 @@ export function DashboardView() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [tiers, articles, fc, ff, bl, rc, rf] = await Promise.all([
-          fetch('/api/tiers').then(r => r.json()).catch(() => []),
-          fetch('/api/articles').then(r => r.json()).catch(() => []),
+        const [fc, ff, bl] = await Promise.all([
           fetch('/api/factures-clients').then(r => r.json()).catch(() => []),
           fetch('/api/factures-fournisseurs').then(r => r.json()).catch(() => []),
           fetch('/api/bons-livraison').then(r => r.json()).catch(() => []),
-          fetch('/api/reglements-clients').then(r => r.json()).catch(() => []),
-          fetch('/api/reglements-fournisseurs').then(r => r.json()).catch(() => []),
         ]);
-        
-        setStats({
-          tiers: Array.isArray(tiers) ? tiers.length : 0,
-          articles: Array.isArray(articles) ? articles.length : 0,
-          facturesClients: Array.isArray(fc) ? fc.length : 0,
-          facturesFournisseurs: Array.isArray(ff) ? ff.length : 0,
-          bonsLivraison: Array.isArray(bl) ? bl.length : 0,
-          reglementsClients: Array.isArray(rc) ? rc.length : 0,
-          reglementsFournisseurs: Array.isArray(rf) ? rf.length : 0,
-        });
         
         // Calculate monthly totals - 7 months (M-6 to M en cours)
         const calcMonthlyTotals = (items: any[], dateField: string, valueField: string = 'totalHT'): MonthlyData => {
@@ -194,8 +174,6 @@ export function DashboardView() {
           })
           .forEach((f: any) => {
             const isValidated = f.statut === 'VALIDEE';
-            // Pour les clients: factures = crédit (montant positif)
-            // Pour les fournisseurs: factures = débit (montant négatif)
             const montantTTC = f.totalTTC || 0;
             const montant = isClient ? montantTTC : -montantTTC;
             lines.push({
@@ -230,8 +208,6 @@ export function DashboardView() {
           })
           .forEach((r: any) => {
             const isValidated = r.statut === 'VALIDE';
-            // Pour les clients: règlements = débit (montant négatif)
-            // Pour les fournisseurs: règlements = crédit (montant positif)
             const montantRgl = r.montant || 0;
             const montant = isClient ? -montantRgl : montantRgl;
             lines.push({
@@ -240,7 +216,7 @@ export function DashboardView() {
               type: isValidated ? 'Règlement' : 'Règlement (en attente)',
               numero: r.numero || r.reference || '-',
               montant: montant,
-              montantTTC: 0, // Pas de TTC pour les règlements
+              montantTTC: 0,
               solde: 0,
               statut: r.statut,
               isValidated: isValidated,
@@ -323,7 +299,6 @@ export function DashboardView() {
       setSortField(field);
       setSortDirection('desc');
     }
-    // Re-sort the data
     setReleveData(prev => {
       const sorted = [...prev].sort((a, b) => {
         let valA: any, valB: any;
@@ -353,11 +328,9 @@ export function DashboardView() {
   const exportReleveCSV = () => {
     if (releveData.length === 0) return;
     
-    // CSV header
     const headers = ['Date', 'Type', 'Numéro', 'Montant', 'Montant TTC', 'Solde', 'Statut'];
     const csvRows = [headers.join(';')];
     
-    // Add data rows
     releveData.forEach(line => {
       const row = [
         line.dateStr,
@@ -371,11 +344,9 @@ export function DashboardView() {
       csvRows.push(row.join(';'));
     });
     
-    // Add totals
     const totalMontant = releveData.reduce((s, l) => s + l.montant, 0);
     csvRows.push(['', 'TOTAL', '', totalMontant.toFixed(2).replace('.', ','), '', '', ''].join(';'));
     
-    // Create and download file
     const csvContent = csvRows.join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -478,61 +449,11 @@ export function DashboardView() {
     }, 300);
   };
 
-  // Monthly stats component - 7 months
-  const MonthlyStatBar = ({ data, label }: { data: MonthlyData, label: string }) => (
-    <div className="bg-green-50 rounded-lg p-2 mb-2 border border-green-200">
-      <div className="text-xs text-green-600 font-medium mb-1">{label}</div>
-      <div className="grid grid-cols-7 gap-1 text-center">
-        {[6, 5, 4, 3, 2, 1, 0].map((m) => {
-          const key = `m${m}` as keyof MonthlyData;
-          const isCurrent = m === 0;
-          return (
-            <div key={m} className={isCurrent ? 'bg-green-100 rounded px-1' : ''}>
-              <div className="text-[9px] text-muted-foreground font-medium">{getMonthLabel(m)}</div>
-              <div className={`text-[10px] font-bold ${isCurrent ? 'text-green-800' : 'text-green-700'}`}>
-                {formatCurrency(data[key])}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  const cards = [
-    { 
-      title: 'Tiers', 
-      value: stats.tiers, 
-      icon: <Users className="w-5 h-5 text-green-500" />,
-      monthlyStats: <MonthlyStatBar data={monthlyStats.facturesClients} label="Total HT Factures Clients" />
-    },
-    { 
-      title: 'Articles', 
-      value: stats.articles, 
-      icon: <Package className="w-5 h-5 text-green-500" />,
-      monthlyStats: <MonthlyStatBar data={monthlyStats.facturesFournisseurs} label="Total HT Factures Fourn." />
-    },
-    { 
-      title: 'Factures Clients', 
-      value: stats.facturesClients, 
-      icon: <FileText className="w-5 h-5 text-green-500" />,
-      monthlyStats: <MonthlyStatBar data={monthlyStats.blNonFactures} label="Total HT BL non facturés" />
-    },
-    { 
-      title: 'Factures Fourn.', 
-      value: stats.facturesFournisseurs, 
-      icon: <Receipt className="w-5 h-5 text-green-500" /> 
-    },
-    { 
-      title: 'Bons de Livraison', 
-      value: stats.bonsLivraison, 
-      icon: <Truck className="w-5 h-5 text-green-500" /> 
-    },
-    { 
-      title: 'Règlements', 
-      value: stats.reglementsClients + stats.reglementsFournisseurs, 
-      icon: <CreditCard className="w-5 h-5 text-green-500" /> 
-    },
+  // Data for the table rows
+  const tableRows = [
+    { label: 'CA Factures Clients', data: monthlyStats.facturesClients, highlight: false },
+    { label: 'CA Factures Fournisseurs', data: monthlyStats.facturesFournisseurs, highlight: false },
+    { label: 'BL non facturés', data: monthlyStats.blNonFactures, highlight: false },
   ];
 
   const finalSolde = releveData.length > 0 ? releveData[0].solde : 0;
@@ -543,7 +464,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V1.98</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V1.99</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
@@ -552,21 +473,36 @@ export function DashboardView() {
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map((card) => (
-          <Card key={card.title}>
-            {card.monthlyStats && (
-              <div className="px-4 pt-4">
-                {card.monthlyStats}
-              </div>
-            )}
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
-              {card.icon}
-            </CardHeader>
-            <CardContent><div className="text-2xl font-bold">{card.value}</div></CardContent>
-          </Card>
-        ))}
+
+      {/* Monthly CA Table - Rows instead of columns */}
+      <div className="bg-green-50 rounded-lg border border-green-200 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-green-100 hover:bg-green-100">
+              <TableHead className="font-bold text-green-700">Libellé</TableHead>
+              {[6, 5, 4, 3, 2, 1, 0].map((m) => (
+                <TableHead key={m} className={`text-right font-bold text-green-700 ${m === 0 ? 'bg-green-200' : ''}`}>
+                  {getMonthLabel(m)}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tableRows.map((row, idx) => (
+              <TableRow key={idx} className="hover:bg-green-100/50">
+                <TableCell className="font-medium text-green-800">{row.label}</TableCell>
+                {[6, 5, 4, 3, 2, 1, 0].map((m) => {
+                  const key = `m${m}` as keyof MonthlyData;
+                  return (
+                    <TableCell key={m} className={`text-right font-mono ${m === 0 ? 'bg-green-100 font-bold' : ''}`}>
+                      {formatCurrency(row.data[key])}
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Relevé Dialog - Selection */}
