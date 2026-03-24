@@ -15,7 +15,7 @@ import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
 
 interface LigneBL { id?: string; articleId?: string; designation: string; quantite: number; prixUnitaire: number; totalHT: number; }
-interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; bonCommande: string | null; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; }
+interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; bonCommande: string | null; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; facture?: { id: string; numero: string } | null; }
 interface Tiers { id: string; code: string; raisonSociale: string; type: string; }
 interface Article { id: string; code: string; designation: string; prixUnitaire: number; }
 interface Parametres { 
@@ -339,6 +339,7 @@ export function BonsLivraisonView() {
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('client')}>Client <SortIcon field="client" /></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('totalHT')}>Total HT <SortIcon field="totalHT" /></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('statut')}>Statut <SortIcon field="statut" /></TableHead>
+                  <TableHead>Facturé</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -348,9 +349,29 @@ export function BonsLivraisonView() {
                 <TableCell>{b.client?.raisonSociale}</TableCell>
                 <TableCell>{formatCurrency(b.totalHT)}</TableCell>
                 <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
+                <TableCell>
+                  {b.facture ? (
+                    <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800 font-medium">
+                      ✓ {b.facture.numero}
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-500">-</span>
+                  )}
+                </TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
                   {b.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(b.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
-                  {b.statut === 'VALIDEE' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleConvertToFacture(b)} title="Créer facture"><FileText className="h-4 w-4" /></Button>}
+                  {b.statut === 'VALIDEE' && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className={b.facture ? "text-gray-400 cursor-not-allowed" : "text-green-600"} 
+                      onClick={() => !b.facture && handleConvertToFacture(b)} 
+                      disabled={!!b.facture}
+                      title={b.facture ? `Déjà facturé (${b.facture.numero})` : "Créer facture"}
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(b)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
                   <Button size="sm" variant="outline" onClick={() => openEditDialog(b)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
                   <Button size="sm" variant="destructive" onClick={() => handleDelete(b.id)} disabled={b.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>

@@ -72,6 +72,7 @@ model FactureClient {
   client          Tiers              @relation(fields: [clientId], references: [id])
   lignes          LigneFactureClient[]
   reglements      ReglementClient[]
+  bonsLivraison   BonLivraison[]     // BL convertis en cette facture
 
   @@index([clientId])
   @@index([statut])
@@ -164,14 +165,17 @@ model BonLivraison {
   infoLibre       String?
   notesLivraison  String?
   totalHT         Float    @default(0)
+  factureId       String?  // ID de la facture si le BL a été converti
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   client          Tiers               @relation(fields: [clientId], references: [id])
   lignes          LigneBonLivraison[]
+  facture         FactureClient?      @relation(fields: [factureId], references: [id])
 
   @@index([clientId])
   @@index([statut])
+  @@index([factureId])
 }
 
 model LigneBonLivraison {

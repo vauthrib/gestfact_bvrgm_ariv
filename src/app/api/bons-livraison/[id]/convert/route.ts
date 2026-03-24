@@ -93,7 +93,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Update BL to mark as converted
     await prisma.bonLivraison.update({
       where: { id },
-      data: { infoLibre: `Converti en facture ${numeroFacture}` }
+      data: { 
+        factureId: facture.id,
+        infoLibre: `Converti en facture ${numeroFacture}`
+      }
     });
 
     return NextResponse.json(facture);

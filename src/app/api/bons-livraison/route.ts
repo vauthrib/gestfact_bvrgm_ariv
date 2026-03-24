@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 export async function GET() {
   try {
     const bl = await prisma.bonLivraison.findMany({
-      include: { client: true, lignes: true },
+      include: { client: true, lignes: true, facture: { select: { id: true, numero: true } } },
       orderBy: { createdAt: 'desc' }
     });
     return NextResponse.json(bl);
