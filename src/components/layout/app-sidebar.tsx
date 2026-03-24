@@ -48,7 +48,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle }: A
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
           <span className="font-bold text-lg">
-            RGM <span className="bg-orange-400 text-white px-2 py-0.5 rounded text-xs font-bold">V2.01</span>
+            RGM <span className="bg-orange-400 text-white px-2 py-0.5 rounded text-xs font-bold">V2.02</span>
           </span>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle}>

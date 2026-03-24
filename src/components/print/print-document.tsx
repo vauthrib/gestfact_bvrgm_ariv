@@ -41,7 +41,7 @@ const formatDate = (d: string | Date) => {
   return date.toLocaleDateString('fr-FR');
 };
 
-// Couleur verte pâle pour V2.01
+// Couleur verte pâle pour V2.02
 const PRIMARY_COLOR = '#16a34a'; // green-600
 const PRIMARY_LIGHT = '#dcfce7'; // green-100
 const PRIMARY_TEXT = '#15803d'; // green-700
