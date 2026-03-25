@@ -41,6 +41,68 @@ const formatDate = (d: string | Date) => {
   return date.toLocaleDateString('fr-FR');
 };
 
+// Convert number to French words for currency
+const numberToWords = (num: number): string => {
+  const units = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+  const tens = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+  
+  const convertHundreds = (n: number): string => {
+    if (n === 0) return '';
+    if (n < 20) return units[n];
+    if (n < 100) {
+      const t = Math.floor(n / 10);
+      const u = n % 10;
+      if (t === 7 || t === 9) {
+        return tens[t] + (u === 1 && t !== 9 ? '-et-' : '-') + units[10 + u];
+      }
+      if (u === 0) return tens[t] + (t === 8 ? 's' : '');
+      if (u === 1 && t !== 8) return tens[t] + '-et-un';
+      return tens[t] + '-' + units[u];
+    }
+    const h = Math.floor(n / 100);
+    const r = n % 100;
+    let result = h === 1 ? 'cent' : units[h] + ' cent';
+    if (r === 0 && h > 1) result += 's';
+    return result + (r ? ' ' + convertHundreds(r) : '');
+  };
+  
+  if (num === 0) return 'zéro';
+  
+  const intPart = Math.floor(num);
+  const decPart = Math.round((num - intPart) * 100);
+  
+  let result = '';
+  
+  const millions = Math.floor(intPart / 1000000);
+  const thousands = Math.floor((intPart % 1000000) / 1000);
+  const remainder = intPart % 1000;
+  
+  if (millions > 0) {
+    result += millions === 1 ? 'un million' : convertHundreds(millions) + ' millions';
+    if (thousands > 0 || remainder > 0) result += ' ';
+  }
+  
+  if (thousands > 0) {
+    result += thousands === 1 ? 'mille' : convertHundreds(thousands) + ' mille';
+    if (remainder > 0) result += ' ';
+  }
+  
+  if (remainder > 0) {
+    result += convertHundreds(remainder);
+  }
+  
+  // Add currency
+  if (intPart > 0) {
+    result += ' ' + (intPart === 1 ? 'dirham' : 'dirhams');
+  }
+  
+  if (decPart > 0) {
+    result += ' et ' + convertHundreds(decPart) + ' centime' + (decPart > 1 ? 's' : '');
+  }
+  
+  return result.trim();
+};
+
 // Couleur verte pâle pour V2.02
 const PRIMARY_COLOR = '#16a34a'; // green-600
 const PRIMARY_LIGHT = '#dcfce7'; // green-100
@@ -245,6 +307,11 @@ export function PrintDocument({
                 ${documentData.totalTTC !== undefined ? `<p class="total-ttc">Total TTC: ${formatCurrency(documentData.totalTTC)}</p>` : ''}
                 ${documentData.montantTTC !== undefined ? `<p class="total-ttc">Total TTC: ${formatCurrency(documentData.montantTTC)}</p>` : ''}
                 ${documentData.montant !== undefined ? `<p class="total-ttc">Montant: ${formatCurrency(documentData.montant)}</p>` : ''}
+                ${(documentData.totalTTC || documentData.montantTTC || documentData.montant) ? `
+                  <p class="amount-words" style="margin-top: 15px; font-size: 9pt; font-style: italic; border-top: 1px solid #ddd; padding-top: 10px;">
+                    Le montant total toutes taxes comprises, à payer, est de : <strong>${numberToWords(documentData.totalTTC || documentData.montantTTC || documentData.montant)}</strong>.
+                  </p>
+                ` : ''}
               </div>
             ` : ''}
             
@@ -376,6 +443,11 @@ export function PrintDocument({
               ${documentData.totalTTC !== undefined ? `<p class="total-ttc">Total TTC: ${formatCurrency(documentData.totalTTC)}</p>` : ''}
               ${documentData.montantTTC !== undefined ? `<p class="total-ttc">Total TTC: ${formatCurrency(documentData.montantTTC)}</p>` : ''}
               ${documentData.montant !== undefined ? `<p class="total-ttc">Montant: ${formatCurrency(documentData.montant)}</p>` : ''}
+              ${(documentData.totalTTC || documentData.montantTTC || documentData.montant) ? `
+                <p class="amount-words" style="margin-top: 15px; font-size: 9pt; font-style: italic; border-top: 1px solid #ddd; padding-top: 10px;">
+                  Le montant total toutes taxes comprises, à payer, est de : <strong>${numberToWords(documentData.totalTTC || documentData.montantTTC || documentData.montant)}</strong>.
+                </p>
+              ` : ''}
             </div>
           ` : ''}
           
@@ -693,6 +765,11 @@ export function PrintDocument({
                   )}
                   {documentData.montant !== undefined && (
                     <p className="text-lg font-bold text-green-700">Montant: {formatCurrency(documentData.montant)}</p>
+                  )}
+                  {(documentData.totalTTC || documentData.montantTTC || documentData.montant) && (
+                    <p className="text-sm italic text-gray-600 mt-3 pt-2 border-t">
+                      Le montant total toutes taxes comprises, à payer, est de : <strong className="text-green-700">{numberToWords(documentData.totalTTC || documentData.montantTTC || documentData.montant)}</strong>.
+                    </p>
                   )}
                 </div>
               )}
