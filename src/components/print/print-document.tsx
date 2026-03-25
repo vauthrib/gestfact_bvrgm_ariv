@@ -33,7 +33,7 @@ interface PrintDocumentProps {
   letterheadImage?: string | null;
 }
 
-const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH`;
+const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH`;
 
 const formatDate = (d: string | Date) => {
   if (!d) return '';
@@ -649,6 +649,11 @@ export function PrintDocument({
                   )}
                   {documentData.montant !== undefined && (
                     <p className="text-lg font-bold text-green-700">Montant: {formatCurrency(documentData.montant)}</p>
+                  )}
+                  {(documentData.totalTTC || documentData.montantTTC || documentData.montant) && (
+                    <p className="text-sm italic text-gray-600 mt-3 pt-2 border-t">
+                      Le montant total TTC à payer est de : <strong className="text-green-700">{numberToWords(documentData.totalTTC || documentData.montantTTC || documentData.montant)}</strong>.
+                    </p>
                   )}
                 </div>
               )}
