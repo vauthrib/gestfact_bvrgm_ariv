@@ -33,6 +33,7 @@ model Tiers {
   facturesClients          FactureClient[]
   facturesFournisseurs     FactureFournisseur[]
   bonsLivraison            BonLivraison[]
+  avoirsClients            AvoirClient[]
 }
 
 model Article {
@@ -49,6 +50,7 @@ model Article {
 
   lignesFactureClient    LigneFactureClient[]
   lignesBonLivraison     LigneBonLivraison[]
+  lignesAvoirClient      LigneAvoirClient[]
 }
 
 model FactureClient {
@@ -73,6 +75,7 @@ model FactureClient {
   lignes          LigneFactureClient[]
   reglements      ReglementClient[]
   bonsLivraison   BonLivraison[]     // BL convertis en cette facture
+  avoirs          AvoirClient[]      // Avoirs créés depuis cette facture
 
   @@index([clientId])
   @@index([statut])
@@ -112,6 +115,47 @@ model ReglementClient {
 
   @@index([factureId])
   @@index([statut])
+}
+
+model AvoirClient {
+  id              String   @id @default(cuid())
+  numero          String   @unique
+  dateAvoir       DateTime
+  clientId        String
+  factureId       String?  // Facture d'origine (optionnel)
+  motif           String?
+  statut          String   @default("BROUILLON")
+  notes           String?
+  infoLibre       String?
+  totalHT         Float    @default(0)
+  totalTVA        Float    @default(0)
+  totalTTC        Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client          Tiers              @relation(fields: [clientId], references: [id])
+  facture         FactureClient?     @relation(fields: [factureId], references: [id])
+  lignes          LigneAvoirClient[]
+
+  @@index([clientId])
+  @@index([statut])
+  @@index([factureId])
+}
+
+model LigneAvoirClient {
+  id            String   @id @default(cuid())
+  avoirId       String
+  articleId     String?
+  designation   String
+  quantite      Float    @default(0)
+  prixUnitaire  Float    @default(0)
+  tauxTVA       Float    @default(20)
+  totalHT       Float    @default(0)
+
+  avoir         AvoirClient @relation(fields: [avoirId], references: [id], onDelete: Cascade)
+  article       Article?    @relation(fields: [articleId], references: [id])
+
+  @@index([avoirId])
 }
 
 model FactureFournisseur {
@@ -212,6 +256,8 @@ model Parametres {
   numeroFactureDepart   Int?
   prefixeBL             String?
   numeroBLDepart        Int?
+  prefixeAvoir          String?
+  numeroAvoirDepart     Int?
   letterheadImage       String?  // Base64 image du papier à en-tête
   printLayout           String?  // JSON string - Configuration des positions des éléments
   createdAt             DateTime @default(now())

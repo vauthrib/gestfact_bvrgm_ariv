@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, Package, FileText, CreditCard,
-  Truck, Settings, ChevronLeft, ChevronRight, Receipt
+  Truck, Settings, ChevronLeft, ChevronRight, Receipt, Undo2
 } from 'lucide-react';
 
 export type PageView =
@@ -13,6 +13,7 @@ export type PageView =
   | 'articles'
   | 'bons-livraison'
   | 'factures-clients'
+  | 'avoirs-clients'
   | 'reglements-clients'
   | 'factures-fournisseurs'
   | 'reglements-fournisseurs'
@@ -31,6 +32,7 @@ const menuItems: { id: PageView; label: string; icon: React.ReactNode; separator
   { id: 'articles', label: 'Articles', icon: <Package className="w-5 h-5" /> },
   { id: 'bons-livraison', label: 'Bons de Livraison', icon: <Truck className="w-5 h-5" /> },
   { id: 'factures-clients', label: 'Factures Clients', icon: <FileText className="w-5 h-5" /> },
+  { id: 'avoirs-clients', label: 'Avoirs Clients', icon: <Undo2 className="w-5 h-5" /> },
   { id: 'reglements-clients', label: 'Règlements Clients', icon: <CreditCard className="w-5 h-5" />, separatorAfter: true },
   { id: 'factures-fournisseurs', label: 'Factures Fourn.', icon: <Receipt className="w-5 h-5" /> },
   { id: 'reglements-fournisseurs', label: 'Règlements Fourn.', icon: <CreditCard className="w-5 h-5" />, separatorAfter: true },
@@ -48,7 +50,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle }: A
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
           <span className="font-bold text-lg">
-            RGM <span className="bg-orange-400 text-white px-2 py-0.5 rounded text-xs font-bold">V2.04</span>
+            RGM <span className="bg-orange-400 text-white px-2 py-0.5 rounded text-xs font-bold">V2.05</span>
           </span>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle}>

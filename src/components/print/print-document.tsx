@@ -25,7 +25,7 @@ interface PrintLayout {
 interface PrintDocumentProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  documentType: 'BL' | 'FC' | 'FF' | 'RC' | 'RF';
+  documentType: 'BL' | 'FC' | 'FF' | 'RC' | 'RF' | 'AV';
   documentData: any;
   entreprise: any;
   code: string;
@@ -145,6 +145,7 @@ export function PrintDocument({
       case 'FF': return 'Facture Fournisseur';
       case 'RC': return 'Règlement Client';
       case 'RF': return 'Règlement Fournisseur';
+      case 'AV': return 'Avoir Client';
       default: return 'Document';
     }
   };
@@ -155,8 +156,9 @@ export function PrintDocument({
 
   // Generate HTML for print window
   const generatePrintHTML = () => {
-    const docDate = formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement);
+    const docDate = formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement || documentData.dateAvoir);
     const isBL = documentType === 'BL';
+    const isAV = documentType === 'AV';
     const showPrices = !hidePrices || !isBL;
     
     if (useCustomLayout && printLayout) {

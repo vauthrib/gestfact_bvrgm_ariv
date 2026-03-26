@@ -451,7 +451,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V2.04</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V2.05</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
