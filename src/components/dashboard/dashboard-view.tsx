@@ -336,6 +336,24 @@ export function DashboardView() {
             });
           });
         }
+        // Ajouter les avoirs clients
+        const avoirs = await fetch('/api/avoirs-clients').then(r => r.json()).catch(() => []);
+        if (Array.isArray(avoirs)) {
+          avoirs.filter((a: any) => {
+            const matchTier = a.clientId === releveForm.tierId;
+            const date = new Date(a.dateAvoir);
+            return matchTier && (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
+          }).forEach((a: any) => {
+            const isValidated = a.statut === 'VALIDEE';
+            const montantTTC = a.totalTTC || 0;
+            lines.push({
+              date: new Date(a.dateAvoir), dateStr: formatDate(a.dateAvoir),
+              type: isValidated ? 'Avoir' : 'Avoir (en attente)', numero: a.numero,
+              montant: -montantTTC, montantTTC, solde: 0, // Avoir réduit le montant à percevoir
+              statut: a.statut, isValidated, isInfo: false
+            });
+          });
+        }
       }
       lines.sort((a, b) => a.date.getTime() - b.date.getTime());
       let runningSolde = 0;
