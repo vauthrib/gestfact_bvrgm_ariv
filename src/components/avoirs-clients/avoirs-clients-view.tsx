@@ -17,7 +17,7 @@ interface LigneAvoir { id?: string; articleId?: string; designation: string; qua
 interface AvoirClient { id: string; numero: string; dateAvoir: string; clientId: string; factureId: string | null; motif: string | null; statut: string; notes: string | null; infoLibre: string | null; totalHT: number; totalTVA: number; totalTTC: number; client: { raisonSociale: string; adresse?: string; ville?: string; ice?: string }; facture?: { numero: string } | null; lignes?: LigneAvoir[]; }
 interface Tiers { id: string; code: string; raisonSociale: string; type: string; }
 interface Article { id: string; code: string; designation: string; prixUnitaire: number; tauxTVA: number; }
-interface Facture { id: string; numero: string; clientId: string; totalHT: number; totalTTC: number; client: { raisonSociale: string }; lignes: { designation: string; quantite: number; prixUnitaire: number; tauxTVA: number; totalHT: number; articleId?: string }[]; }
+interface Facture { id: string; numero: string; clientId: string; totalHT: number; totalTTC: number; statut: string; client: { raisonSociale: string }; lignes: { designation: string; quantite: number; prixUnitaire: number; tauxTVA: number; totalHT: number; articleId?: string }[]; }
 interface Parametres { nomEntreprise: string; adresseEntreprise?: string; villeEntreprise?: string; telephoneEntreprise?: string; emailEntreprise?: string; ice?: string; rc?: string; rcLieu?: string; prefixeAvoir?: string; numeroAvoirDepart?: number; letterheadImage?: string | null; printLayout?: string | null; }
 
 const parseNumber = (v: string | number) => { if (!v) return 0; if (typeof v === 'number') return v; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
