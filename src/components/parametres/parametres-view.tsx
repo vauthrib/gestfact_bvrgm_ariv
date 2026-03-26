@@ -43,6 +43,7 @@ interface Parametres {
   cnss: string | null; infoLibre: string | null; tvaDefaut: number;
   prefixeFacture: string | null; numeroFactureDepart: number | null;
   prefixeBL: string | null; numeroBLDepart: number | null;
+  prefixeAvoir: string | null; numeroAvoirDepart: number | null;
   letterheadImage: string | null; printLayout: string | null;
 }
 
@@ -200,11 +201,13 @@ export function ParametresView() {
         <Card>
           <CardHeader><CardTitle>Numérotation</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-6 gap-4">
               <div><Label>Préfixe Facture</Label><Input value={parametres?.prefixeFacture || ''} onChange={(e) => setParametres(p => p ? { ...p, prefixeFacture: e.target.value } : null)} /></div>
               <div><Label>N° Départ Facture</Label><Input type="number" value={parametres?.numeroFactureDepart || ''} onChange={(e) => setParametres(p => p ? { ...p, numeroFactureDepart: parseInt(e.target.value) } : null)} /></div>
               <div><Label>Préfixe BL</Label><Input value={parametres?.prefixeBL || ''} onChange={(e) => setParametres(p => p ? { ...p, prefixeBL: e.target.value } : null)} /></div>
               <div><Label>N° Départ BL</Label><Input type="number" value={parametres?.numeroBLDepart || ''} onChange={(e) => setParametres(p => p ? { ...p, numeroBLDepart: parseInt(e.target.value) } : null)} /></div>
+              <div><Label>Préfixe Avoir</Label><Input value={parametres?.prefixeAvoir || ''} onChange={(e) => setParametres(p => p ? { ...p, prefixeAvoir: e.target.value } : null)} /></div>
+              <div><Label>N° Départ Avoir</Label><Input type="number" value={parametres?.numeroAvoirDepart || ''} onChange={(e) => setParametres(p => p ? { ...p, numeroAvoirDepart: parseInt(e.target.value) } : null)} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>TVA par défaut (%)</Label><Input type="number" value={parametres?.tvaDefaut || ''} onChange={(e) => setParametres(p => p ? { ...p, tvaDefaut: parseFloat(e.target.value) } : null)} /></div>
