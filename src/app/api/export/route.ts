@@ -63,6 +63,12 @@ export async function GET(request: NextRequest) {
         numericFields = ['totalHT'];
         filename = 'bons_livraison';
         break;
+      case 'avoirs-clients':
+        data = await prisma.avoirClient.findMany({ include: { client: true, facture: true } });
+        headers = ['numero', 'dateAvoir', 'clientId', 'client.raisonSociale', 'factureId', 'facture.numero', 'motif', 'totalHT', 'totalTVA', 'totalTTC', 'statut'];
+        numericFields = ['totalHT', 'totalTVA', 'totalTTC'];
+        filename = 'avoirs_clients';
+        break;
       default:
         return NextResponse.json({ error: 'Type non supporté' }, { status: 400 });
     }

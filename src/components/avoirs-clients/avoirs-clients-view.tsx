@@ -18,7 +18,25 @@ interface AvoirClient { id: string; numero: string; dateAvoir: string; clientId:
 interface Tiers { id: string; code: string; raisonSociale: string; type: string; }
 interface Article { id: string; code: string; designation: string; prixUnitaire: number; tauxTVA: number; }
 interface Facture { id: string; numero: string; clientId: string; totalHT: number; totalTTC: number; statut: string; client: { raisonSociale: string }; lignes: { designation: string; quantite: number; prixUnitaire: number; tauxTVA: number; totalHT: number; articleId?: string }[]; }
-interface Parametres { nomEntreprise: string; adresseEntreprise?: string; villeEntreprise?: string; telephoneEntreprise?: string; emailEntreprise?: string; ice?: string; rc?: string; rcLieu?: string; prefixeAvoir?: string; numeroAvoirDepart?: number; letterheadImage?: string | null; printLayout?: string | null; }
+interface Parametres { 
+  id?: string;
+  nomEntreprise: string; 
+  adresseEntreprise?: string; 
+  villeEntreprise?: string; 
+  telephoneEntreprise?: string; 
+  emailEntreprise?: string; 
+  ice?: string; 
+  rc?: string; 
+  rcLieu?: string; 
+  prefixeAvoir?: string; 
+  numeroAvoirDepart?: number;
+  prefixeFacture?: string;
+  numeroFactureDepart?: number;
+  prefixeBL?: string;
+  numeroBLDepart?: number;
+  letterheadImage?: string | null; 
+  printLayout?: string | null; 
+}
 
 const parseNumber = (v: string | number) => { if (!v) return 0; if (typeof v === 'number') return v; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH`;
@@ -330,7 +348,7 @@ export function AvoirsClientsView() {
                   <SelectContent>
                     <SelectItem value="">-- Aucune --</SelectItem>
                     {factures.filter(f => f.statut === 'VALIDEE').map(f => (
-                      <SelectItem key={f.id} value={f.id}>{f.numero} - {f.client?.raisonSociale} ({formatCurrency(f.totalTTC)})</SelectItem>
+                      <SelectItem key={f.id} value={f.id}>{f.numero} - {f.client?.raisonSociale || 'N/A'} ({formatCurrency(f.totalTTC)})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
