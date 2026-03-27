@@ -419,7 +419,7 @@ export function AvoirsClientsView() {
       </Dialog>
 
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="avoirs-clients" code="NAC01" />
-      <PrintDocument open={printOpen} onOpenChange={setPrintOpen} documentType="AV" documentData={selectedAvoir} entreprise={parametres} code="NAC01" printLayout={parametres?.printLayout ? JSON.parse(parametres.printLayout) : null} letterheadImage={parametres?.letterheadImage} />
+      <PrintDocument open={printOpen} onOpenChange={setPrintOpen} documentType="AV" documentData={selectedAvoir} entreprise={parametres} code="NAC01" printLayout={parametres?.printLayout ? (() => { try { return JSON.parse(parametres.printLayout); } catch { return null; } })() : null} letterheadImage={parametres?.letterheadImage} />
     </div>
   );
 }
