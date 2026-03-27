@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, ArrowUp, ArrowDown, ArrowUpDown, FileText } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -325,10 +325,8 @@ export function AvoirsClientsView() {
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Avoir</DialogTitle>
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NAC01-DLG</span>
-            </div>
+            <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Avoir</DialogTitle>
+            <DialogDescription>Créez ou modifiez un avoir client</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
@@ -343,10 +341,10 @@ export function AvoirsClientsView() {
               </div>
               <div><Label>Date</Label><Input type="date" value={formData.dateAvoir} onChange={(e) => setFormData({ ...formData, dateAvoir: e.target.value })} required /></div>
               <div><Label>Créer depuis facture</Label>
-                <Select value={formData.factureId} onValueChange={handleSelectFacture}>
+                <Select value={formData.factureId || '__none__'} onValueChange={(v) => handleSelectFacture(v === '__none__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Sélectionner (optionnel)" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">-- Aucune --</SelectItem>
+                    <SelectItem value="__none__">-- Aucune --</SelectItem>
                     {(factures || []).filter(f => f?.statut === 'VALIDEE').map(f => (
                       <SelectItem key={f.id} value={f.id}>{f.numero} - {f?.client?.raisonSociale || 'N/A'} ({formatCurrency(f?.totalTTC || 0)})</SelectItem>
                     ))}
@@ -372,9 +370,12 @@ export function AvoirsClientsView() {
                 <TableHeader><TableRow><TableHead>Article</TableHead><TableHead className="w-[400px]">Désignation</TableHead><TableHead>Qté</TableHead><TableHead>P.U.</TableHead><TableHead>TVA%</TableHead><TableHead>Total HT</TableHead><TableHead></TableHead></TableRow></TableHeader>
                 <TableBody>{lignes.map((l, idx) => (<TableRow key={idx}>
                   <TableCell>
-                    <Select value={l.articleId || ''} onValueChange={(v) => updateLigne(idx, 'articleId', v)}>
+                    <Select value={l.articleId || '__none__'} onValueChange={(v) => updateLigne(idx, 'articleId', v === '__none__' ? '' : v)}>
                       <SelectTrigger className="w-32"><SelectValue placeholder="..." /></SelectTrigger>
-                      <SelectContent>{sortedArticles.map(a => (<SelectItem key={a.id} value={a.id}>{a.code}</SelectItem>))}</SelectContent>
+                      <SelectContent>
+                        <SelectItem value="__none__">--</SelectItem>
+                        {sortedArticles.map(a => (<SelectItem key={a.id} value={a.id}>{a.code}</SelectItem>))}
+                      </SelectContent>
                     </Select>
                   </TableCell>
                   <TableCell><Textarea value={l.designation} onChange={(e) => updateLigne(idx, 'designation', e.target.value)} className="min-h-[40px] min-w-[300px]" /></TableCell>
@@ -405,7 +406,10 @@ export function AvoirsClientsView() {
 
       <Dialog open={codeDialogOpen} onOpenChange={setCodeDialogOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Code requis</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Code requis</DialogTitle>
+            <DialogDescription>Entrez le code pour modifier cet avoir validé</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">Cet avoir est validé. Entrez le code pour le modifier.</p>
             <Input type="password" placeholder="Code à 4 chiffres" value={codeInput} onChange={(e) => setCodeInput(e.target.value)} className={`text-center text-xl ${codeError ? 'border-red-500' : ''}`} maxLength={4} autoFocus />
