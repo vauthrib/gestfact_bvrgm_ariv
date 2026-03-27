@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, Trash2, AlertTriangle, Layout, Printer } from 'lucide-react';
+import { Upload, Trash2, AlertTriangle, Layout, Printer, Database } from 'lucide-react';
 import { ImportCentralDialog } from '@/components/import-export/import-central-dialog';
 import { PrintLayoutEditor } from '@/components/print/print-layout-editor';
 import {
@@ -66,6 +66,8 @@ export function ParametresView() {
   const [clearError, setClearError] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [layoutEditorOpen, setLayoutEditorOpen] = useState(false);
+  const [migratingAvoirs, setMigratingAvoirs] = useState(false);
+  const [migrationMessage, setMigrationMessage] = useState('');
 
   useEffect(() => { fetchParametres(); }, []);
 
@@ -155,6 +157,25 @@ export function ParametresView() {
     }
   };
 
+  const handleMigrateAvoirs = async () => {
+    if (!confirm('Créer les tables pour les avoirs clients ?')) return;
+    setMigratingAvoirs(true);
+    setMigrationMessage('');
+    try {
+      const res = await fetch('/api/migrations/create-avoirs-tables', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setMigrationMessage('Tables créées avec succès!');
+      } else {
+        setMigrationMessage('Erreur: ' + data.error);
+      }
+    } catch (e: any) {
+      setMigrationMessage('Erreur: ' + e.message);
+    } finally {
+      setMigratingAvoirs(false);
+    }
+  };
+
   if (loading) return <div className="p-8">Chargement...</div>;
 
   return (
@@ -225,6 +246,11 @@ export function ParametresView() {
 
         <div className="flex justify-end gap-4 flex-wrap">
           {saved && <span className="text-green-600 self-center">Paramètres enregistrés!</span>}
+          {migrationMessage && <span className={migrationMessage.includes('Erreur') ? 'text-red-600' : 'text-green-600'} self-center>{migrationMessage}</span>}
+          <Button type="button" variant="outline" onClick={handleMigrateAvoirs} disabled={migratingAvoirs} className="border-blue-300 text-blue-700 hover:bg-blue-50">
+            <Database className="w-4 h-4 mr-2" />
+            {migratingAvoirs ? 'Migration...' : 'Créer tables Avoirs'}
+          </Button>
           <Button type="button" variant="outline" onClick={() => setLayoutEditorOpen(true)} className="border-green-300 text-green-700 hover:bg-green-50">
             <Printer className="w-4 h-4 mr-2" />
             Mise en page impression
