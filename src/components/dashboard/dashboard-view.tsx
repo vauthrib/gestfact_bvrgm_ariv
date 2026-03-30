@@ -123,7 +123,8 @@ interface ReleveLine {
   date: Date;
   dateStr: string;
   type: string;
-  numero: string;
+  numero: string;        // Numéro de la facture
+  numeroRef?: string;    // Numéro du document (règlement, avoir, BL)
   montant: number;
   montantTTC: number;
   solde: number;
@@ -338,11 +339,14 @@ export function DashboardView() {
           const date = new Date(r.dateReglement);
           return matchTier && (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
         }).forEach((r: any) => {
-          const isValidated = r.statut === 'VALIDE';
+          const isValidated = r.statut === 'ENREGISTRE' || r.statut === 'VALIDE';
           const montantRgl = r.montant || 0;
+          const factureNumero = r.facture?.numero || '-';
           lines.push({
             date: new Date(r.dateReglement), dateStr: formatDate(r.dateReglement),
-            type: isValidated ? 'Règlement' : 'Règlement (en attente)', numero: r.numero || r.reference || '-',
+            type: isValidated ? 'Règlement' : 'Règlement (en attente)', 
+            numero: factureNumero,  // Numéro de la facture
+            numeroRef: r.numero || r.reference || '-',  // Numéro du règlement
             montant: isClient ? -montantRgl : montantRgl, montantTTC: 0, solde: 0,
             statut: r.statut, isValidated, isInfo: false
           });
@@ -356,9 +360,12 @@ export function DashboardView() {
             const date = new Date(b.dateBL);
             return matchTier && (!dateFrom || date >= dateFrom) && (!dateTo || date <= dateTo);
           }).forEach((b: any) => {
+            const factureNumero = b.facture?.numero || '-';
             lines.push({
               date: new Date(b.dateBL), dateStr: formatDate(b.dateBL),
-              type: 'Bon de Livraison (info)', numero: b.numero,
+              type: 'Bon de Livraison (info)', 
+              numero: factureNumero,  // Numéro de la facture si converti
+              numeroRef: b.numero,    // Numéro du BL
               montant: 0, montantTTC: 0, solde: 0,
               statut: b.statut, isValidated: true, isInfo: true
             });
@@ -374,10 +381,13 @@ export function DashboardView() {
           }).forEach((a: any) => {
             const isValidated = a.statut === 'VALIDEE';
             const montantTTC = a.totalTTC || 0;
+            const factureNumero = a.facture?.numero || '-';
             lines.push({
               date: new Date(a.dateAvoir), dateStr: formatDate(a.dateAvoir),
-              type: isValidated ? 'Avoir' : 'Avoir (en attente)', numero: a.numero,
-              montant: -montantTTC, montantTTC, solde: 0, // Avoir réduit le montant à percevoir
+              type: isValidated ? 'Avoir' : 'Avoir (en attente)', 
+              numero: factureNumero,  // Numéro de la facture associée
+              numeroRef: a.numero,    // Numéro de l'avoir
+              montant: -montantTTC, montantTTC, solde: 0,
               statut: a.statut, isValidated, isInfo: false
             });
           });
@@ -434,14 +444,21 @@ export function DashboardView() {
 
   const exportReleveCSV = () => {
     if (releveData.length === 0) return;
-    const headers = ['Date', 'Type', 'Numéro', 'Montant', 'Montant TTC', 'Solde', 'Statut'];
+    const headers = ['Date', 'Type', 'N° Facture', 'Réf. Doc', 'Montant TTC', 'Montant', 'Solde', 'Statut'];
     const csvRows = [headers.join(';')];
     releveData.forEach(line => {
-      csvRows.push([line.dateStr, line.type, line.numero, line.montant.toFixed(2).replace('.', ','),
-        line.montantTTC > 0 ? line.montantTTC.toFixed(2).replace('.', ',') : '', line.solde.toFixed(2).replace('.', ','),
-        line.isInfo ? 'INFO' : (line.isValidated ? 'Validé' : 'En attente')].join(';'));
+      csvRows.push([
+        line.dateStr, 
+        line.type, 
+        line.numero, 
+        line.numeroRef || '',
+        line.montantTTC > 0 ? line.montantTTC.toFixed(2).replace('.', ',') : '',
+        line.montant !== 0 ? line.montant.toFixed(2).replace('.', ',') : '',
+        line.solde.toFixed(2).replace('.', ','),
+        line.isInfo ? 'INFO' : (line.isValidated ? 'Validé' : 'En attente')
+      ].join(';'));
     });
-    csvRows.push(['', 'TOTAL', '', releveData.reduce((s, l) => s + l.montant, 0).toFixed(2).replace('.', ','), '', '', ''].join(';'));
+    csvRows.push(['', 'TOTAL', '', '', '', releveData.reduce((s, l) => s + l.montant, 0).toFixed(2).replace('.', ','), '', ''].join(';'));
     const blob = new Blob(['\ufeff' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -706,12 +723,12 @@ export function DashboardView() {
       .footer { margin-top: 20px; font-size: 8pt; color: #666; } .soldes { margin-top: 15px; padding: 10px; background: #dcfce7; border-radius: 6px; } .soldes-row { display: flex; justify-content: space-between; margin: 3px 0; }
       .negative { color: #dc2626; } .positive { color: #16a34a; } .amount-words { margin-top: 20px; padding: 15px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; font-weight: bold; }</style></head>
       <body><h1>Relevé de compte</h1><h2>${releveTier?.raisonSociale || ''}</h2><p>Période: ${releveForm.dateFrom || 'Début'} - ${releveForm.dateTo || 'Fin'}</p>
-      <table><thead><tr><th>Date</th><th>Type</th><th>N°</th><th class="text-right">Montant TTC</th><th class="text-right">Montant</th><th class="text-right">Solde</th></tr></thead>
-      <tbody>${releveData.map(l => `<tr class="${l.isInfo ? 'info' : (!l.isValidated ? 'pending' : '')}"><td>${l.dateStr}</td><td>${l.type}</td><td>${l.numero}</td>
+      <table><thead><tr><th>Date</th><th>Type</th><th>N° Facture</th><th>Réf. Doc</th><th class="text-right">Montant TTC</th><th class="text-right">Montant</th><th class="text-right">Solde</th></tr></thead>
+      <tbody>${releveData.map(l => `<tr class="${l.isInfo ? 'info' : (!l.isValidated ? 'pending' : '')}"><td>${l.dateStr}</td><td>${l.type}</td><td>${l.numero}</td><td>${l.numeroRef || ''}</td>
       <td class="text-right">${l.montantTTC > 0 ? l.montantTTC.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}</td>
       <td class="text-right ${l.montant < 0 ? 'negative' : 'positive'}">${l.montant !== 0 ? Math.abs(l.montant).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (l.montant < 0 ? ' (D)' : ' (C)') : ''}</td>
       <td class="text-right" style="font-weight:bold;">${Math.abs(l.solde).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${l.solde >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</td></tr>`).join('')}
-      <tr class="total-row"><td colspan="3">TOTAL</td><td></td><td class="text-right">${totalMontant.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td></td></tr></tbody></table>
+      <tr class="total-row"><td colspan="4">TOTAL</td><td></td><td class="text-right">${totalMontant.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td><td></td></tr></tbody></table>
       <div class="soldes"><div class="soldes-row"><strong>Solde Final:</strong><span>${Math.abs(finalSolde).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${finalSolde >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span></div></div>
       <div class="amount-words">Soit le montant à payer de : <strong>${amountInWords}</strong> en ${currencyLabel} (${printCurrency})</div>
       <div class="footer"><p>Document généré le ${formatDate(new Date())}</p></div></body></html>`;
@@ -735,7 +752,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-green-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur RGM V2.17</p>
+          <p className="text-muted-foreground">Bienvenue sur RGM V2.18</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
@@ -850,7 +867,8 @@ export function DashboardView() {
                     <TableRow>
                       <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('date')}>Date <SortIcon field="date" /></TableHead>
                       <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('type')}>Type <SortIcon field="type" /></TableHead>
-                      <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('numero')}>N° <SortIcon field="numero" /></TableHead>
+                      <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('numero')}>N° Facture <SortIcon field="numero" /></TableHead>
+                      <TableHead>Réf. Doc</TableHead>
                       <TableHead className="text-right">Montant TTC</TableHead>
                       <TableHead className="text-right cursor-pointer hover:bg-gray-100" onClick={() => handleSort('montant')}>Montant <SortIcon field="montant" /></TableHead>
                       <TableHead className="text-right cursor-pointer hover:bg-gray-100" onClick={() => handleSort('solde')}>Solde <SortIcon field="solde" /></TableHead>
@@ -862,6 +880,7 @@ export function DashboardView() {
                         <TableCell>{line.dateStr}</TableCell>
                         <TableCell className={line.isInfo ? 'text-gray-500 italic' : (!line.isValidated ? 'text-yellow-700 italic' : '')}>{line.type}</TableCell>
                         <TableCell>{line.numero}</TableCell>
+                        <TableCell className="text-gray-600">{line.numeroRef || ''}</TableCell>
                         <TableCell className="text-right">{line.montantTTC > 0 ? formatCurrency(line.montantTTC) : ''}</TableCell>
                         <TableCell className={`text-right font-medium ${line.type.includes('Règlement') ? 'text-green-600' : line.type.includes('Facture') ? 'text-red-600' : ''}`}>
                           {line.montant !== 0 ? `${line.montant < 0 ? '-' : '+'}${formatCurrency(Math.abs(line.montant))}` : ''}
@@ -869,7 +888,7 @@ export function DashboardView() {
                         <TableCell className="text-right font-bold">{formatCurrency(Math.abs(line.solde))}<span className="text-xs ml-1">{line.solde >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</span></TableCell>
                       </TableRow>
                     ))}
-                    <TableRow className="bg-green-50 font-bold"><TableCell colSpan={3}>TOTAL</TableCell><TableCell></TableCell><TableCell className="text-right">{formatCurrency(Math.abs(releveData.reduce((s, l) => s + l.montant, 0)))}</TableCell><TableCell></TableCell></TableRow>
+                    <TableRow className="bg-green-50 font-bold"><TableCell colSpan={4}>TOTAL</TableCell><TableCell></TableCell><TableCell className="text-right">{formatCurrency(Math.abs(releveData.reduce((s, l) => s + l.montant, 0)))}</TableCell><TableCell></TableCell></TableRow>
                   </TableBody>
                 </Table>
               </>
