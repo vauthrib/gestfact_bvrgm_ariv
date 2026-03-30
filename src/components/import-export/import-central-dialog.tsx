@@ -1,15 +1,22 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, FileSpreadsheet, FileText, AlertCircle, CheckCircle, Users, Package, FileText as FactureIcon, CreditCard, Truck, Lock, Download, Database } from 'lucide-react';
+import { Upload, FileSpreadsheet, FileText, AlertCircle, CheckCircle, Users, Package, FileText as FactureIcon, CreditCard, Truck, Lock, Download, Database, Trash2, AlertTriangle } from 'lucide-react';
 
 interface ImportCentralDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface ClearDataState {
+  showDialog: boolean;
+  code: string;
+  error: boolean;
+  clearing: boolean;
 }
 
 type ImportType = 'tiers' | 'articles' | 'factures-clients' | 'factures-fournisseurs' | 'reglements-clients' | 'reglements-fournisseurs' | 'bons-livraison';
@@ -41,6 +48,9 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
   const [importAllLoading, setImportAllLoading] = useState(false);
   const [importAllResult, setImportAllResult] = useState<{ success: boolean; message: string; results?: any[] } | null>(null);
   const importAllInputRef = useRef<HTMLInputElement>(null);
+  
+  // Clear data state
+  const [clearData, setClearData] = useState<ClearDataState>({ showDialog: false, code: '', error: false, clearing: false });
 
   const handleCodeSubmit = () => {
     if (codeInput === SECRET_CODE) {
@@ -176,6 +186,35 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
     onOpenChange(open);
   };
 
+  const handleClearData = async () => {
+    if (clearData.code !== '2222') {
+      setClearData(prev => ({ ...prev, error: true }));
+      return;
+    }
+    
+    setClearData(prev => ({ ...prev, clearing: true }));
+    try {
+      const res = await fetch('/api/clear-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: clearData.code })
+      });
+      
+      if (res.ok) {
+        setClearData({ showDialog: false, code: '', error: false, clearing: false });
+        alert('Toutes les données ont été supprimées avec succès!');
+      } else {
+        const data = await res.json();
+        alert('Erreur: ' + data.error);
+      }
+    } catch (e) { 
+      console.error(e); 
+      alert('Erreur lors de la suppression des données');
+    } finally {
+      setClearData(prev => ({ ...prev, clearing: false }));
+    }
+  };
+
   const typeLabels: Record<string, string> = {
     'tiers': 'Tiers',
     'articles': 'Articles',
@@ -297,6 +336,19 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
                   )}
                 </div>
               </div>
+              
+              {/* Vider les données - RED BUTTON */}
+              <div className="mt-4 pt-4 border-t border-red-200">
+                <Button
+                  variant="destructive"
+                  className="w-full bg-red-600 hover:bg-red-700 h-auto py-3"
+                  onClick={() => setClearData(prev => ({ ...prev, showDialog: true }))}
+                >
+                  <Trash2 className="w-5 h-5 mr-2" />
+                  <span className="font-semibold">VIDER LES DONNÉES</span>
+                </Button>
+                <p className="text-xs text-red-600 text-center mt-1">⚠️ Action irréversible</p>
+              </div>
             </div>
 
             {/* Individual imports */}
@@ -397,6 +449,52 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
           </div>
         )}
       </DialogContent>
+      
+      {/* Dialog confirmation pour vider les données */}
+      <Dialog open={clearData.showDialog} onOpenChange={(open) => setClearData(prev => ({ ...prev, showDialog: open, code: '', error: false }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Vider toutes les données
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-red-50 p-3 rounded-lg text-sm">
+              <p className="font-semibold text-red-700 mb-2">Cette action va supprimer définitivement :</p>
+              <ul className="list-disc list-inside text-red-600 space-y-1">
+                <li>Tous les tiers (clients/fournisseurs)</li>
+                <li>Tous les articles</li>
+                <li>Toutes les factures et avoirs</li>
+                <li>Tous les bons de livraison</li>
+                <li>Tous les règlements</li>
+              </ul>
+            </div>
+            <div>
+              <Label>Entrez le code de confirmation</Label>
+              <Input
+                type="password"
+                value={clearData.code}
+                onChange={(e) => setClearData(prev => ({ ...prev, code: e.target.value, error: false }))}
+                placeholder="Code à 4 chiffres"
+                className={`mt-2 ${clearData.error ? 'border-red-500' : ''}`}
+                maxLength={4}
+              />
+              {clearData.error && <p className="text-red-500 text-sm mt-1">Code incorrect</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearData(prev => ({ ...prev, showDialog: false, code: '', error: false }))}>Annuler</Button>
+            <Button
+              variant="destructive"
+              onClick={handleClearData}
+              disabled={clearData.clearing || clearData.code.length !== 4}
+            >
+              {clearData.clearing ? 'Suppression...' : 'Confirmer la suppression'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
