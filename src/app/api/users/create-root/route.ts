@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { DEFAULT_PERMISSIONS, Permission } from '@/lib/permissions';
 
 // POST - Create ROOT user (can be called once)
 export async function POST() {
@@ -20,18 +21,8 @@ export async function POST() {
     // Hash password
     const hashedPassword = await bcrypt.hash('root@25803314', 10);
 
-    // All permissions
-    const allPermissions = {
-      dashboard: { view: true, edit: true },
-      tiers: { view: true, edit: true, create: true },
-      articles: { view: true, edit: true, create: true },
-      bonsLivraison: { view: true, edit: true, create: true },
-      facturesClients: { view: true, edit: true, create: true },
-      avoirsClients: { view: true, edit: true, create: true },
-      reglementsClients: { view: true, edit: true, create: true },
-      facturesFournisseurs: { view: true, edit: true, create: true },
-      reglementsFournisseurs: { view: true, edit: true, create: true }
-    };
+    // All permissions as array (matching permissions.ts format)
+    const allPermissions: Permission[] = DEFAULT_PERMISSIONS.ADMIN;
 
     // Create ROOT user
     const user = await db.user.create({

@@ -103,7 +103,7 @@ const numberToWords = (num: number): string => {
   return result.trim();
 };
 
-// Couleur verte pâle pour V2.49
+// Couleur verte pâle pour V2.50
 const PRIMARY_COLOR = '#16a34a'; // green-600
 const PRIMARY_LIGHT = '#dcfce7'; // green-100
 const PRIMARY_TEXT = '#15803d'; // green-700
