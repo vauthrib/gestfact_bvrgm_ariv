@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/lib/db';
 import LoginForm from './LoginForm';
 
 export const dynamic = 'force-dynamic';
@@ -13,16 +12,7 @@ export default async function LoginPage() {
     redirect('/');
   }
 
-  // Check if any users exist, if not redirect to init
-  try {
-    const userCount = await db.user.count();
-    if (userCount === 0) {
-      redirect('/init');
-    }
-  } catch (e) {
-    // Table might not exist, redirect to init
-    redirect('/init');
-  }
-
+  // Just render the login form
+  // If no users exist, the form will handle redirect to /init
   return <LoginForm />;
 }
