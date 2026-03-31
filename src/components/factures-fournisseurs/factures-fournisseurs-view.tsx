@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@/lib/user-context';
 import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,12 +30,11 @@ type SortField = 'numeroFacture' | 'dateFacture' | 'fournisseur' | 'montantHT' |
 type SortDirection = 'asc' | 'desc';
 
 export function FacturesFournisseursView() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user } = useUser();
   const permissions = user?.permissions as Permission[] || [];
   
-  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'fournisseurs.edit');
-  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'fournisseurs.create');
+  const canEdit = hasPermission(user?.role || '', permissions, 'fournisseurs.edit');
+  const canCreate = hasPermission(user?.role || '', permissions, 'fournisseurs.create');
   
   const [factures, setFactures] = useState<FactureFournisseur[]>([]);
   const [fournisseurs, setFournisseurs] = useState<Tiers[]>([]);

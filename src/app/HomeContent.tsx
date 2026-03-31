@@ -14,6 +14,7 @@ import { BonsLivraisonView } from '@/components/bons-livraison/bons-livraison-vi
 import { ParametresView } from '@/components/parametres/parametres-view';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { Permission } from '@/lib/permissions';
+import { UserProvider } from '@/lib/user-context';
 
 interface User {
   id: string;
@@ -52,18 +53,20 @@ export default function HomeContent({ user }: HomeContentProps) {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <AppSidebar
-        currentView={currentView}
-        onViewChange={setCurrentView}
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        user={user}
-        onLogout={handleLogout}
-      />
-      <main className="flex-1 overflow-y-auto overflow-x-hidden">
-        {renderView()}
-      </main>
-    </div>
+    <UserProvider user={user}>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <AppSidebar
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          user={user}
+          onLogout={handleLogout}
+        />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          {renderView()}
+        </main>
+      </div>
+    </UserProvider>
   );
 }

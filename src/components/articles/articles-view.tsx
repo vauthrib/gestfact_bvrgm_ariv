@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@/lib/user-context';
 import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,12 +25,11 @@ type SortField = 'code' | 'designation' | 'prixUnitaire' | 'tauxTVA' | 'statut';
 type SortDirection = 'asc' | 'desc';
 
 export function ArticlesView() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user } = useUser();
   const permissions = user?.permissions as Permission[] || [];
   
-  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'articles.edit');
-  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'articles.create');
+  const canEdit = hasPermission(user?.role || '', permissions, 'articles.edit');
+  const canCreate = hasPermission(user?.role || '', permissions, 'articles.create');
   
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);

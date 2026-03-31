@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@/lib/user-context';
 import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,12 +47,11 @@ type SortField = 'numero' | 'dateAvoir' | 'client' | 'totalHT' | 'totalTTC' | 's
 type SortDirection = 'asc' | 'desc';
 
 export function AvoirsClientsView() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user } = useUser();
   const permissions = user?.permissions as Permission[] || [];
   
-  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'avoirs.edit');
-  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'avoirs.create');
+  const canEdit = hasPermission(user?.role || '', permissions, 'avoirs.edit');
+  const canCreate = hasPermission(user?.role || '', permissions, 'avoirs.create');
   
   const [avoirs, setAvoirs] = useState<AvoirClient[]>([]);
   const [clients, setClients] = useState<Tiers[]>([]);

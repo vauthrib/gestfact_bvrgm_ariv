@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@/lib/user-context';
 import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,12 +26,11 @@ type SortField = 'raisonSociale' | 'ville' | 'telephone' | 'email';
 type SortDirection = 'asc' | 'desc';
 
 export function TiersView() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user } = useUser();
   const permissions = user?.permissions as Permission[] || [];
   
-  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'tiers.edit');
-  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'tiers.create');
+  const canEdit = hasPermission(user?.role || '', permissions, 'tiers.edit');
+  const canCreate = hasPermission(user?.role || '', permissions, 'tiers.create');
   
   const [tiers, setTiers] = useState<Tiers[]>([]);
   const [loading, setLoading] = useState(true);

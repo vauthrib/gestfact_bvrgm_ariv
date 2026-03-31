@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@/lib/user-context';
 import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,13 +34,12 @@ type SortField = 'numero' | 'dateBL' | 'client' | 'totalHT' | 'statut';
 type SortDirection = 'asc' | 'desc';
 
 export function BonsLivraisonView() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user } = useUser();
   const permissions = user?.permissions as Permission[] || [];
   
-  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'bl.edit');
-  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'bl.create');
-  const canValidate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'bl.validate');
+  const canEdit = hasPermission(user?.role || '', permissions, 'bl.edit');
+  const canCreate = hasPermission(user?.role || '', permissions, 'bl.create');
+  const canValidate = hasPermission(user?.role || '', permissions, 'bl.validate');
   
   const [bons, setBons] = useState<BonLivraison[]>([]);
   const [clients, setClients] = useState<Tiers[]>([]);

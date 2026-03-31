@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@/lib/user-context';
 import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,13 +34,12 @@ type SortField = 'numero' | 'dateFacture' | 'client' | 'totalHT' | 'totalTVA' | 
 type SortDirection = 'asc' | 'desc';
 
 export function FacturesClientsView() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user } = useUser();
   const permissions = user?.permissions as Permission[] || [];
   
-  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'factures.edit');
-  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'factures.create');
-  const canValidate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'factures.validate');
+  const canEdit = hasPermission(user?.role || '', permissions, 'factures.edit');
+  const canCreate = hasPermission(user?.role || '', permissions, 'factures.create');
+  const canValidate = hasPermission(user?.role || '', permissions, 'factures.validate');
   
   const [factures, setFactures] = useState<FactureClient[]>([]);
   const [clients, setClients] = useState<Tiers[]>([]);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@/lib/user-context';
 import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,12 +57,11 @@ interface GroupedReglement {
 const ALL_FOURNISSEURS = '__ALL__';
 
 export function ReglementsFournisseursView() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user } = useUser();
   const permissions = user?.permissions as Permission[] || [];
   
-  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'reglements-fourn.edit');
-  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'reglements-fourn.create');
+  const canEdit = hasPermission(user?.role || '', permissions, 'reglements-fourn.edit');
+  const canCreate = hasPermission(user?.role || '', permissions, 'reglements-fourn.create');
   
   const [reglements, setReglements] = useState<ReglementFournisseur[]>([]);
   const [factures, setFactures] = useState<FactureFournisseur[]>([]);
