@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +57,13 @@ interface GroupedReglement {
 const ALL_FOURNISSEURS = '__ALL__';
 
 export function ReglementsFournisseursView() {
+  const { data: session } = useSession();
+  const user = session?.user;
+  const permissions = user?.permissions as Permission[] || [];
+  
+  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'reglements-fourn.edit');
+  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'reglements-fourn.create');
+  
   const [reglements, setReglements] = useState<ReglementFournisseur[]>([]);
   const [factures, setFactures] = useState<FactureFournisseur[]>([]);
   const [tiers, setTiers] = useState<Tiers[]>([]);
@@ -365,7 +374,9 @@ export function ReglementsFournisseursView() {
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFF01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          {canCreate && (
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          )}
         </div>
       </div>
       <Card>

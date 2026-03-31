@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +34,14 @@ type SortField = 'numero' | 'dateBL' | 'client' | 'totalHT' | 'statut';
 type SortDirection = 'asc' | 'desc';
 
 export function BonsLivraisonView() {
+  const { data: session } = useSession();
+  const user = session?.user;
+  const permissions = user?.permissions as Permission[] || [];
+  
+  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'bl.edit');
+  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'bl.create');
+  const canValidate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'bl.validate');
+  
   const [bons, setBons] = useState<BonLivraison[]>([]);
   const [clients, setClients] = useState<Tiers[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
@@ -307,7 +317,9 @@ export function BonsLivraisonView() {
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          {canCreate && (
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          )}
         </div>
       </div>
       <Card>
@@ -359,7 +371,7 @@ export function BonsLivraisonView() {
                   )}
                 </TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
-                  {b.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(b.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  {b.statut === 'BROUILLON' && canValidate && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(b.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
                   {b.statut === 'VALIDEE' && (
                     <Button 
                       size="sm" 
@@ -373,8 +385,8 @@ export function BonsLivraisonView() {
                     </Button>
                   )}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(b)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="outline" onClick={() => openEditDialog(b)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(b.id)} disabled={b.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
+                  {canEdit && <Button size="sm" variant="outline" onClick={() => openEditDialog(b)} title="Modifier"><Pencil className="h-4 w-4" /></Button>}
+                  {canEdit && <Button size="sm" variant="destructive" onClick={() => handleDelete(b.id)} disabled={b.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>}
                 </div></TableCell>
               </TableRow>))}</TableBody>
             </Table>

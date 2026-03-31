@@ -1,48 +1,57 @@
 // Types de permissions disponibles
+// Chaque module a 3 permissions: .view (Visu), .edit (Modif), .create (Créer)
 export const PERMISSION_DEFINITIONS = {
   // Tableau de bord
-  'dashboard.view': { label: 'Voir le tableau de bord', group: 'Général' },
+  'dashboard.view': { label: 'Voir', group: 'Tableau de bord', type: 'view' },
   
   // Tiers (Clients/Fournisseurs)
-  'tiers.view': { label: 'Voir les tiers', group: 'Tiers' },
-  'tiers.edit': { label: 'Créer/Modifier les tiers', group: 'Tiers' },
+  'tiers.view': { label: 'Visu', group: 'Tiers', type: 'view' },
+  'tiers.edit': { label: 'Modif', group: 'Tiers', type: 'edit' },
+  'tiers.create': { label: 'Créer', group: 'Tiers', type: 'create' },
   
   // Articles
-  'articles.view': { label: 'Voir les articles', group: 'Articles' },
-  'articles.edit': { label: 'Créer/Modifier les articles', group: 'Articles' },
+  'articles.view': { label: 'Visu', group: 'Articles', type: 'view' },
+  'articles.edit': { label: 'Modif', group: 'Articles', type: 'edit' },
+  'articles.create': { label: 'Créer', group: 'Articles', type: 'create' },
   
   // Bons de Livraison
-  'bl.view': { label: 'Voir les bons de livraison', group: 'Bons de Livraison' },
-  'bl.edit': { label: 'Créer/Modifier les BL', group: 'Bons de Livraison' },
-  'bl.validate': { label: 'Valider les BL', group: 'Bons de Livraison' },
+  'bl.view': { label: 'Visu', group: 'Bons de Livraison', type: 'view' },
+  'bl.edit': { label: 'Modif', group: 'Bons de Livraison', type: 'edit' },
+  'bl.create': { label: 'Créer', group: 'Bons de Livraison', type: 'create' },
+  'bl.validate': { label: 'Valider', group: 'Bons de Livraison', type: 'validate' },
   
   // Factures Clients
-  'factures.view': { label: 'Voir les factures clients', group: 'Factures Clients' },
-  'factures.edit': { label: 'Créer/Modifier les factures', group: 'Factures Clients' },
-  'factures.validate': { label: 'Valider les factures', group: 'Factures Clients' },
+  'factures.view': { label: 'Visu', group: 'Factures Clients', type: 'view' },
+  'factures.edit': { label: 'Modif', group: 'Factures Clients', type: 'edit' },
+  'factures.create': { label: 'Créer', group: 'Factures Clients', type: 'create' },
+  'factures.validate': { label: 'Valider', group: 'Factures Clients', type: 'validate' },
   
   // Avoirs
-  'avoirs.view': { label: 'Voir les avoirs', group: 'Avoirs' },
-  'avoirs.edit': { label: 'Créer/Modifier les avoirs', group: 'Avoirs' },
+  'avoirs.view': { label: 'Visu', group: 'Avoirs', type: 'view' },
+  'avoirs.edit': { label: 'Modif', group: 'Avoirs', type: 'edit' },
+  'avoirs.create': { label: 'Créer', group: 'Avoirs', type: 'create' },
   
   // Règlements Clients
-  'reglements.view': { label: 'Voir les règlements clients', group: 'Règlements Clients' },
-  'reglements.edit': { label: 'Créer/Modifier les règlements', group: 'Règlements Clients' },
+  'reglements.view': { label: 'Visu', group: 'Règlements Clients', type: 'view' },
+  'reglements.edit': { label: 'Modif', group: 'Règlements Clients', type: 'edit' },
+  'reglements.create': { label: 'Créer', group: 'Règlements Clients', type: 'create' },
   
   // Factures Fournisseurs
-  'fournisseurs.view': { label: 'Voir les factures fournisseurs', group: 'Fournisseurs' },
-  'fournisseurs.edit': { label: 'Créer/Modifier les factures fourn.', group: 'Fournisseurs' },
+  'fournisseurs.view': { label: 'Visu', group: 'Fournisseurs', type: 'view' },
+  'fournisseurs.edit': { label: 'Modif', group: 'Fournisseurs', type: 'edit' },
+  'fournisseurs.create': { label: 'Créer', group: 'Fournisseurs', type: 'create' },
   
   // Règlements Fournisseurs
-  'reglements-fourn.view': { label: 'Voir les règlements fournisseurs', group: 'Règlements Fournisseurs' },
-  'reglements-fourn.edit': { label: 'Créer/Modifier les règlements fourn.', group: 'Règlements Fournisseurs' },
+  'reglements-fourn.view': { label: 'Visu', group: 'Règlements Fournisseurs', type: 'view' },
+  'reglements-fourn.edit': { label: 'Modif', group: 'Règlements Fournisseurs', type: 'edit' },
+  'reglements-fourn.create': { label: 'Créer', group: 'Règlements Fournisseurs', type: 'create' },
   
   // Paramètres
-  'parametres.view': { label: 'Voir les paramètres', group: 'Administration' },
-  'parametres.edit': { label: 'Modifier les paramètres', group: 'Administration' },
+  'parametres.view': { label: 'Voir', group: 'Administration', type: 'view' },
+  'parametres.edit': { label: 'Modifier', group: 'Administration', type: 'edit' },
   
   // Utilisateurs
-  'users.manage': { label: 'Gérer les utilisateurs', group: 'Administration' },
+  'users.manage': { label: 'Gérer', group: 'Administration', type: 'manage' },
 } as const;
 
 export type Permission = keyof typeof PERMISSION_DEFINITIONS;
@@ -52,44 +61,44 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
   ADMIN: [
     // Admin a toutes les permissions
     'dashboard.view',
-    'tiers.view', 'tiers.edit',
-    'articles.view', 'articles.edit',
-    'bl.view', 'bl.edit', 'bl.validate',
-    'factures.view', 'factures.edit', 'factures.validate',
-    'avoirs.view', 'avoirs.edit',
-    'reglements.view', 'reglements.edit',
-    'fournisseurs.view', 'fournisseurs.edit',
-    'reglements-fourn.view', 'reglements-fourn.edit',
+    'tiers.view', 'tiers.edit', 'tiers.create',
+    'articles.view', 'articles.edit', 'articles.create',
+    'bl.view', 'bl.edit', 'bl.create', 'bl.validate',
+    'factures.view', 'factures.edit', 'factures.create', 'factures.validate',
+    'avoirs.view', 'avoirs.edit', 'avoirs.create',
+    'reglements.view', 'reglements.edit', 'reglements.create',
+    'fournisseurs.view', 'fournisseurs.edit', 'fournisseurs.create',
+    'reglements-fourn.view', 'reglements-fourn.edit', 'reglements-fourn.create',
     'parametres.view', 'parametres.edit',
     'users.manage',
   ],
   USER: [
-    // User par défaut : seulement créer des BL
+    // User standard: peut voir tiers/articles et créer des BL
     'dashboard.view',
     'tiers.view',
     'articles.view',
-    'bl.view', 'bl.edit',
+    'bl.view', 'bl.create',
   ],
-  // Profil "Créateur BL uniquement"
   BL_ONLY: [
+    // Profil "Créateur BL uniquement"
     'dashboard.view',
     'tiers.view',
     'articles.view',
-    'bl.view', 'bl.edit',
+    'bl.view', 'bl.create',
   ],
 };
 
-// Grouper les permissions pour l'affichage
+// Grouper les permissions pour l'affichage en tableau avec 3 colonnes
 export const PERMISSION_GROUPS = [
-  { name: 'Général', permissions: ['dashboard.view'] },
-  { name: 'Tiers', permissions: ['tiers.view', 'tiers.edit'] },
-  { name: 'Articles', permissions: ['articles.view', 'articles.edit'] },
-  { name: 'Bons de Livraison', permissions: ['bl.view', 'bl.edit', 'bl.validate'] },
-  { name: 'Factures Clients', permissions: ['factures.view', 'factures.edit', 'factures.validate'] },
-  { name: 'Avoirs', permissions: ['avoirs.view', 'avoirs.edit'] },
-  { name: 'Règlements Clients', permissions: ['reglements.view', 'reglements.edit'] },
-  { name: 'Fournisseurs', permissions: ['fournisseurs.view', 'fournisseurs.edit'] },
-  { name: 'Règlements Fournisseurs', permissions: ['reglements-fourn.view', 'reglements-fourn.edit'] },
+  { name: 'Tableau de bord', permissions: ['dashboard.view'] },
+  { name: 'Tiers', permissions: ['tiers.view', 'tiers.edit', 'tiers.create'] },
+  { name: 'Articles', permissions: ['articles.view', 'articles.edit', 'articles.create'] },
+  { name: 'Bons de Livraison', permissions: ['bl.view', 'bl.edit', 'bl.create', 'bl.validate'] },
+  { name: 'Factures Clients', permissions: ['factures.view', 'factures.edit', 'factures.create', 'factures.validate'] },
+  { name: 'Avoirs', permissions: ['avoirs.view', 'avoirs.edit', 'avoirs.create'] },
+  { name: 'Règlements Clients', permissions: ['reglements.view', 'reglements.edit', 'reglements.create'] },
+  { name: 'Fournisseurs', permissions: ['fournisseurs.view', 'fournisseurs.edit', 'fournisseurs.create'] },
+  { name: 'Règlements Fournisseurs', permissions: ['reglements-fourn.view', 'reglements-fourn.edit', 'reglements-fourn.create'] },
   { name: 'Administration', permissions: ['parametres.view', 'parametres.edit', 'users.manage'] },
 ];
 

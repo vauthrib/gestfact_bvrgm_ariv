@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +30,13 @@ type SortField = 'numeroFacture' | 'dateFacture' | 'fournisseur' | 'montantHT' |
 type SortDirection = 'asc' | 'desc';
 
 export function FacturesFournisseursView() {
+  const { data: session } = useSession();
+  const user = session?.user;
+  const permissions = user?.permissions as Permission[] || [];
+  
+  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'fournisseurs.edit');
+  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'fournisseurs.create');
+  
   const [factures, setFactures] = useState<FactureFournisseur[]>([]);
   const [fournisseurs, setFournisseurs] = useState<Tiers[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,7 +184,9 @@ export function FacturesFournisseursView() {
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFF01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          {canCreate && (
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          )}
         </div>
       </div>
       <Card>
@@ -222,8 +233,8 @@ export function FacturesFournisseursView() {
                 <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Enregistrée'}</span></TableCell>
                 <TableCell><div className="flex gap-2">
                   {f.statut === 'ENREGISTREE' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)}><CheckCircle className="h-4 w-4" /></Button>}
-                  <Button size="sm" variant="outline" onClick={() => openEditDialog(f)}><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)}><Trash2 className="h-4 w-4" /></Button>
+                  {canEdit && <Button size="sm" variant="outline" onClick={() => openEditDialog(f)}><Pencil className="h-4 w-4" /></Button>}
+                  {canEdit && <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)}><Trash2 className="h-4 w-4" /></Button>}
                 </div></TableCell>
               </TableRow>))}</TableBody>
             </Table>

@@ -531,30 +531,71 @@ export function ParametresView({ userRole }: ParametresViewProps) {
               </Select>
             </div>
 
-            {/* Permissions détaillées */}
+            {/* Permissions détaillées en tableau */}
             <div className="border rounded-lg p-4">
               <Label className="text-base font-semibold mb-3 block">Permissions détaillées</Label>
-              <div className="space-y-4">
-                {PERMISSION_GROUPS.map((group) => (
-                  <div key={group.name} className="space-y-2">
-                    <div className="font-medium text-sm text-muted-foreground">{group.name}</div>
-                    <div className="grid grid-cols-2 gap-2 pl-4">
-                      {group.permissions.map((perm) => (
-                        <div key={perm} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={perm}
-                            checked={userForm.permissions.includes(perm)}
-                            onCheckedChange={() => togglePermission(perm)}
-                          />
-                          <label htmlFor={perm} className="text-sm cursor-pointer">
-                            {PERMISSION_DEFINITIONS[perm].label}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px]">Module</TableHead>
+                    <TableHead className="w-[80px] text-center">Visu</TableHead>
+                    <TableHead className="w-[80px] text-center">Modif</TableHead>
+                    <TableHead className="w-[80px] text-center">Créer</TableHead>
+                    <TableHead className="w-[80px] text-center">Autre</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {PERMISSION_GROUPS.map((group) => {
+                    const viewPerm = group.permissions.find(p => p.endsWith('.view') || p === 'dashboard.view');
+                    const editPerm = group.permissions.find(p => p.endsWith('.edit'));
+                    const createPerm = group.permissions.find(p => p.endsWith('.create'));
+                    const otherPerms = group.permissions.filter(p => 
+                      !p.endsWith('.view') && !p.endsWith('.edit') && !p.endsWith('.create') && p !== 'dashboard.view'
+                    );
+                    
+                    return (
+                      <TableRow key={group.name}>
+                        <TableCell className="font-medium">{group.name}</TableCell>
+                        <TableCell className="text-center">
+                          {viewPerm && (
+                            <Checkbox
+                              checked={userForm.permissions.includes(viewPerm)}
+                              onCheckedChange={() => togglePermission(viewPerm)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {editPerm && (
+                            <Checkbox
+                              checked={userForm.permissions.includes(editPerm)}
+                              onCheckedChange={() => togglePermission(editPerm)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {createPerm && (
+                            <Checkbox
+                              checked={userForm.permissions.includes(createPerm)}
+                              onCheckedChange={() => togglePermission(createPerm)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {otherPerms.length > 0 && otherPerms.map(perm => (
+                            <div key={perm} className="flex items-center justify-center gap-1">
+                              <Checkbox
+                                checked={userForm.permissions.includes(perm)}
+                                onCheckedChange={() => togglePermission(perm)}
+                              />
+                              <span className="text-xs">{PERMISSION_DEFINITIONS[perm].label}</span>
+                            </div>
+                          ))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           </div>
           <DialogFooter>

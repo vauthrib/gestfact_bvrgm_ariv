@@ -31,6 +31,7 @@ export function TiersView() {
   const permissions = user?.permissions as Permission[] || [];
   
   const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'tiers.edit');
+  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'tiers.create');
   
   const [tiers, setTiers] = useState<Tiers[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +110,7 @@ export function TiersView() {
   };
 
   const openNewDialog = () => {
-    if (!canEdit) return;
+    if (!canCreate) return;
     resetForm();
     setDialogOpen(true);
   };
@@ -162,7 +163,7 @@ export function TiersView() {
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TIE01</span>
-          {canEdit && (
+          {canCreate && (
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={openNewDialog}>
               <Plus className="w-4 h-4 mr-2" />Nouveau
             </Button>

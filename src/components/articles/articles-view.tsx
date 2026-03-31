@@ -30,6 +30,7 @@ export function ArticlesView() {
   const permissions = user?.permissions as Permission[] || [];
   
   const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'articles.edit');
+  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'articles.create');
   
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +147,7 @@ export function ArticlesView() {
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          {canEdit && (
+          {canCreate && (
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           )}
         </div>

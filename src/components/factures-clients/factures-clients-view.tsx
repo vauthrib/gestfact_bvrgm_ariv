@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +34,14 @@ type SortField = 'numero' | 'dateFacture' | 'client' | 'totalHT' | 'totalTVA' | 
 type SortDirection = 'asc' | 'desc';
 
 export function FacturesClientsView() {
+  const { data: session } = useSession();
+  const user = session?.user;
+  const permissions = user?.permissions as Permission[] || [];
+  
+  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'factures.edit');
+  const canCreate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'factures.create');
+  const canValidate = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'factures.validate');
+  
   const [factures, setFactures] = useState<FactureClient[]>([]);
   const [clients, setClients] = useState<Tiers[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
@@ -284,7 +294,9 @@ export function FacturesClientsView() {
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          {canCreate && (
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          )}
         </div>
       </div>
       <Card>
@@ -330,10 +342,10 @@ export function FacturesClientsView() {
                 <TableCell>{formatCurrency(f.totalTTC)}</TableCell>
                 <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
-                  {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  {f.statut === 'BROUILLON' && canValidate && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(f)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="outline" onClick={() => openEditDialog(f)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)} disabled={f.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
+                  {canEdit && <Button size="sm" variant="outline" onClick={() => openEditDialog(f)} title="Modifier"><Pencil className="h-4 w-4" /></Button>}
+                  {canEdit && <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)} disabled={f.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>}
                 </div></TableCell>
               </TableRow>))}</TableBody>
             </Table>
