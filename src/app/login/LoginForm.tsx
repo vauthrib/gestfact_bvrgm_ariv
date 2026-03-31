@@ -27,14 +27,20 @@ export default function LoginForm() {
         redirect: false
       });
 
+      console.log('SignIn result:', result);
+
       if (result?.error) {
         setError('Email ou mot de passe incorrect');
         setLoading(false);
-      } else {
+      } else if (result?.ok) {
         router.push('/');
         router.refresh();
+      } else {
+        setError('Erreur de connexion');
+        setLoading(false);
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError('Une erreur est survenue');
       setLoading(false);
     }
@@ -46,7 +52,7 @@ export default function LoginForm() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
             <h1 className="text-3xl font-bold text-blue-600">ARIV</h1>
-            <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-mono font-bold border border-blue-300">V2.48</span>
+            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold border border-blue-300">V2.49</span>
           </div>
           <p className="text-sm text-muted-foreground">Gestion de Facturation</p>
         </div>
