@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +25,12 @@ type SortField = 'code' | 'designation' | 'prixUnitaire' | 'tauxTVA' | 'statut';
 type SortDirection = 'asc' | 'desc';
 
 export function ArticlesView() {
+  const { data: session } = useSession();
+  const user = session?.user;
+  const permissions = user?.permissions as Permission[] || [];
+  
+  const canEdit = user?.role === 'ADMIN' || hasPermission(user?.role || '', permissions, 'articles.edit');
+  
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -33,7 +41,7 @@ export function ArticlesView() {
     code: '', designation: '', prixUnitaire: '', unite: 'pièce', tauxTVA: '20', infoLibre: '', actif: true
   });
   
-  // Sorting - default by designation ascending
+  // Sorting
   const [sortField, setSortField] = useState<SortField>('designation');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -49,15 +57,19 @@ export function ArticlesView() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      alert('Vous n\'avez pas les droits pour créer ou modifier un article');
+      return;
+    }
     try {
       const body = { 
         ...formData, 
         id: editingArticle?.id,
-        prixUnitaire: parseNumber(formData.prixUnitaire), 
-        tauxTVA: parseNumber(formData.tauxTVA) 
+        prixUnitaire: parseNumber(formData.prixUnitaire),
+        tauxTVA: parseNumber(formData.tauxTVA)
       };
       const res = await fetch('/api/articles', {
-        method: editingArticle ? 'PUT' : 'POST', 
+        method: editingArticle ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
@@ -67,6 +79,10 @@ export function ArticlesView() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canEdit) {
+      alert('Vous n\'avez pas les droits pour supprimer un article');
+      return;
+    }
     if (!confirm('Supprimer cet article ?')) return;
     await fetch(`/api/articles?id=${id}`, { method: 'DELETE' });
     fetchArticles();
@@ -126,13 +142,16 @@ export function ArticlesView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-green-700">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-700">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
+          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
           <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          {canEdit && (
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          )}
         </div>
       </div>
+
       <Card>
         <CardHeader><CardTitle>Liste des Articles</CardTitle></CardHeader>
         <CardContent>
@@ -141,13 +160,13 @@ export function ArticlesView() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('code')}>Code <SortIcon field="code" /></TableHead>
-                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('designation')}>Désignation <SortIcon field="designation" /></TableHead>
-                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('prixUnitaire')}>P.U. HT <SortIcon field="prixUnitaire" /></TableHead>
+                  <TableHead className="cursor-pointer hover:bg-blue-50" onClick={() => handleSort('code')}>Code <SortIcon field="code" /></TableHead>
+                  <TableHead className="cursor-pointer hover:bg-blue-50" onClick={() => handleSort('designation')}>Désignation <SortIcon field="designation" /></TableHead>
+                  <TableHead className="cursor-pointer hover:bg-blue-50" onClick={() => handleSort('prixUnitaire')}>P.U. HT <SortIcon field="prixUnitaire" /></TableHead>
                   <TableHead>Unité</TableHead>
-                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('tauxTVA')}>TVA <SortIcon field="tauxTVA" /></TableHead>
-                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('statut')}>Statut <SortIcon field="statut" /></TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="cursor-pointer hover:bg-blue-50" onClick={() => handleSort('tauxTVA')}>TVA <SortIcon field="tauxTVA" /></TableHead>
+                  <TableHead className="cursor-pointer hover:bg-blue-50" onClick={() => handleSort('statut')}>Statut <SortIcon field="statut" /></TableHead>
+                  {canEdit && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>{filteredArticles.map((a) => (<TableRow key={a.id}>
@@ -156,72 +175,53 @@ export function ArticlesView() {
                 <TableCell>{formatCurrency(a.prixUnitaire)}</TableCell>
                 <TableCell>{a.unite}</TableCell>
                 <TableCell>{a.tauxTVA}%</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${a.actif ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{a.actif ? 'Actif' : 'Inactif'}</span></TableCell>
-                <TableCell><div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openEditDialog(a)}><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(a.id)}><Trash2 className="h-4 w-4" /></Button>
-                </div></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${a.actif ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{a.actif ? 'Actif' : 'Inactif'}</span></TableCell>
+                {canEdit && (
+                  <TableCell><div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => openEditDialog(a)}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(a.id)}><Trash2 className="h-4 w-4" /></Button>
+                  </div></TableCell>
+                )}
               </TableRow>))}</TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[8000px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogContent className="max-w-[800px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingArticle ? 'Modifier' : 'Nouveau'} Article</DialogTitle>
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01-DLG</span>
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Row 1: Code */}
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label>Code Article</Label>
-                <Input 
-                  value={formData.code} 
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })} 
-                  placeholder="Ex: REF-001, A 123, etc."
-                  required 
-                />
-                <p className="text-xs text-muted-foreground mt-1">Code libre (espaces et caractères spéciaux autorisés)</p>
+                <Input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="Ex: REF-001" required />
               </div>
               <div><Label>Prix Unitaire HT</Label><Input type="text" value={formData.prixUnitaire} onChange={(e) => setFormData({ ...formData, prixUnitaire: e.target.value })} required /></div>
               <div></div>
               <div></div>
             </div>
-
-            {/* Row 2: Désignation (sur 3 lignes, ~30 caractères de largeur) */}
             <div>
               <Label>Désignation</Label>
-              <Textarea
-                value={formData.designation}
-                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                required
-                rows={3}
-                className="w-[50ch] font-mono resize-none"
-                placeholder="Désignation..."
-              />
+              <Textarea value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} required rows={3} className="w-[50ch] font-mono resize-none" placeholder="Désignation..." />
             </div>
-
-            {/* Row 3: Unité | TVA % */}
             <div className="grid grid-cols-4 gap-4">
               <div><Label>Unité</Label><Input value={formData.unite} onChange={(e) => setFormData({ ...formData, unite: e.target.value })} /></div>
               <div><Label>TVA %</Label><Input type="text" value={formData.tauxTVA} onChange={(e) => setFormData({ ...formData, tauxTVA: e.target.value })} /></div>
               <div></div>
               <div></div>
             </div>
-
-            {/* Row 4: Info Libres */}
             <div><Label>Info Libres</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
-
             <div className="flex items-center gap-2">
               <input type="checkbox" id="actif" checked={formData.actif} onChange={(e) => setFormData({ ...formData, actif: e.target.checked })} className="w-4 h-4" />
               <Label htmlFor="actif">Article actif</Label>
             </div>
-
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
