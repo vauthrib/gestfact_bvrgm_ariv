@@ -95,7 +95,7 @@ export function ImportDialog({ open, onOpenChange, type, code, onSuccess }: Impo
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Import {typeLabels[type]}</DialogTitle>
-            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-IMP</span>
+            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-IMP</span>
           </div>
         </DialogHeader>
 
@@ -158,7 +158,7 @@ export function ImportDialog({ open, onOpenChange, type, code, onSuccess }: Impo
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
           <Button
             type="button"
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-blue-600 hover:bg-blue-700"
             onClick={handleImport}
             disabled={!file || loading}
           >

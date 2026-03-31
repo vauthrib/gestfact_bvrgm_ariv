@@ -24,7 +24,7 @@ export function ExportDialog({ open, onOpenChange, type, code }: ExportDialogPro
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Exporter</DialogTitle>
-            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-EXP</span>
+            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-EXP</span>
           </div>
         </DialogHeader>
 
@@ -58,7 +58,7 @@ export function ExportDialog({ open, onOpenChange, type, code }: ExportDialogPro
             className="w-full justify-start gap-3 h-14"
             onClick={() => handleExport('xlsx')}
           >
-            <FileSpreadsheet className="w-5 h-5 text-green-700" />
+            <FileSpreadsheet className="w-5 h-5 text-blue-700" />
             <div className="text-left">
               <div className="font-medium">XLSX</div>
               <div className="text-xs text-gray-500">Microsoft Excel moderne</div>

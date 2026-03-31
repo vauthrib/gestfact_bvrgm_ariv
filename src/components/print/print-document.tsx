@@ -485,7 +485,7 @@ export function PrintDocument({
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Aperçu - {getTitle()}</DialogTitle>
-            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-PRT</span>
+            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-PRT</span>
           </div>
         </DialogHeader>
 
@@ -513,7 +513,7 @@ export function PrintDocument({
             </Button>
           )}
           
-          <Button onClick={handlePrint} className="bg-green-600 hover:bg-green-700">
+          <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">
             <Printer className="w-4 h-4 mr-2" /> Imprimer
           </Button>
         </div>
@@ -555,7 +555,7 @@ export function PrintDocument({
                   width: mmToPxStr(layout.docInfo.width)
                 }}>
                   <h2 className="text-lg font-bold">{getTitle()}</h2>
-                  <p className="font-bold text-green-700">{getNumero()}</p>
+                  <p className="font-bold text-blue-700">{getNumero()}</p>
                   <p className="text-sm">Date: {formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement)}</p>
                   {documentData.bonCommande && (
                     <p className="text-sm">BC: {documentData.bonCommande}</p>
@@ -644,17 +644,17 @@ export function PrintDocument({
                     <p>TVA: <span className="font-bold">{formatCurrency(documentData.montantTVA)}</span></p>
                   )}
                   {documentData.totalTTC !== undefined && (
-                    <p className="text-lg font-bold text-green-700">Total TTC: {formatCurrency(documentData.totalTTC)}</p>
+                    <p className="text-lg font-bold text-blue-700">Total TTC: {formatCurrency(documentData.totalTTC)}</p>
                   )}
                   {documentData.montantTTC !== undefined && (
-                    <p className="text-lg font-bold text-green-700">Total TTC: {formatCurrency(documentData.montantTTC)}</p>
+                    <p className="text-lg font-bold text-blue-700">Total TTC: {formatCurrency(documentData.montantTTC)}</p>
                   )}
                   {documentData.montant !== undefined && (
-                    <p className="text-lg font-bold text-green-700">Montant: {formatCurrency(documentData.montant)}</p>
+                    <p className="text-lg font-bold text-blue-700">Montant: {formatCurrency(documentData.montant)}</p>
                   )}
                   {(documentData.totalTTC || documentData.montantTTC || documentData.montant) && (
                     <p className="text-sm italic text-gray-600 mt-3 pt-2 border-t">
-                      Le montant total TTC à payer est de : <strong className="text-green-700">{numberToWords(documentData.totalTTC || documentData.montantTTC || documentData.montant)}</strong>.
+                      Le montant total TTC à payer est de : <strong className="text-blue-700">{numberToWords(documentData.totalTTC || documentData.montantTTC || documentData.montant)}</strong>.
                     </p>
                   )}
                 </div>
@@ -677,7 +677,7 @@ export function PrintDocument({
             <>
               <div className="flex justify-between border-b-2 border-green-700 pb-4 mb-6 p-6">
                 <div>
-                  <h1 className="text-xl font-bold text-green-700">{entreprise?.nomEntreprise || 'Votre Entreprise'}</h1>
+                  <h1 className="text-xl font-bold text-blue-700">{entreprise?.nomEntreprise || 'Votre Entreprise'}</h1>
                   <p className="text-sm text-gray-600">
                     {entreprise?.adresseEntreprise}<br />
                     {entreprise?.villeEntreprise}<br />
@@ -687,7 +687,7 @@ export function PrintDocument({
                 </div>
                 <div className="text-right">
                   <h2 className="text-lg font-bold">{getTitle()}</h2>
-                  <p className="font-bold text-green-700">{getNumero()}</p>
+                  <p className="font-bold text-blue-700">{getNumero()}</p>
                   <p className="text-sm">Date: {formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement)}</p>
                   {documentData.bonCommande && (
                     <p className="text-sm">BC: {documentData.bonCommande}</p>
@@ -765,17 +765,17 @@ export function PrintDocument({
                     <p>TVA: <span className="font-bold">{formatCurrency(documentData.montantTVA)}</span></p>
                   )}
                   {documentData.totalTTC !== undefined && (
-                    <p className="text-lg font-bold text-green-700">Total TTC: {formatCurrency(documentData.totalTTC)}</p>
+                    <p className="text-lg font-bold text-blue-700">Total TTC: {formatCurrency(documentData.totalTTC)}</p>
                   )}
                   {documentData.montantTTC !== undefined && (
-                    <p className="text-lg font-bold text-green-700">Total TTC: {formatCurrency(documentData.montantTTC)}</p>
+                    <p className="text-lg font-bold text-blue-700">Total TTC: {formatCurrency(documentData.montantTTC)}</p>
                   )}
                   {documentData.montant !== undefined && (
-                    <p className="text-lg font-bold text-green-700">Montant: {formatCurrency(documentData.montant)}</p>
+                    <p className="text-lg font-bold text-blue-700">Montant: {formatCurrency(documentData.montant)}</p>
                   )}
                   {(documentData.totalTTC || documentData.montantTTC || documentData.montant) && (
                     <p className="text-sm italic text-gray-600 mt-3 pt-2 border-t">
-                      Le montant total toutes taxes comprises, à payer, est de : <strong className="text-green-700">{numberToWords(documentData.totalTTC || documentData.montantTTC || documentData.montant)}</strong>.
+                      Le montant total toutes taxes comprises, à payer, est de : <strong className="text-blue-700">{numberToWords(documentData.totalTTC || documentData.montantTTC || documentData.montant)}</strong>.
                     </p>
                   )}
                 </div>

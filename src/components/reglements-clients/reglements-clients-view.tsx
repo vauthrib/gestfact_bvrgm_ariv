@@ -469,14 +469,14 @@ export function ReglementsClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-green-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.02</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.02</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
+          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
           {canEdit && (
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           )}
           {canCreate && (
-            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           )}
         </div>
       </div>
@@ -530,11 +530,11 @@ export function ReglementsClientsView() {
                               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </Button>
                           </TableCell>
-                          <TableCell className="font-bold text-green-700">{item.baseNumber}</TableCell>
+                          <TableCell className="font-bold text-blue-700">{item.baseNumber}</TableCell>
                           <TableCell>{new Date(item.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
                           <TableCell>{item.client}</TableCell>
                           <TableCell className="text-green-600 italic">{item.reglements.length} facture(s)</TableCell>
-                          <TableCell className="font-bold text-green-700">{formatCurrency(item.totalMontant)}</TableCell>
+                          <TableCell className="font-bold text-blue-700">{formatCurrency(item.totalMontant)}</TableCell>
                           <TableCell>{getModePaiementDisplay(item.modePaiement, null)}</TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded text-xs ${item.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
@@ -635,7 +635,7 @@ export function ReglementsClientsView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingReglement ? 'Modifier' : 'Nouveau'} Règlement</DialogTitle>
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01-DLG</span>
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -808,7 +808,7 @@ export function ReglementsClientsView() {
             )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-              <Button type="submit" className="bg-green-600 hover:bg-green-700">{editingReglement ? 'Modifier' : 'Créer'}</Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editingReglement ? 'Modifier' : 'Créer'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

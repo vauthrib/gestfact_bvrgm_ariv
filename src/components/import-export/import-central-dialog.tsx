@@ -234,7 +234,7 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
               <Upload className="w-5 h-5" />
               Importation Centralisée
             </DialogTitle>
-            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01-IMP</span>
+            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01-IMP</span>
           </div>
         </DialogHeader>
 
@@ -262,7 +262,7 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => handleOpenChange(false)}>Annuler</Button>
-              <Button className="bg-green-600 hover:bg-green-700" onClick={handleCodeSubmit}>Valider</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCodeSubmit}>Valider</Button>
             </DialogFooter>
           </div>
         )}
@@ -271,10 +271,10 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
           <div className="space-y-4">
             {/* EXPORT ALL / IMPORT ALL Buttons */}
             <div className="border-b pb-4 mb-4">
-              <Label className="text-base font-semibold text-green-700 mb-3 block">Actions globales</Label>
+              <Label className="text-base font-semibold text-blue-700 mb-3 block">Actions globales</Label>
               <div className="grid grid-cols-2 gap-3">
                 <Button
-                  className="bg-green-600 hover:bg-green-700 h-auto py-3 flex-col"
+                  className="bg-blue-600 hover:bg-blue-700 h-auto py-3 flex-col"
                   onClick={handleExportAll}
                 >
                   <Download className="w-5 h-5 mb-1" />
@@ -295,7 +295,7 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
                     <label htmlFor="file-import-all" className="cursor-pointer">
                       <Button
                         variant="outline"
-                        className="w-full border-green-300 text-green-700 hover:bg-green-50 h-auto py-3 flex-col"
+                        className="w-full border-blue-300 text-blue-700 hover:bg-blue-50 h-auto py-3 flex-col"
                         asChild
                       >
                         <span>
@@ -320,7 +320,7 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
                         </Button>
                       </div>
                       <Button
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        className="w-full bg-blue-600 hover:bg-blue-700"
                         onClick={handleImportAll}
                         disabled={importAllLoading}
                       >
@@ -438,7 +438,7 @@ export function ImportCentralDialog({ open, onOpenChange }: ImportCentralDialogP
               <Button variant="outline" onClick={() => handleOpenChange(false)}>Fermer</Button>
               {selectedType && file && (
                 <Button
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-blue-600 hover:bg-blue-700"
                   onClick={handleImport}
                   disabled={!file || loading}
                 >
