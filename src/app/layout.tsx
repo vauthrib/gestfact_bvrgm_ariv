@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RGM V2.18 - Gestion de Facturation",
+  title: "ARIV V2.18 - Gestion de Facturation",
   description: "Application de gestion de facturation",
 };
 

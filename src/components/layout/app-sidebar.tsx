@@ -50,7 +50,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle }: A
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
           <span className="font-bold text-lg">
-            RGM <span className="bg-orange-400 text-white px-2 py-0.5 rounded text-xs font-bold">V2.18</span>
+            ARIV <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">V2.18</span>
           </span>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle}>
@@ -64,7 +64,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle }: A
               variant={currentView === item.id ? 'secondary' : 'ghost'}
               className={cn(
                 'w-full justify-start gap-3',
-                currentView === item.id && 'bg-green-100 text-green-900 hover:bg-green-200'
+                currentView === item.id && 'bg-blue-100 text-blue-900 hover:bg-blue-200'
               )}
               onClick={() => onViewChange(item.id)}
             >
