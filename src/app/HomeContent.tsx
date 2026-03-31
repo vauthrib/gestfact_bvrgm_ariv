@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { signOut } from 'next-auth/react';
 import { AppSidebar, PageView } from '@/components/layout/app-sidebar';
 import { TiersView } from '@/components/tiers/tiers-view';
@@ -13,7 +13,7 @@ import { ReglementsFournisseursView } from '@/components/reglements-fournisseurs
 import { BonsLivraisonView } from '@/components/bons-livraison/bons-livraison-view';
 import { ParametresView } from '@/components/parametres/parametres-view';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
-import { Permission } from '@/lib/permissions';
+import { Permission, hasPermission, getAccessiblePages } from '@/lib/permissions';
 import { UserProvider } from '@/lib/user-context';
 
 interface User {
@@ -29,7 +29,22 @@ interface HomeContentProps {
 }
 
 export default function HomeContent({ user }: HomeContentProps) {
-  const [currentView, setCurrentView] = useState<PageView>('dashboard');
+  // Determine the initial view based on permissions
+  const initialView = useMemo<PageView>(() => {
+    const canViewDashboard = hasPermission(user.role, user.permissions, 'dashboard.view');
+    if (canViewDashboard) return 'dashboard';
+    
+    // Get accessible pages and return the first one
+    const accessiblePages = getAccessiblePages(user.role, user.permissions);
+    if (accessiblePages.length > 0) {
+      return accessiblePages[0] as PageView;
+    }
+    
+    // Fallback to dashboard even if no access (shouldn't happen)
+    return 'dashboard';
+  }, [user.role, user.permissions]);
+
+  const [currentView, setCurrentView] = useState<PageView>(initialView);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const renderView = () => {

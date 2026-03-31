@@ -315,7 +315,9 @@ export function BonsLivraisonView() {
         <div><h1 className="text-3xl font-bold text-green-700">Bons de Livraison</h1><p className="text-muted-foreground">Gérez vos BL</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01</span>
-          <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
+          {canEdit && (
+            <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
+          )}
           {canCreate && (
             <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           )}

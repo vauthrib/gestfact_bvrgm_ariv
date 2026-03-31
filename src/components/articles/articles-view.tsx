@@ -145,7 +145,9 @@ export function ArticlesView() {
         <div><h1 className="text-3xl font-bold text-blue-700">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
-          <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
+          {canEdit && (
+            <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
+          )}
           {canCreate && (
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           )}
