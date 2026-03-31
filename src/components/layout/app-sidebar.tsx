@@ -6,6 +6,7 @@ import {
   LayoutDashboard, Users, Package, FileText, CreditCard,
   Truck, Settings, ChevronLeft, ChevronRight, Receipt, Undo2, LogOut, User
 } from 'lucide-react';
+import { hasPermission, Permission } from '@/lib/permissions';
 
 export type PageView =
   | 'dashboard'
@@ -24,6 +25,7 @@ interface User {
   email: string;
   name?: string | null;
   role: string;
+  permissions: Permission[];
 }
 
 interface AppSidebarProps {
@@ -35,20 +37,34 @@ interface AppSidebarProps {
   onLogout: () => void;
 }
 
-const menuItems: { id: PageView; label: string; icon: React.ReactNode; separatorAfter?: boolean }[] = [
-  { id: 'dashboard', label: 'Tableau de bord', icon: <LayoutDashboard className="w-5 h-5" /> },
-  { id: 'tiers', label: 'Tiers', icon: <Users className="w-5 h-5" /> },
-  { id: 'articles', label: 'Articles', icon: <Package className="w-5 h-5" /> },
-  { id: 'bons-livraison', label: 'Bons de Livraison', icon: <Truck className="w-5 h-5" /> },
-  { id: 'factures-clients', label: 'Factures Clients', icon: <FileText className="w-5 h-5" /> },
-  { id: 'avoirs-clients', label: 'Avoirs Clients', icon: <Undo2 className="w-5 h-5" /> },
-  { id: 'reglements-clients', label: 'Règlements Clients', icon: <CreditCard className="w-5 h-5" />, separatorAfter: true },
-  { id: 'factures-fournisseurs', label: 'Factures Fourn.', icon: <Receipt className="w-5 h-5" /> },
-  { id: 'reglements-fournisseurs', label: 'Règlements Fourn.', icon: <CreditCard className="w-5 h-5" />, separatorAfter: true },
-  { id: 'parametres', label: 'Paramètres', icon: <Settings className="w-5 h-5" /> },
+const allMenuItems: { id: PageView; label: string; icon: React.ReactNode; separatorAfter?: boolean; permission: Permission }[] = [
+  { id: 'dashboard', label: 'Tableau de bord', icon: <LayoutDashboard className="w-5 h-5" />, permission: 'dashboard.view' },
+  { id: 'tiers', label: 'Tiers', icon: <Users className="w-5 h-5" />, permission: 'tiers.view' },
+  { id: 'articles', label: 'Articles', icon: <Package className="w-5 h-5" />, permission: 'articles.view' },
+  { id: 'bons-livraison', label: 'Bons de Livraison', icon: <Truck className="w-5 h-5" />, permission: 'bl.view' },
+  { id: 'factures-clients', label: 'Factures Clients', icon: <FileText className="w-5 h-5" />, permission: 'factures.view' },
+  { id: 'avoirs-clients', label: 'Avoirs Clients', icon: <Undo2 className="w-5 h-5" />, permission: 'avoirs.view' },
+  { id: 'reglements-clients', label: 'Règlements Clients', icon: <CreditCard className="w-5 h-5" />, permission: 'reglements.view', separatorAfter: true },
+  { id: 'factures-fournisseurs', label: 'Factures Fourn.', icon: <Receipt className="w-5 h-5" />, permission: 'fournisseurs.view' },
+  { id: 'reglements-fournisseurs', label: 'Règlements Fourn.', icon: <CreditCard className="w-5 h-5" />, permission: 'reglements-fourn.view', separatorAfter: true },
+  { id: 'parametres', label: 'Paramètres', icon: <Settings className="w-5 h-5" />, permission: 'parametres.view' },
 ];
 
 export function AppSidebar({ currentView, onViewChange, collapsed, onToggle, user, onLogout }: AppSidebarProps) {
+  // Filtrer les menus selon les permissions
+  const menuItems = allMenuItems.filter(item => 
+    hasPermission(user.role, user.permissions, item.permission)
+  );
+
+  // Ajouter separatorAfter au dernier item de chaque groupe si nécessaire
+  const processedMenuItems = menuItems.map((item, index) => {
+    // Ajouter separator après règlements clients et règlements fournisseurs
+    const needsSeparator = 
+      item.id === 'reglements-clients' || 
+      item.id === 'reglements-fournisseurs';
+    return { ...item, separatorAfter: needsSeparator };
+  });
+
   return (
     <div
       className={cn(
@@ -59,7 +75,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle, use
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
           <span className="font-bold text-lg">
-            ARIV <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">V2.20</span>
+            ARIV <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">V2.21</span>
           </span>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle}>
@@ -68,7 +84,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle, use
       </div>
       
       <nav className="flex-1 p-2 space-y-1">
-        {menuItems.map((item, index) => (
+        {processedMenuItems.map((item) => (
           <div key={item.id}>
             <Button
               variant={currentView === item.id ? 'secondary' : 'ghost'}

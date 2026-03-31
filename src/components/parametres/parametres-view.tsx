@@ -19,6 +19,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { 
+  PERMISSION_DEFINITIONS, PERMISSION_GROUPS, Permission, DEFAULT_PERMISSIONS 
+} from '@/lib/permissions';
 
 interface LayoutElement {
   x: number;
@@ -54,6 +58,7 @@ interface User {
   email: string;
   name: string | null;
   role: string;
+  permissions: string | null;
   actif: boolean;
   createdAt: string;
 }
@@ -61,6 +66,13 @@ interface User {
 interface ParametresViewProps {
   userRole?: string;
 }
+
+// Profils prédéfinis
+const PROFILES = {
+  ADMIN: { label: 'Administrateur (tout accès)', permissions: DEFAULT_PERMISSIONS.ADMIN },
+  USER: { label: 'Utilisateur standard', permissions: DEFAULT_PERMISSIONS.USER },
+  BL_ONLY: { label: 'Créateur BL uniquement', permissions: DEFAULT_PERMISSIONS.BL_ONLY },
+};
 
 export function ParametresView({ userRole }: ParametresViewProps) {
   const [parametres, setParametres] = useState<Parametres | null>(null);
@@ -73,8 +85,15 @@ export function ParametresView({ userRole }: ParametresViewProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [userForm, setUserForm] = useState({ email: '', password: '', name: '', role: 'USER' });
+  const [userForm, setUserForm] = useState({ 
+    email: '', 
+    password: '', 
+    name: '', 
+    role: 'USER',
+    permissions: [] as Permission[]
+  });
   const [userLoading, setUserLoading] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<string>('USER');
 
   const isAdmin = userRole === 'ADMIN';
 
@@ -146,46 +165,101 @@ export function ParametresView({ userRole }: ParametresViewProps) {
     }
   };
 
+  // Parse user permissions
+  const parsePermissions = (permissionsStr: string | null): Permission[] => {
+    if (!permissionsStr) return [];
+    try {
+      return JSON.parse(permissionsStr);
+    } catch {
+      return [];
+    }
+  };
+
   // User management functions
   const openUserDialog = (user?: User) => {
     if (user) {
       setEditingUser(user);
-      setUserForm({ email: user.email, password: '', name: user.name || '', role: user.role });
+      const perms = parsePermissions(user.permissions);
+      setUserForm({ 
+        email: user.email, 
+        password: '', 
+        name: user.name || '', 
+        role: user.role,
+        permissions: perms
+      });
+      // Detect profile
+      if (user.role === 'ADMIN') {
+        setSelectedProfile('ADMIN');
+      } else if (JSON.stringify(perms) === JSON.stringify(DEFAULT_PERMISSIONS.BL_ONLY)) {
+        setSelectedProfile('BL_ONLY');
+      } else {
+        setSelectedProfile('USER');
+      }
     } else {
       setEditingUser(null);
-      setUserForm({ email: '', password: '', name: '', role: 'USER' });
+      setUserForm({ email: '', password: '', name: '', role: 'USER', permissions: DEFAULT_PERMISSIONS.USER });
+      setSelectedProfile('USER');
     }
     setUserDialogOpen(true);
+  };
+
+  const handleProfileChange = (profile: string) => {
+    setSelectedProfile(profile);
+    if (profile === 'ADMIN') {
+      setUserForm(prev => ({ ...prev, role: 'ADMIN', permissions: PROFILES.ADMIN.permissions }));
+    } else if (profile === 'BL_ONLY') {
+      setUserForm(prev => ({ ...prev, role: 'USER', permissions: PROFILES.BL_ONLY.permissions }));
+    } else {
+      setUserForm(prev => ({ ...prev, role: 'USER', permissions: PROFILES.USER.permissions }));
+    }
+  };
+
+  const togglePermission = (permission: Permission) => {
+    setUserForm(prev => {
+      const hasPerm = prev.permissions.includes(permission);
+      const newPerms = hasPerm 
+        ? prev.permissions.filter(p => p !== permission)
+        : [...prev.permissions, permission];
+      // Deselect profile when manually changing
+      setSelectedProfile('');
+      return { ...prev, permissions: newPerms };
+    });
   };
 
   const handleSaveUser = async () => {
     setUserLoading(true);
     try {
+      const payload = {
+        email: userForm.email,
+        name: userForm.name,
+        role: userForm.role,
+        password: userForm.password || undefined,
+        permissions: userForm.permissions
+      };
+
       if (editingUser) {
-        // Update existing user
-        const updateData: { email: string; name: string; role: string; password?: string } = {
-          email: userForm.email,
-          name: userForm.name,
-          role: userForm.role
-        };
-        if (userForm.password) {
-          updateData.password = userForm.password;
-        }
         const res = await fetch(`/api/users/${editingUser.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateData)
+          body: JSON.stringify(payload)
         });
         if (res.ok) {
           fetchUsers();
           setUserDialogOpen(false);
+        } else {
+          const error = await res.json();
+          alert(error.error || 'Erreur lors de la modification');
         }
       } else {
-        // Create new user
+        if (!userForm.password) {
+          alert('Le mot de passe est requis pour un nouvel utilisateur');
+          setUserLoading(false);
+          return;
+        }
         const res = await fetch('/api/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(userForm)
+          body: JSON.stringify(payload)
         });
         if (res.ok) {
           fetchUsers();
@@ -227,6 +301,16 @@ export function ParametresView({ userRole }: ParametresViewProps) {
     } catch (e) { console.error(e); }
   };
 
+  // Get permission summary for display
+  const getPermissionSummary = (user: User): string => {
+    if (user.role === 'ADMIN') return 'Tout accès';
+    const perms = parsePermissions(user.permissions);
+    if (perms.length === 0) return 'Aucun droit';
+    if (JSON.stringify(perms) === JSON.stringify(DEFAULT_PERMISSIONS.BL_ONLY)) return 'BL uniquement';
+    if (JSON.stringify(perms) === JSON.stringify(DEFAULT_PERMISSIONS.USER)) return 'Standard';
+    return `${perms.length} permissions`;
+  };
+
   if (loading) return <div className="p-8">Chargement...</div>;
 
   return (
@@ -259,6 +343,7 @@ export function ParametresView({ userRole }: ParametresViewProps) {
                   <TableHead>Nom</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Rôle</TableHead>
+                  <TableHead>Droits</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -266,12 +351,15 @@ export function ParametresView({ userRole }: ParametresViewProps) {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell>{user.name || '-'}</TableCell>
+                    <TableCell className="font-medium">{user.name || '-'}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
                         {user.role === 'ADMIN' ? 'Administrateur' : 'Utilisateur'}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {getPermissionSummary(user)}
                     </TableCell>
                     <TableCell>
                       <Button 
@@ -295,7 +383,7 @@ export function ParametresView({ userRole }: ParametresViewProps) {
                 ))}
                 {users.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       Aucun utilisateur
                     </TableCell>
                   </TableRow>
@@ -389,32 +477,34 @@ export function ParametresView({ userRole }: ParametresViewProps) {
         onSave={handleSaveLayout}
       />
 
-      {/* User Dialog */}
+      {/* User Dialog with Permissions */}
       <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingUser ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'}</DialogTitle>
             <DialogDescription>
-              {editingUser ? 'Modifiez les informations de l\'utilisateur' : 'Créez un nouveau compte utilisateur'}
+              {editingUser ? 'Modifiez les informations et permissions de l\'utilisateur' : 'Créez un nouveau compte utilisateur avec des permissions personnalisées'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <Label>Nom</Label>
-              <Input 
-                value={userForm.name} 
-                onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} 
-                placeholder="Nom complet"
-              />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input 
-                type="email"
-                value={userForm.email} 
-                onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} 
-                placeholder="email@exemple.com"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Nom</Label>
+                <Input 
+                  value={userForm.name} 
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} 
+                  placeholder="Nom complet"
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input 
+                  type="email"
+                  value={userForm.email} 
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} 
+                  placeholder="email@exemple.com"
+                />
+              </div>
             </div>
             <div>
               <Label>{editingUser ? 'Nouveau mot de passe (laisser vide pour garder l\'actuel)' : 'Mot de passe'}</Label>
@@ -425,17 +515,46 @@ export function ParametresView({ userRole }: ParametresViewProps) {
                 placeholder="••••••••"
               />
             </div>
+
+            {/* Profil prédéfini */}
             <div>
-              <Label>Rôle</Label>
-              <Select value={userForm.role} onValueChange={(v) => setUserForm({ ...userForm, role: v })}>
+              <Label>Profil de droits</Label>
+              <Select value={selectedProfile} onValueChange={handleProfileChange}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Choisir un profil" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USER">Utilisateur</SelectItem>
-                  <SelectItem value="ADMIN">Administrateur</SelectItem>
+                  {Object.entries(PROFILES).map(([key, value]) => (
+                    <SelectItem key={key} value={key}>{value.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Permissions détaillées */}
+            <div className="border rounded-lg p-4">
+              <Label className="text-base font-semibold mb-3 block">Permissions détaillées</Label>
+              <div className="space-y-4">
+                {PERMISSION_GROUPS.map((group) => (
+                  <div key={group.name} className="space-y-2">
+                    <div className="font-medium text-sm text-muted-foreground">{group.name}</div>
+                    <div className="grid grid-cols-2 gap-2 pl-4">
+                      {group.permissions.map((perm) => (
+                        <div key={perm} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={perm}
+                            checked={userForm.permissions.includes(perm)}
+                            onCheckedChange={() => togglePermission(perm)}
+                          />
+                          <label htmlFor={perm} className="text-sm cursor-pointer">
+                            {PERMISSION_DEFINITIONS[perm].label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { DEFAULT_PERMISSIONS } from '@/lib/permissions';
 
 // PUT - Update user (admin only)
 export async function PUT(
@@ -18,7 +19,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { email, password, name, role, actif } = body;
+    const { email, password, name, role, actif, permissions } = body;
 
     const updateData: {
       email?: string;
@@ -26,12 +27,26 @@ export async function PUT(
       role?: string;
       actif?: boolean;
       password?: string;
+      permissions?: string;
     } = {};
 
     if (email) updateData.email = email;
     if (name !== undefined) updateData.name = name || null;
-    if (role) updateData.role = role;
+    if (role) {
+      updateData.role = role;
+      // Update permissions based on role
+      if (role === 'ADMIN') {
+        updateData.permissions = JSON.stringify(DEFAULT_PERMISSIONS.ADMIN);
+      }
+    }
     if (actif !== undefined) updateData.actif = actif;
+    
+    // Handle permissions update
+    if (permissions !== undefined) {
+      if (Array.isArray(permissions)) {
+        updateData.permissions = JSON.stringify(permissions);
+      }
+    }
     
     // Only update password if provided
     if (password) {
@@ -46,6 +61,7 @@ export async function PUT(
         email: true,
         name: true,
         role: true,
+        permissions: true,
         actif: true,
         updatedAt: true
       }

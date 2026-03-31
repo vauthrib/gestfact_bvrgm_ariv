@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { db } from './db';
+import { Permission } from './permissions';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
@@ -32,11 +33,22 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Parse permissions from JSON
+        let permissions: Permission[] = [];
+        if (user.permissions) {
+          try {
+            permissions = JSON.parse(user.permissions);
+          } catch {
+            permissions = [];
+          }
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role
+          role: user.role,
+          permissions
         };
       }
     })
@@ -52,6 +64,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.permissions = user.permissions;
       }
       return token;
     },
@@ -59,6 +72,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.permissions = token.permissions as Permission[];
       }
       return session;
     }
@@ -72,10 +86,12 @@ declare module 'next-auth' {
       email: string;
       name?: string | null;
       role: string;
+      permissions: Permission[];
     }
   }
   interface User {
     role: string;
+    permissions: Permission[];
   }
 }
 
@@ -83,5 +99,6 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role: string;
+    permissions: Permission[];
   }
 }

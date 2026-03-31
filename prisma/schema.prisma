@@ -273,6 +273,7 @@ model User {
   email         String    @unique
   password      String    // Hashed password
   role          String    @default("USER")  // ADMIN, USER
+  permissions   String?   // JSON string with permissions
   actif         Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

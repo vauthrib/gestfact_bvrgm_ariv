@@ -13,12 +13,14 @@ import { ReglementsFournisseursView } from '@/components/reglements-fournisseurs
 import { BonsLivraisonView } from '@/components/bons-livraison/bons-livraison-view';
 import { ParametresView } from '@/components/parametres/parametres-view';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
+import { Permission } from '@/lib/permissions';
 
 interface User {
   id: string;
   email: string;
   name?: string | null;
   role: string;
+  permissions: Permission[];
 }
 
 interface HomeContentProps {

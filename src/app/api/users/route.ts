@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { Permission, DEFAULT_PERMISSIONS } from '@/lib/permissions';
 
 // GET - List all users (admin only)
 export async function GET() {
@@ -19,6 +20,7 @@ export async function GET() {
         email: true,
         name: true,
         role: true,
+        permissions: true,
         actif: true,
         createdAt: true,
         updatedAt: true
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password, name, role } = body;
+    const { email, password, name, role, permissions } = body;
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email et mot de passe requis' }, { status: 400 });
@@ -61,18 +63,32 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Handle permissions
+    let permissionsJson: string | null = null;
+    if (role === 'ADMIN') {
+      // Admin has all permissions
+      permissionsJson = JSON.stringify(DEFAULT_PERMISSIONS.ADMIN);
+    } else if (permissions && Array.isArray(permissions)) {
+      permissionsJson = JSON.stringify(permissions);
+    } else {
+      // Default permissions for USER role
+      permissionsJson = JSON.stringify(DEFAULT_PERMISSIONS.USER);
+    }
+
     const user = await db.user.create({
       data: {
         email,
         password: hashedPassword,
         name: name || null,
-        role: role || 'USER'
+        role: role || 'USER',
+        permissions: permissionsJson
       },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        permissions: true,
         actif: true,
         createdAt: true
       }
