@@ -5,11 +5,17 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
+  // Only create client if DATABASE_URL exists
+  if (!process.env.DATABASE_URL) {
+    console.warn('DATABASE_URL not set - Prisma client will not be able to connect')
+  }
+
   return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query'] : [],
+    log: [],
   })
 }
 
+// Singleton pattern to prevent multiple PrismaClient instances
 export const db = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== 'production') {
