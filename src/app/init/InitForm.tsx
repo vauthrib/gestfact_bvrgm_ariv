@@ -65,7 +65,7 @@ export default function InitForm() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
             <h1 className="text-3xl font-bold text-blue-600">ARIV</h1>
-            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold border border-blue-300">V2.47</span>
+            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold border border-blue-300">V2.48</span>
           </div>
           <p className="text-lg font-medium text-foreground">Première initialisation</p>
           <p className="text-sm text-muted-foreground">Créez le compte administrateur</p>
