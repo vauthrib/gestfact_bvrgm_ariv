@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@/lib/user-context';
-import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Pencil, Trash2, Search, CheckCircle, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExportDialog } from '@/components/import-export/export-dialog';
+import { PermissionGate } from '@/components/auth/permission-gate';
 
 interface FactureFournisseur {
   id: string; numeroFacture: string; fournisseurId: string; dateFacture: string;
@@ -30,12 +29,6 @@ type SortField = 'numeroFacture' | 'dateFacture' | 'fournisseur' | 'montantHT' |
 type SortDirection = 'asc' | 'desc';
 
 export function FacturesFournisseursView() {
-  const { user } = useUser();
-  const permissions = user?.permissions as Permission[] || [];
-  
-  const canEdit = hasPermission(user?.role || '', permissions, 'fournisseurs.edit');
-  const canCreate = hasPermission(user?.role || '', permissions, 'fournisseurs.create');
-  
   const [factures, setFactures] = useState<FactureFournisseur[]>([]);
   const [fournisseurs, setFournisseurs] = useState<Tiers[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,9 +58,6 @@ export function FacturesFournisseursView() {
   
   const fetchFactures = async () => { try { const res = await fetch('/api/factures-fournisseurs'); const d = await res.json(); setFactures(Array.isArray(d) ? d : []); } catch (e) { console.error(e); } finally { setLoading(false); } };
   const fetchFournisseurs = async () => { try { const res = await fetch('/api/tiers'); const d = await res.json(); setFournisseurs((Array.isArray(d) ? d : []).filter((t: any) => t.type === 'FOURNISSEUR')); } catch (e) { } };
-
-  // Sorted list for dropdown
-  const sortedFournisseurs = [...fournisseurs].sort((a, b) => a.raisonSociale.localeCompare(b.raisonSociale));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +104,7 @@ export function FacturesFournisseursView() {
   };
 
   const handleCodeSubmit = () => {
-    if (codeInput === '1111') {
+    if (codeInput === '3333') {
       setCodeDialogOpen(false);
       if (pendingEdit) {
         setEditing(pendingEdit);
@@ -182,12 +172,8 @@ export function FacturesFournisseursView() {
         <div><h1 className="text-3xl font-bold text-blue-700">Factures Fournisseurs</h1><p className="text-muted-foreground">Gérez vos factures fournisseurs</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFF01</span>
-          {canEdit && (
-            <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          )}
-          {canCreate && (
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
-          )}
+          <PermissionGate permission="fournisseurs.create"><Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button></PermissionGate>
+          <PermissionGate permission="fournisseurs.create"><Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button></PermissionGate>
         </div>
       </div>
       <Card>
@@ -231,11 +217,11 @@ export function FacturesFournisseursView() {
                 <TableCell>{formatCurrency(f.montantHT)}</TableCell>
                 <TableCell>{formatCurrency(f.montantTVA)}</TableCell>
                 <TableCell>{formatCurrency(f.montantTTC)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Enregistrée'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Enregistrée'}</span></TableCell>
                 <TableCell><div className="flex gap-2">
-                  {f.statut === 'ENREGISTREE' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)}><CheckCircle className="h-4 w-4" /></Button>}
-                  {canEdit && <Button size="sm" variant="outline" onClick={() => openEditDialog(f)}><Pencil className="h-4 w-4" /></Button>}
-                  {canEdit && <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)}><Trash2 className="h-4 w-4" /></Button>}
+                  {f.statut === 'ENREGISTREE' && <PermissionGate permission="fournisseurs.validate"><Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(f.id)}><CheckCircle className="h-4 w-4" /></Button></PermissionGate>}
+                  <PermissionGate permission="fournisseurs.edit"><Button size="sm" variant="outline" onClick={() => openEditDialog(f)}><Pencil className="h-4 w-4" /></Button></PermissionGate>
+                  <PermissionGate permission="fournisseurs.edit"><Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)}><Trash2 className="h-4 w-4" /></Button></PermissionGate>
                 </div></TableCell>
               </TableRow>))}</TableBody>
             </Table>
@@ -254,7 +240,7 @@ export function FacturesFournisseursView() {
             <div className="grid grid-cols-3 gap-4">
               <div><Label>N° Facture</Label><Input value={formData.numeroFacture} onChange={(e) => setFormData({ ...formData, numeroFacture: e.target.value })} required /></div>
               <div><Label>Date</Label><Input type="date" value={formData.dateFacture} onChange={(e) => setFormData({ ...formData, dateFacture: e.target.value })} required /></div>
-              <div><Label>Fournisseur</Label><Select value={formData.fournisseurId} onValueChange={(v) => setFormData({ ...formData, fournisseurId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{sortedFournisseurs.map((f) => (<SelectItem key={f.id} value={f.id}>{f.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
+              <div><Label>Fournisseur</Label><Select value={formData.fournisseurId} onValueChange={(v) => setFormData({ ...formData, fournisseurId: v })}><SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{fournisseurs.map((f) => (<SelectItem key={f.id} value={f.id}>{f.raisonSociale}</SelectItem>))}</SelectContent></Select></div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div><Label>Échéance</Label><Input type="date" value={formData.dateEcheance} onChange={(e) => setFormData({ ...formData, dateEcheance: e.target.value })} /></div>

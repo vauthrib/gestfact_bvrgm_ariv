@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { 
   PERMISSION_DEFINITIONS, PERMISSION_GROUPS, Permission, DEFAULT_PERMISSIONS 
 } from '@/lib/permissions';
+import { PermissionGate } from '@/components/auth/permission-gate';
 
 interface LayoutElement {
   x: number;
@@ -323,18 +324,20 @@ export function ParametresView({ userRole }: ParametresViewProps) {
         <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">PAR01</span>
       </div>
 
-      {/* Users Management - Admin Only */}
-      {isAdmin && (
+      {/* Users Management - Requires users.manage permission */}
+      <PermissionGate permission="users.manage">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <UsersIcon className="w-5 h-5" />
               Gestion des Utilisateurs
             </CardTitle>
-            <Button onClick={() => openUserDialog()} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Nouvel utilisateur
-            </Button>
+            <PermissionGate permission="users.manage">
+              <Button onClick={() => openUserDialog()} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Nouvel utilisateur
+              </Button>
+            </PermissionGate>
           </CardHeader>
           <CardContent>
             <Table>
@@ -372,12 +375,14 @@ export function ParametresView({ userRole }: ParametresViewProps) {
                       </Button>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => openUserDialog(user)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(user.id)} className="text-red-600">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <PermissionGate permission="users.manage">
+                        <Button variant="ghost" size="sm" onClick={() => openUserDialog(user)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(user.id)} className="text-red-600">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </PermissionGate>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -392,7 +397,7 @@ export function ParametresView({ userRole }: ParametresViewProps) {
             </Table>
           </CardContent>
         </Card>
-      )}
+      </PermissionGate>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
@@ -453,15 +458,21 @@ export function ParametresView({ userRole }: ParametresViewProps) {
 
         <div className="flex justify-end gap-4 flex-wrap">
           {saved && <span className="text-blue-600 self-center">Paramètres enregistrés!</span>}
-          <Button type="button" variant="outline" onClick={() => setLayoutEditorOpen(true)} className="border-blue-300 text-blue-700 hover:bg-blue-50">
-            <Printer className="w-4 h-4 mr-2" />
-            Mise en page impression
-          </Button>
-          <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
-            <Upload className="w-4 h-4 mr-2" />
-            Imports
-          </Button>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Enregistrer</Button>
+          <PermissionGate permission="parametres.edit">
+            <Button type="button" variant="outline" onClick={() => setLayoutEditorOpen(true)} className="border-blue-300 text-blue-700 hover:bg-blue-50">
+              <Printer className="w-4 h-4 mr-2" />
+              Mise en page impression
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="parametres.edit">
+            <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Imports
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="parametres.edit">
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Enregistrer</Button>
+          </PermissionGate>
         </div>
       </form>
 

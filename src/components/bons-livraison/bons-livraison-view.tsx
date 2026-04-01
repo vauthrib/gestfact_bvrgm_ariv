@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@/lib/user-context';
-import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
+import { PermissionGate } from '@/components/auth/permission-gate';
 
 interface LigneBL { id?: string; articleId?: string; designation: string; quantite: number; prixUnitaire: number; totalHT: number; }
 interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; bonCommande: string | null; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; facture?: { id: string; numero: string } | null; }
@@ -34,13 +33,6 @@ type SortField = 'numero' | 'dateBL' | 'client' | 'totalHT' | 'statut';
 type SortDirection = 'asc' | 'desc';
 
 export function BonsLivraisonView() {
-  const { user } = useUser();
-  const permissions = user?.permissions as Permission[] || [];
-  
-  const canEdit = hasPermission(user?.role || '', permissions, 'bl.edit');
-  const canCreate = hasPermission(user?.role || '', permissions, 'bl.create');
-  const canValidate = hasPermission(user?.role || '', permissions, 'bl.validate');
-  
   const [bons, setBons] = useState<BonLivraison[]>([]);
   const [clients, setClients] = useState<Tiers[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
@@ -315,12 +307,12 @@ export function BonsLivraisonView() {
         <div><h1 className="text-3xl font-bold text-blue-700">Bons de Livraison</h1><p className="text-muted-foreground">Gérez vos BL</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01</span>
-          {canEdit && (
+          <PermissionGate permission="bl.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          )}
-          {canCreate && (
+          </PermissionGate>
+          <PermissionGate permission="bl.create">
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
-          )}
+          </PermissionGate>
         </div>
       </div>
       <Card>
@@ -361,10 +353,10 @@ export function BonsLivraisonView() {
                 <TableCell>{new Date(b.dateBL).toLocaleDateString('fr-FR')}</TableCell>
                 <TableCell>{b.client?.raisonSociale}</TableCell>
                 <TableCell>{formatCurrency(b.totalHT)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
                 <TableCell>
                   {b.facture ? (
-                    <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800 font-medium">
+                    <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 font-medium">
                       ✓ {b.facture.numero}
                     </span>
                   ) : (
@@ -372,12 +364,14 @@ export function BonsLivraisonView() {
                   )}
                 </TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
-                  {b.statut === 'BROUILLON' && canValidate && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(b.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  <PermissionGate permission="bl.validate">
+                    {b.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(b.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  </PermissionGate>
                   {b.statut === 'VALIDEE' && (
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className={b.facture ? "text-gray-400 cursor-not-allowed" : "text-green-600"} 
+                      className={b.facture ? "text-gray-400 cursor-not-allowed" : "text-blue-600"} 
                       onClick={() => !b.facture && handleConvertToFacture(b)} 
                       disabled={!!b.facture}
                       title={b.facture ? `Déjà facturé (${b.facture.numero})` : "Créer facture"}
@@ -386,8 +380,10 @@ export function BonsLivraisonView() {
                     </Button>
                   )}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(b)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
-                  {canEdit && <Button size="sm" variant="outline" onClick={() => openEditDialog(b)} title="Modifier"><Pencil className="h-4 w-4" /></Button>}
-                  {canEdit && <Button size="sm" variant="destructive" onClick={() => handleDelete(b.id)} disabled={b.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>}
+                  <PermissionGate permission="bl.edit">
+                    <Button size="sm" variant="outline" onClick={() => openEditDialog(b)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(b.id)} disabled={b.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
+                  </PermissionGate>
                 </div></TableCell>
               </TableRow>))}</TableBody>
             </Table>

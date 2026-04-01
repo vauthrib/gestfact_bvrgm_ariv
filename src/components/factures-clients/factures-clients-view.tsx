@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@/lib/user-context';
-import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
+import { PermissionGate } from '@/components/auth/permission-gate';
 
 interface LigneFacture { id?: string; articleId?: string; designation: string; quantite: string; prixUnitaire: string; tauxTVA: string; totalHT: number; }
 interface FactureClient { id: string; numero: string; dateFacture: string; clientId: string; bonCommande: string | null; numeroBL: string | null; dateEcheance: string; statut: string; infoLibre: string | null; notes: string | null; totalHT: number; totalTVA: number; totalTTC: number; client: { raisonSociale: string; adresse?: string; ville?: string; ice?: string }; lignes?: LigneFacture[]; }
@@ -34,13 +33,6 @@ type SortField = 'numero' | 'dateFacture' | 'client' | 'totalHT' | 'totalTVA' | 
 type SortDirection = 'asc' | 'desc';
 
 export function FacturesClientsView() {
-  const { user } = useUser();
-  const permissions = user?.permissions as Permission[] || [];
-  
-  const canEdit = hasPermission(user?.role || '', permissions, 'factures.edit');
-  const canCreate = hasPermission(user?.role || '', permissions, 'factures.create');
-  const canValidate = hasPermission(user?.role || '', permissions, 'factures.validate');
-  
   const [factures, setFactures] = useState<FactureClient[]>([]);
   const [clients, setClients] = useState<Tiers[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
@@ -213,7 +205,7 @@ export function FacturesClientsView() {
   };
 
   const handleCodeSubmit = async () => {
-    if (codeInput === '1111') {
+    if (codeInput === '3333') {
       setCodeDialogOpen(false);
       if (pendingEdit) {
         try {
@@ -292,12 +284,12 @@ export function FacturesClientsView() {
         <div><h1 className="text-3xl font-bold text-blue-700">Factures Clients</h1><p className="text-muted-foreground">Gérez vos factures</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
-          {canEdit && (
+          <PermissionGate permission="factures.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          )}
-          {canCreate && (
+          </PermissionGate>
+          <PermissionGate permission="factures.create">
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
-          )}
+          </PermissionGate>
         </div>
       </div>
       <Card>
@@ -341,12 +333,18 @@ export function FacturesClientsView() {
                 <TableCell>{formatCurrency(f.totalHT)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTVA)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTTC)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
-                  {f.statut === 'BROUILLON' && canValidate && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  <PermissionGate permission="factures.validate">
+                    {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  </PermissionGate>
                   <Button size="sm" variant="outline" onClick={() => handlePrint(f)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
-                  {canEdit && <Button size="sm" variant="outline" onClick={() => openEditDialog(f)} title="Modifier"><Pencil className="h-4 w-4" /></Button>}
-                  {canEdit && <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)} disabled={f.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>}
+                  <PermissionGate permission="factures.edit">
+                    <Button size="sm" variant="outline" onClick={() => openEditDialog(f)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
+                  </PermissionGate>
+                  <PermissionGate permission="factures.edit">
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(f.id)} disabled={f.statut === 'VALIDEE'} title="Supprimer"><Trash2 className="h-4 w-4" /></Button>
+                  </PermissionGate>
                 </div></TableCell>
               </TableRow>))}</TableBody>
             </Table>
@@ -416,6 +414,31 @@ export function FacturesClientsView() {
           </form>
         </DialogContent>
       </Dialog>
+      {/* Code dialog for validated documents */}
+      <Dialog open={codeDialogOpen} onOpenChange={setCodeDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Code requis</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">Cette facture est validée. Entrez le code pour la modifier.</p>
+            <Input
+              type="password"
+              placeholder="Code à 4 chiffres"
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value)}
+              className={`text-center text-xl ${codeError ? 'border-red-500' : ''}`}
+              maxLength={4}
+              autoFocus
+            />
+            {codeError && <p className="text-red-500 text-sm text-center">Code incorrect</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCodeDialogOpen(false)}>Annuler</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCodeSubmit}>Confirmer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Multi-article dialog */}
       <Dialog open={multiArticleDialogOpen} onOpenChange={setMultiArticleDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -459,31 +482,6 @@ export function FacturesClientsView() {
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleAddMultipleArticles} disabled={selectedArticles.length === 0}>
               Ajouter {selectedArticles.length} article{selectedArticles.length > 1 ? 's' : ''}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Code dialog for validated documents */}
-      <Dialog open={codeDialogOpen} onOpenChange={setCodeDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Code requis</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">Cette facture est validée. Entrez le code pour la modifier.</p>
-            <Input
-              type="password"
-              placeholder="Code à 4 chiffres"
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value)}
-              className={`text-center text-xl ${codeError ? 'border-red-500' : ''}`}
-              maxLength={4}
-              autoFocus
-            />
-            {codeError && <p className="text-red-500 text-sm text-center">Code incorrect</p>}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCodeDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCodeSubmit}>Confirmer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

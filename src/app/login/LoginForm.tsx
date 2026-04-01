@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +12,6 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +31,10 @@ export default function LoginForm() {
         setError('Email ou mot de passe incorrect');
         setLoading(false);
       } else if (result?.ok) {
-        router.push('/');
-        router.refresh();
+        // Force un rechargement complet pour que le middleware lise le cookie de session
+        window.location.href = '/';
       } else {
+        // Unknown state
         setError('Erreur de connexion');
         setLoading(false);
       }
@@ -52,7 +51,7 @@ export default function LoginForm() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
             <h1 className="text-3xl font-bold text-blue-600">ARIV</h1>
-            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold border border-blue-300">V2.50</span>
+            <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-mono font-bold border border-blue-300">V2.51</span>
           </div>
           <p className="text-sm text-muted-foreground">Gestion de Facturation</p>
         </div>

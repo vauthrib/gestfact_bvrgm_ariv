@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useUser } from '@/lib/user-context';
-import { Permission, hasPermission } from '@/lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Pencil, Trash2, Search, Download, AlertTriangle, CheckCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExportDialog } from '@/components/import-export/export-dialog';
+import { PermissionGate } from '@/components/auth/permission-gate';
 
 interface ReglementFournisseur {
   id: string; factureId: string; dateReglement: string;
@@ -57,12 +56,6 @@ interface GroupedReglement {
 const ALL_FOURNISSEURS = '__ALL__';
 
 export function ReglementsFournisseursView() {
-  const { user } = useUser();
-  const permissions = user?.permissions as Permission[] || [];
-  
-  const canEdit = hasPermission(user?.role || '', permissions, 'reglements-fourn.edit');
-  const canCreate = hasPermission(user?.role || '', permissions, 'reglements-fourn.create');
-  
   const [reglements, setReglements] = useState<ReglementFournisseur[]>([]);
   const [factures, setFactures] = useState<FactureFournisseur[]>([]);
   const [tiers, setTiers] = useState<Tiers[]>([]);
@@ -372,12 +365,8 @@ export function ReglementsFournisseursView() {
         <div><h1 className="text-3xl font-bold text-blue-700">Règlements Fournisseurs</h1><p className="text-muted-foreground">Gérez les règlements effectués</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFF01</span>
-          {canEdit && (
-            <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
-          )}
-          {canCreate && (
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
-          )}
+          <PermissionGate permission="reglements-fourn.create"><Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button></PermissionGate>
+          <PermissionGate permission="reglements-fourn.create"><Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button></PermissionGate>
         </div>
       </div>
       <Card>
@@ -418,7 +407,7 @@ export function ReglementsFournisseursView() {
                     const isExpanded = expandedGroups.has(item.baseNumber);
                     return (
                       <>
-                        <TableRow key={item.baseNumber} className="bg-green-50 font-semibold">
+                        <TableRow key={item.baseNumber} className="bg-blue-50 font-semibold">
                           <TableCell>
                             <Button variant="ghost" size="sm" className="p-0 h-6 w-6" onClick={() => toggleGroup(item.baseNumber)}>
                               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -426,25 +415,29 @@ export function ReglementsFournisseursView() {
                           </TableCell>
                           <TableCell>{new Date(item.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
                           <TableCell className="font-bold text-blue-700">{item.fournisseur}</TableCell>
-                          <TableCell className="text-green-600 italic">{item.reglements.length} facture(s)</TableCell>
+                          <TableCell className="text-blue-600 italic">{item.reglements.length} facture(s)</TableCell>
                           <TableCell className="font-bold text-blue-700">{formatCurrency(item.totalMontant)}</TableCell>
                           <TableCell>{getModePaiementDisplay(item.modePaiement, null)}</TableCell>
                           <TableCell>
-                            <span className={`px-2 py-1 rounded text-xs ${item.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            <span className={`px-2 py-1 rounded text-xs ${item.statut === 'VALIDE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
                               {item.statut === 'VALIDE' ? 'Validé' : 'En attente'}
                             </span>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
                               {item.statut === 'ENREGISTRE' && (
-                                <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidateGroup(item.baseNumber, item.reglements)} title="Valider tout">
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
+                                <PermissionGate permission="reglements-fourn.validate">
+                                  <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidateGroup(item.baseNumber, item.reglements)} title="Valider tout">
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                </PermissionGate>
                               )}
                               {!item.reglements.some(r => r.statut === 'VALIDE') && (
-                                <Button size="sm" variant="destructive" onClick={() => handleDeleteGroup(item.baseNumber, item.reglements)} title="Supprimer tout">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <PermissionGate permission="reglements-fourn.edit">
+                                  <Button size="sm" variant="destructive" onClick={() => handleDeleteGroup(item.baseNumber, item.reglements)} title="Supprimer tout">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </PermissionGate>
                               )}
                             </div>
                           </TableCell>
@@ -458,23 +451,29 @@ export function ReglementsFournisseursView() {
                             <TableCell className="text-sm">{formatCurrency(r.montant)}</TableCell>
                             <TableCell className="text-sm">{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
                             <TableCell className="text-sm">
-                              <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
                                 {r.statut === 'VALIDE' ? 'Validé' : 'En attente'}
                               </span>
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
                                 {r.statut === 'ENREGISTRE' && (
-                                  <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)} title="Valider">
-                                    <CheckCircle className="h-4 w-4" />
-                                  </Button>
+                                  <PermissionGate permission="reglements-fourn.validate">
+                                    <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(r.id)} title="Valider">
+                                      <CheckCircle className="h-4 w-4" />
+                                    </Button>
+                                  </PermissionGate>
                                 )}
-                                <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <PermissionGate permission="reglements-fourn.edit">
+                                  <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </PermissionGate>
+                                <PermissionGate permission="reglements-fourn.edit">
+                                  <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </PermissionGate>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -492,23 +491,29 @@ export function ReglementsFournisseursView() {
                         <TableCell>{formatCurrency(r.montant)}</TableCell>
                         <TableCell>{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
                             {r.statut === 'VALIDE' ? 'Validé' : 'En attente'}
                           </span>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
                             {r.statut === 'ENREGISTRE' && (
-                              <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(r.id)} title="Valider">
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
+                              <PermissionGate permission="reglements-fourn.validate">
+                                <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(r.id)} title="Valider">
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              </PermissionGate>
                             )}
-                            <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <PermissionGate permission="reglements-fourn.edit">
+                              <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </PermissionGate>
+                            <PermissionGate permission="reglements-fourn.edit">
+                              <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </PermissionGate>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -554,7 +559,7 @@ export function ReglementsFournisseursView() {
             </div>
             
             {isMultiPayment && !editingReglement && (
-              <div className="border rounded-lg p-4 bg-green-50">
+              <div className="border rounded-lg p-4 bg-blue-50">
                 <Label className="text-base font-semibold mb-2 block">Répartition du paiement</Label>
                 {multiPayments.length === 0 ? (
                   <div className="text-center text-muted-foreground py-4">
@@ -576,7 +581,7 @@ export function ReglementsFournisseursView() {
                           <TableRow key={p.factureId}>
                             <TableCell className="font-medium">{p.numeroFacture}</TableCell>
                             <TableCell>{formatCurrency(p.montantTTC)}</TableCell>
-                            <TableCell className="text-green-600 font-semibold">{formatCurrency(p.resteAPayer)}</TableCell>
+                            <TableCell className="text-blue-600 font-semibold">{formatCurrency(p.resteAPayer)}</TableCell>
                             <TableCell>
                               <Input type="text" value={p.montant} onChange={(e) => handleMultiPaymentChange(p.factureId, e.target.value)} placeholder="0.00" className="w-32" />
                             </TableCell>
@@ -586,7 +591,7 @@ export function ReglementsFournisseursView() {
                     </Table>
                     <div className="mt-4 p-3 bg-white rounded border flex justify-between items-center">
                       <span className="font-semibold">Total à régler:</span>
-                      <span className="text-xl font-bold text-green-600">{formatCurrency(calculateTotalMultiPayment())}</span>
+                      <span className="text-xl font-bold text-blue-600">{formatCurrency(calculateTotalMultiPayment())}</span>
                     </div>
                   </>
                 )}
@@ -606,11 +611,11 @@ export function ReglementsFournisseursView() {
                   </Select>
                 </div>
                 {selectedFacture && resteAPayer !== null && (
-                  <div className={`p-4 rounded-lg border ${resteAPayer > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+                  <div className={`p-4 rounded-lg border ${resteAPayer > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'}`}>
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div><span className="text-muted-foreground">Total Facture:</span><div className="font-bold text-lg">{formatCurrency(selectedFacture.montantTTC)}</div></div>
                       <div><span className="text-muted-foreground">Déjà réglé:</span><div className="font-bold text-lg">{formatCurrency(selectedFacture.montantTTC - resteAPayer)}</div></div>
-                      <div><span className="text-muted-foreground">Reste à payer:</span><div className="font-bold text-lg text-green-600">{formatCurrency(resteAPayer)}{resteAPayer <= 0 && <span className="ml-2 text-sm">(Soldée)</span>}</div></div>
+                      <div><span className="text-muted-foreground">Reste à payer:</span><div className="font-bold text-lg text-blue-600">{formatCurrency(resteAPayer)}{resteAPayer <= 0 && <span className="ml-2 text-sm">(Soldée)</span>}</div></div>
                     </div>
                   </div>
                 )}
@@ -619,7 +624,7 @@ export function ReglementsFournisseursView() {
                   <div>
                     <Label className="text-base font-semibold">Montant</Label>
                     <Input type="text" value={formData.montant} onChange={(e) => setFormData({ ...formData, montant: e.target.value })} required />
-                    {resteAPayer !== null && parseNumber(formData.montant) > resteAPayer && <div className="flex items-center gap-2 mt-1 text-green-600 text-sm"><AlertTriangle className="w-4 h-4" />Dépassement de {formatCurrency(parseNumber(formData.montant) - resteAPayer)}</div>}
+                    {resteAPayer !== null && parseNumber(formData.montant) > resteAPayer && <div className="flex items-center gap-2 mt-1 text-blue-600 text-sm"><AlertTriangle className="w-4 h-4" />Dépassement de {formatCurrency(parseNumber(formData.montant) - resteAPayer)}</div>}
                   </div>
                 </div>
               </>
