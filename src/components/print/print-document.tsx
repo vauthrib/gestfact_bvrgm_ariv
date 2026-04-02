@@ -102,7 +102,7 @@ const numberToWords = (num: number): string => {
   return result.trim();
 };
 
-// V2.55 - Couleurs par instance
+// V2.56 - Couleurs par instance
 const PRIMARY_COLOR = '#3b82f6'; // blue-500
 
 const DEFAULT_LAYOUT: PrintLayout = {
@@ -156,14 +156,16 @@ export function PrintDocument({
   const getTiers = () => documentData.client || documentData.fournisseur || {};
   const lignes = documentData.lignes || [];
 
-  // Generate single A5 BL content - V2.55: Layout similaire au A4
-  const generateA5BLContent = (showPrices: boolean) => {
+  // Generate HTML for print window
+  const generatePrintHTML = () => {
     const docDate = formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement || documentData.dateAvoir);
+    const isBLDoc = documentType === 'BL';
+    const showPrices = !hidePrices;
     
-    return `
-      <div class="a5-content">
-        ${letterheadImage ? `<img src="${letterheadImage}" class="letterhead-img" alt="" />` : ''}
-        
+    // V2.56: Mode A5 double - Layout corrigé avec letterhead séparé du contenu
+    if (isBLDoc && doubleA5) {
+      // Générer le contenu d'un BL A5 sans l'image letterhead
+      const generateBLInnerContent = () => `
         <div class="header">
           <div class="company">
             <h1>${entreprise?.nomEntreprise || 'Entreprise'}</h1>
@@ -176,14 +178,14 @@ export function PrintDocument({
             ${documentData.bonCommande ? `<p>BC: ${documentData.bonCommande}</p>` : ''}
           </div>
         </div>
-        
+
         <div class="client-box">
           <h3>CLIENT</h3>
           <p class="name">${getTiers()?.raisonSociale || ''}</p>
           ${getTiers()?.adresse ? `<p>${getTiers().adresse}</p>` : ''}
           ${getTiers()?.ville ? `<p>${getTiers().ville}</p>` : ''}
         </div>
-        
+
         <table>
           <thead>
             <tr>
@@ -208,29 +210,19 @@ export function PrintDocument({
             `).join('')}
           </tbody>
         </table>
-        
+
         ${showPrices && documentData.totalHT !== undefined ? `
           <div class="totals">
             <p>Total HT: <strong>${formatCurrency(documentData.totalHT)}</strong></p>
           </div>
         ` : ''}
-        
+
         <div class="footer">
           <p>${entreprise?.nomEntreprise || ''} ${entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
           ${entreprise?.ice ? `<p>ICE: ${entreprise.ice}</p>` : ''}
         </div>
-      </div>
-    `;
-  };
+      `;
 
-  // Generate HTML for print window
-  const generatePrintHTML = () => {
-    const docDate = formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement || documentData.dateAvoir);
-    const isBLDoc = documentType === 'BL';
-    const showPrices = !hidePrices;
-    
-    // V2.55: Mode A5 double - Layout centré comme le A4
-    if (isBLDoc && doubleA5) {
       return `
         <!DOCTYPE html>
         <html>
@@ -256,7 +248,6 @@ export function PrintDocument({
               height: 210mm;
               position: relative;
               border-right: 1px dashed #ccc;
-              padding: 5mm;
               overflow: hidden;
             }
             .bl-half:last-child {
@@ -271,17 +262,19 @@ export function PrintDocument({
               z-index: 0;
               object-fit: contain;
             }
-            .a5-content {
+            .bl-content {
               position: relative;
               z-index: 1;
               width: 100%;
               height: 100%;
+              padding: 5mm;
               display: flex;
               flex-direction: column;
             }
             .header {
               display: flex;
               justify-content: space-between;
+              align-items: flex-start;
               border-bottom: 2px solid ${PRIMARY_COLOR};
               padding-bottom: 3mm;
               margin-bottom: 3mm;
@@ -317,10 +310,16 @@ export function PrintDocument({
         <body>
           <div class="page">
             <div class="bl-half">
-              ${generateA5BLContent(showPrices)}
+              ${letterheadImage ? `<img src="${letterheadImage}" class="letterhead-img" alt="" />` : ''}
+              <div class="bl-content">
+                ${generateBLInnerContent()}
+              </div>
             </div>
             <div class="bl-half">
-              ${generateA5BLContent(showPrices)}
+              ${letterheadImage ? `<img src="${letterheadImage}" class="letterhead-img" alt="" />` : ''}
+              <div class="bl-content">
+                ${generateBLInnerContent()}
+              </div>
             </div>
           </div>
         </body>
@@ -650,7 +649,7 @@ export function PrintDocument({
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Aperçu - {getTitle()}</DialogTitle>
-            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-PRT</span>
+            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">{code}-PRT</span>
           </div>
         </DialogHeader>
 
@@ -662,7 +661,7 @@ export function PrintDocument({
               <Button
                 variant={doubleA5 ? "default" : "outline"}
                 onClick={() => setDoubleA5(!doubleA5)}
-                className={doubleA5 ? "bg-blue-600 hover:bg-blue-700" : ""}
+                className={doubleA5 ? "bg-green-600 hover:bg-green-700" : ""}
               >
                 <Copy className="w-4 h-4 mr-2" />
                 {doubleA5 ? 'A5 Double (2x)' : 'Format A4'}
@@ -672,7 +671,7 @@ export function PrintDocument({
               <Button
                 variant={hidePrices ? "default" : "outline"}
                 onClick={() => setHidePrices(!hidePrices)}
-                className={hidePrices ? "bg-blue-600 hover:bg-blue-700" : ""}
+                className={hidePrices ? "bg-green-600 hover:bg-green-700" : ""}
               >
                 {hidePrices ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
                 {hidePrices ? 'Sans prix' : 'Avec prix'}
@@ -684,14 +683,14 @@ export function PrintDocument({
             <Button
               variant={useCustomLayout ? "default" : "outline"}
               onClick={() => setUseCustomLayout(!useCustomLayout)}
-              className={useCustomLayout ? "bg-blue-600 hover:bg-blue-700" : ""}
+              className={useCustomLayout ? "bg-green-600 hover:bg-green-700" : ""}
             >
               <Settings className="w-4 h-4 mr-2" />
               {useCustomLayout ? 'Mise en page personnalisée' : 'Mise en page standard'}
             </Button>
           )}
           
-          <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={handlePrint} className="bg-green-600 hover:bg-green-700">
             <Printer className="w-4 h-4 mr-2" /> Imprimer
           </Button>
         </div>
@@ -737,14 +736,14 @@ export function PrintDocument({
                   }} />
                 )}
                 <div className="relative z-10 h-full flex flex-col">
-                  <div className="flex justify-between border-b-2 border-blue-600 pb-1 mb-2">
+                  <div className="flex justify-between border-b-2 border-green-600 pb-1 mb-2">
                     <div>
-                      <h1 className="text-[10px] font-bold text-blue-700">{entreprise?.nomEntreprise}</h1>
+                      <h1 className="text-[10px] font-bold text-green-700">{entreprise?.nomEntreprise}</h1>
                       <p className="text-[7px] text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
                     </div>
                     <div className="text-right">
                       <h2 className="text-[9px] font-bold">Bon de Livraison</h2>
-                      <p className="font-bold text-blue-700 text-[8px]">{getNumero()}</p>
+                      <p className="font-bold text-green-700 text-[8px]">{getNumero()}</p>
                       <p className="text-[6px]">Date: {formatDate(documentData.dateBL)}</p>
                     </div>
                   </div>
@@ -757,7 +756,7 @@ export function PrintDocument({
                   
                   <table className="w-full border-collapse text-[6px] flex-1">
                     <thead>
-                      <tr className="bg-blue-600 text-white">
+                      <tr className="bg-green-600 text-white">
                         <th className="p-0.5 text-left" style={{width: showPrices ? '50%' : '70%'}}>Désignation</th>
                         <th className="p-0.5 text-right" style={{width: '15%'}}>Qté</th>
                         {showPrices && (
@@ -807,14 +806,14 @@ export function PrintDocument({
                   }} />
                 )}
                 <div className="relative z-10 h-full flex flex-col">
-                  <div className="flex justify-between border-b-2 border-blue-600 pb-1 mb-2">
+                  <div className="flex justify-between border-b-2 border-green-600 pb-1 mb-2">
                     <div>
-                      <h1 className="text-[10px] font-bold text-blue-700">{entreprise?.nomEntreprise}</h1>
+                      <h1 className="text-[10px] font-bold text-green-700">{entreprise?.nomEntreprise}</h1>
                       <p className="text-[7px] text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
                     </div>
                     <div className="text-right">
                       <h2 className="text-[9px] font-bold">Bon de Livraison</h2>
-                      <p className="font-bold text-blue-700 text-[8px]">{getNumero()}</p>
+                      <p className="font-bold text-green-700 text-[8px]">{getNumero()}</p>
                       <p className="text-[6px]">Date: {formatDate(documentData.dateBL)}</p>
                     </div>
                   </div>
@@ -827,7 +826,7 @@ export function PrintDocument({
                   
                   <table className="w-full border-collapse text-[6px] flex-1">
                     <thead>
-                      <tr className="bg-blue-600 text-white">
+                      <tr className="bg-green-600 text-white">
                         <th className="p-0.5 text-left" style={{width: showPrices ? '50%' : '70%'}}>Désignation</th>
                         <th className="p-0.5 text-right" style={{width: '15%'}}>Qté</th>
                         {showPrices && (
@@ -876,7 +875,7 @@ export function PrintDocument({
                   width: mmToPxStr(layout.docInfo.width)
                 }}>
                   <h2 className="text-lg font-bold">{getTitle()}</h2>
-                  <p className="font-bold text-blue-700">{getNumero()}</p>
+                  <p className="font-bold text-green-700">{getNumero()}</p>
                   <p className="text-sm">Date: {formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement)}</p>
                 </div>
               )}
@@ -902,7 +901,7 @@ export function PrintDocument({
                 }}>
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-blue-600 text-white">
+                      <tr className="bg-green-600 text-white">
                         <th className="p-2 text-left text-xs" style={{width: showPrices ? '45%' : '60%'}}>Désignation</th>
                         <th className="p-2 text-right text-xs" style={{width: '10%'}}>Qté</th>
                         {showPrices && (
@@ -959,14 +958,14 @@ export function PrintDocument({
           ) : (
             /* Standard Layout Preview */
             <div className="p-4">
-              <div className="flex justify-between border-b-2 border-blue-600 pb-4 mb-4">
+              <div className="flex justify-between border-b-2 border-green-600 pb-4 mb-4">
                 <div>
-                  <h1 className="text-xl font-bold text-blue-700">{entreprise?.nomEntreprise}</h1>
+                  <h1 className="text-xl font-bold text-green-700">{entreprise?.nomEntreprise}</h1>
                   <p className="text-sm text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
                 </div>
                 <div className="text-right">
                   <h2 className="text-lg font-bold">{getTitle()}</h2>
-                  <p className="font-bold text-blue-700">{getNumero()}</p>
+                  <p className="font-bold text-green-700">{getNumero()}</p>
                   <p className="text-sm">Date: {formatDate(documentData.dateBL || documentData.dateFacture)}</p>
                 </div>
               </div>
@@ -979,7 +978,7 @@ export function PrintDocument({
               
               <table className="w-full border-collapse mb-4">
                 <thead>
-                  <tr className="bg-blue-600 text-white">
+                  <tr className="bg-green-600 text-white">
                     <th className="p-2 text-left text-xs" style={{width: showPrices ? '45%' : '70%'}}>Désignation</th>
                     <th className="p-2 text-right text-xs" style={{width: '10%'}}>Qté</th>
                     {showPrices && (
