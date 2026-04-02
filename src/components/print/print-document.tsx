@@ -102,7 +102,7 @@ const numberToWords = (num: number): string => {
   return result.trim();
 };
 
-// V2.56 - Couleurs par instance
+// V2.57 - Couleurs par instance
 const PRIMARY_COLOR = '#3b82f6'; // blue-500
 
 const DEFAULT_LAYOUT: PrintLayout = {
@@ -161,65 +161,113 @@ export function PrintDocument({
     const docDate = formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement || documentData.dateAvoir);
     const isBLDoc = documentType === 'BL';
     const showPrices = !hidePrices;
-    
-    // V2.56: Mode A5 double - Layout corrigé avec letterhead séparé du contenu
+
+    // V2.57: Mode A5 double - Utilise le layout personnalisé adapté à l'échelle A5
     if (isBLDoc && doubleA5) {
-      // Générer le contenu d'un BL A5 sans l'image letterhead
-      const generateBLInnerContent = () => `
-        <div class="header">
-          <div class="company">
-            <h1>${entreprise?.nomEntreprise || 'Entreprise'}</h1>
-            <p>${entreprise?.adresseEntreprise || ''} ${entreprise?.villeEntreprise || ''}</p>
-          </div>
-          <div class="doc-info">
-            <h2>Bon de Livraison</h2>
-            <p class="numero">${getNumero()}</p>
-            <p>Date: ${docDate}</p>
-            ${documentData.bonCommande ? `<p>BC: ${documentData.bonCommande}</p>` : ''}
-          </div>
-        </div>
+      // Ratio de conversion A4 vers A5 (A5 = A4 / √2)
+      const A5_SCALE = 148.5 / 210; // ≈ 0.707
 
-        <div class="client-box">
-          <h3>CLIENT</h3>
-          <p class="name">${getTiers()?.raisonSociale || ''}</p>
-          ${getTiers()?.adresse ? `<p>${getTiers().adresse}</p>` : ''}
-          ${getTiers()?.ville ? `<p>${getTiers().ville}</p>` : ''}
-        </div>
+      // Convert mm to px pour A5 (avec échelle)
+      const mmToPx5 = (mm: number) => Math.round(mm * 3.779527559 * A5_SCALE);
+      const mmToPx5Str = (mm: number) => `${mmToPx5(mm)}px`;
 
-        <table>
-          <thead>
-            <tr>
-              <th style="width: ${showPrices ? '50%' : '70%'};">Désignation</th>
-              <th style="width: 15%; text-align: right;">Qté</th>
-              ${showPrices ? `
-                <th style="width: 17%; text-align: right;">P.U.</th>
-                <th style="width: 18%; text-align: right;">Total</th>
-              ` : ''}
-            </tr>
-          </thead>
-          <tbody>
-            ${lignes.map((l: any) => `
-              <tr>
-                <td>${l.designation}</td>
-                <td style="text-align: right;">${l.quantite}</td>
-                ${showPrices ? `
-                  <td style="text-align: right;">${formatCurrency(l.prixUnitaire)}</td>
-                  <td style="text-align: right;">${formatCurrency(l.totalHT)}</td>
-                ` : ''}
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+      // Adapter le layout pour A5
+      const a5Layout = {
+        docInfo: {
+          ...layout.docInfo,
+          x: layout.docInfo.x * A5_SCALE,
+          y: layout.docInfo.y * A5_SCALE,
+          width: layout.docInfo.width * A5_SCALE,
+        },
+        clientInfo: {
+          ...layout.clientInfo,
+          x: layout.clientInfo.x * A5_SCALE,
+          y: layout.clientInfo.y * A5_SCALE,
+          width: layout.clientInfo.width * A5_SCALE,
+        },
+        tableStart: {
+          ...layout.tableStart,
+          x: layout.tableStart.x * A5_SCALE,
+          y: layout.tableStart.y * A5_SCALE,
+          width: layout.tableStart.width * A5_SCALE,
+        },
+        totals: {
+          ...layout.totals,
+          x: layout.totals.x * A5_SCALE,
+          y: Math.max(layout.totals.y, layout.tableStart.y + 130) * A5_SCALE,
+          width: layout.totals.width * A5_SCALE,
+        },
+        footer: {
+          ...layout.footer,
+          x: layout.footer.x * A5_SCALE,
+          y: layout.footer.y * A5_SCALE,
+          width: layout.footer.width * A5_SCALE,
+        },
+      };
 
-        ${showPrices && documentData.totalHT !== undefined ? `
-          <div class="totals">
-            <p>Total HT: <strong>${formatCurrency(documentData.totalHT)}</strong></p>
-          </div>
-        ` : ''}
+      // Générer le contenu d'un BL A5 avec layout personnalisé
+      const generateA5BLContent = () => `
+        ${letterheadImage ? `<img src="${letterheadImage}" class="letterhead-img" alt="" />` : ''}
+        <div class="page">
+          ${a5Layout.docInfo.visible ? `
+            <div class="doc-info">
+              <h2>${getTitle()}</h2>
+              <p class="numero">${getNumero()}</p>
+              <p>Date: ${docDate}</p>
+              ${documentData.bonCommande ? `<p>BC: ${documentData.bonCommande}</p>` : ''}
+            </div>
+          ` : ''}
 
-        <div class="footer">
-          <p>${entreprise?.nomEntreprise || ''} ${entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
-          ${entreprise?.ice ? `<p>ICE: ${entreprise.ice}</p>` : ''}
+          ${a5Layout.clientInfo.visible ? `
+            <div class="client-info">
+              <h3>CLIENT</h3>
+              <p class="name">${getTiers()?.raisonSociale || ''}</p>
+              ${getTiers()?.adresse ? `<p>${getTiers().adresse}</p>` : ''}
+              ${getTiers()?.ville ? `<p>${getTiers().ville}</p>` : ''}
+            </div>
+          ` : ''}
+
+          ${a5Layout.tableStart.visible && lignes.length > 0 ? `
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: ${showPrices ? '45%' : '60%'};">Désignation</th>
+                    <th style="width: 10%; text-align: right;">Qté</th>
+                    ${showPrices ? `
+                      <th style="width: 15%; text-align: right;">P.U. HT</th>
+                      <th style="width: 20%; text-align: right;">Total HT</th>
+                    ` : ''}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${lignes.map((l: any) => `
+                    <tr>
+                      <td>${l.designation}</td>
+                      <td style="text-align: right;">${l.quantite}</td>
+                      ${showPrices ? `
+                        <td style="text-align: right;">${formatCurrency(l.prixUnitaire)}</td>
+                        <td style="text-align: right;">${formatCurrency(l.totalHT)}</td>
+                      ` : ''}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
+
+          ${a5Layout.totals.visible && showPrices && documentData.totalHT !== undefined ? `
+            <div class="totals-section">
+              <p>Total HT: <strong>${formatCurrency(documentData.totalHT)}</strong></p>
+            </div>
+          ` : ''}
+
+          ${a5Layout.footer.visible ? `
+            <div class="footer-section">
+              <p>${entreprise?.nomEntreprise || ''} ${entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
+              ${entreprise?.ice ? `<p>ICE: ${entreprise.ice}</p>` : ''}
+            </div>
+          ` : ''}
         </div>
       `;
 
@@ -237,7 +285,7 @@ export function PrintDocument({
               width: 297mm;
               height: 210mm;
             }
-            .page {
+            .page-container {
               width: 297mm;
               height: 210mm;
               display: flex;
@@ -262,45 +310,58 @@ export function PrintDocument({
               z-index: 0;
               object-fit: contain;
             }
-            .bl-content {
+            .page {
               position: relative;
+              width: 148.5mm;
+              height: 210mm;
               z-index: 1;
-              width: 100%;
-              height: 100%;
-              padding: 5mm;
-              display: flex;
-              flex-direction: column;
             }
-            .header {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-              border-bottom: 2px solid ${PRIMARY_COLOR};
-              padding-bottom: 3mm;
-              margin-bottom: 3mm;
+            .doc-info {
+              position: absolute;
+              left: ${mmToPx5Str(a5Layout.docInfo.x)};
+              top: ${mmToPx5Str(a5Layout.docInfo.y)};
+              width: ${mmToPx5Str(a5Layout.docInfo.width)};
+              text-align: right;
             }
-            .company h1 { font-size: 10pt; color: ${PRIMARY_COLOR}; margin-bottom: 1px; }
-            .company p { font-size: 6pt; color: #666; margin: 1px 0; }
-            .doc-info { text-align: right; }
-            .doc-info h2 { font-size: 9pt; margin-bottom: 1px; }
+            .doc-info h2 { font-size: 9pt; margin-bottom: 2px; }
             .doc-info .numero { font-size: 8pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
             .doc-info p { font-size: 6pt; margin: 1px 0; }
-            .client-box {
-              background: #f8f9fa;
-              padding: 2mm 3mm;
-              border-radius: 3px;
-              margin-bottom: 3mm;
+            .client-info {
+              position: absolute;
+              left: ${mmToPx5Str(a5Layout.clientInfo.x)};
+              top: ${mmToPx5Str(a5Layout.clientInfo.y)};
+              width: ${mmToPx5Str(a5Layout.clientInfo.width)};
             }
-            .client-box h3 { font-size: 6pt; color: #666; margin-bottom: 1px; }
-            .client-box p { font-size: 7pt; margin: 1px 0; }
-            .client-box .name { font-weight: bold; font-size: 8pt; }
-            table { width: 100%; border-collapse: collapse; flex: 1; }
-            th { background: ${PRIMARY_COLOR}; color: white; padding: 2px 3px; text-align: left; font-size: 6pt; }
-            td { padding: 2px 3px; border-bottom: 1px solid #ddd; font-size: 6pt; }
-            .totals { text-align: right; margin-top: 2mm; }
-            .totals p { font-size: 7pt; }
-            .footer { margin-top: auto; border-top: 1px solid #ddd; padding-top: 2mm; font-size: 5pt; color: #666; }
-            .footer p { margin: 1px 0; }
+            .client-info h3 { font-size: 6pt; color: #666; margin-bottom: 1px; }
+            .client-info p { font-size: 7pt; margin: 1px 0; }
+            .client-info .name { font-weight: bold; font-size: 9pt; }
+            .table-container {
+              position: absolute;
+              left: ${mmToPx5Str(a5Layout.tableStart.x)};
+              top: ${mmToPx5Str(a5Layout.tableStart.y)};
+              width: ${mmToPx5Str(a5Layout.tableStart.width)};
+            }
+            table { width: 100%; border-collapse: collapse; }
+            th { background: ${PRIMARY_COLOR}; color: white; padding: 3px 4px; text-align: left; font-size: 6pt; }
+            th:last-child, td:last-child { text-align: right; }
+            td { padding: 2px 4px; border-bottom: 1px solid #ddd; font-size: 6pt; }
+            .totals-section {
+              position: absolute;
+              left: ${mmToPx5Str(a5Layout.totals.x)};
+              top: ${mmToPx5Str(a5Layout.totals.y)};
+              width: ${mmToPx5Str(a5Layout.totals.width)};
+              text-align: right;
+            }
+            .totals-section p { font-size: 7pt; margin: 2px 0; }
+            .footer-section {
+              position: absolute;
+              left: ${mmToPx5Str(a5Layout.footer.x)};
+              top: ${mmToPx5Str(a5Layout.footer.y)};
+              width: ${mmToPx5Str(a5Layout.footer.width)};
+              font-size: 5pt;
+              color: #666;
+            }
+            .footer-section p { margin: 1px 0; }
             @media print {
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .bl-half { page-break-inside: avoid; }
@@ -308,18 +369,12 @@ export function PrintDocument({
           </style>
         </head>
         <body>
-          <div class="page">
+          <div class="page-container">
             <div class="bl-half">
-              ${letterheadImage ? `<img src="${letterheadImage}" class="letterhead-img" alt="" />` : ''}
-              <div class="bl-content">
-                ${generateBLInnerContent()}
-              </div>
+              ${generateA5BLContent()}
             </div>
             <div class="bl-half">
-              ${letterheadImage ? `<img src="${letterheadImage}" class="letterhead-img" alt="" />` : ''}
-              <div class="bl-content">
-                ${generateBLInnerContent()}
-              </div>
+              ${generateA5BLContent()}
             </div>
           </div>
         </body>
