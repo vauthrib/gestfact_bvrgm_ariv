@@ -102,7 +102,7 @@ const numberToWords = (num: number): string => {
   return result.trim();
 };
 
-// V2.57 - Couleurs par instance
+// V2.58 - Couleurs par instance
 const PRIMARY_COLOR = '#3b82f6'; // blue-500
 
 const DEFAULT_LAYOUT: PrintLayout = {
@@ -162,46 +162,46 @@ export function PrintDocument({
     const isBLDoc = documentType === 'BL';
     const showPrices = !hidePrices;
 
-    // V2.57: Mode A5 double - Utilise le layout personnalisé adapté à l'échelle A5
+    // V2.58: Mode A5 double - Layout optimisé avec grandes polices
     if (isBLDoc && doubleA5) {
-      // Ratio de conversion A4 vers A5 (A5 = A4 / √2)
-      const A5_SCALE = 148.5 / 210; // ≈ 0.707
-
-      // Convert mm to px pour A5 (avec échelle)
-      const mmToPx5 = (mm: number) => Math.round(mm * 3.779527559 * A5_SCALE);
+      // Conversion mm vers px pour A5 (pleine largeur utilisée)
+      const mmToPx5 = (mm: number) => Math.round(mm * 3.779527559);
       const mmToPx5Str = (mm: number) => `${mmToPx5(mm)}px`;
 
-      // Adapter le layout pour A5
+      // Décalage vertical pour descendre les infos (en mm)
+      const Y_OFFSET = 25; // Descendre de 25mm
+
+      // Adapter le layout pour A5 - utiliser toute la largeur
       const a5Layout = {
         docInfo: {
           ...layout.docInfo,
-          x: layout.docInfo.x * A5_SCALE,
-          y: layout.docInfo.y * A5_SCALE,
-          width: layout.docInfo.width * A5_SCALE,
+          x: layout.docInfo.x,
+          y: layout.docInfo.y + Y_OFFSET,
+          width: layout.docInfo.width,
         },
         clientInfo: {
           ...layout.clientInfo,
-          x: layout.clientInfo.x * A5_SCALE,
-          y: layout.clientInfo.y * A5_SCALE,
-          width: layout.clientInfo.width * A5_SCALE,
+          x: layout.clientInfo.x,
+          y: layout.clientInfo.y + Y_OFFSET,
+          width: layout.clientInfo.width,
         },
         tableStart: {
           ...layout.tableStart,
-          x: layout.tableStart.x * A5_SCALE,
-          y: layout.tableStart.y * A5_SCALE,
-          width: layout.tableStart.width * A5_SCALE,
+          x: layout.tableStart.x,
+          y: layout.tableStart.y + Y_OFFSET,
+          width: layout.tableStart.width,
         },
         totals: {
           ...layout.totals,
-          x: layout.totals.x * A5_SCALE,
-          y: Math.max(layout.totals.y, layout.tableStart.y + 130) * A5_SCALE,
-          width: layout.totals.width * A5_SCALE,
+          x: layout.totals.x,
+          y: Math.max(layout.totals.y, layout.tableStart.y + 130) + Y_OFFSET,
+          width: layout.totals.width,
         },
         footer: {
           ...layout.footer,
-          x: layout.footer.x * A5_SCALE,
-          y: layout.footer.y * A5_SCALE,
-          width: layout.footer.width * A5_SCALE,
+          x: layout.footer.x,
+          y: layout.footer.y,
+          width: layout.footer.width,
         },
       };
 
@@ -281,7 +281,7 @@ export function PrintDocument({
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
               font-family: Arial, sans-serif;
-              font-size: 7pt;
+              font-size: 9pt;
               width: 297mm;
               height: 210mm;
             }
@@ -323,18 +323,18 @@ export function PrintDocument({
               width: ${mmToPx5Str(a5Layout.docInfo.width)};
               text-align: right;
             }
-            .doc-info h2 { font-size: 9pt; margin-bottom: 2px; }
-            .doc-info .numero { font-size: 8pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
-            .doc-info p { font-size: 6pt; margin: 1px 0; }
+            .doc-info h2 { font-size: 12pt; margin-bottom: 3px; }
+            .doc-info .numero { font-size: 11pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
+            .doc-info p { font-size: 9pt; margin: 2px 0; }
             .client-info {
               position: absolute;
               left: ${mmToPx5Str(a5Layout.clientInfo.x)};
               top: ${mmToPx5Str(a5Layout.clientInfo.y)};
               width: ${mmToPx5Str(a5Layout.clientInfo.width)};
             }
-            .client-info h3 { font-size: 6pt; color: #666; margin-bottom: 1px; }
-            .client-info p { font-size: 7pt; margin: 1px 0; }
-            .client-info .name { font-weight: bold; font-size: 9pt; }
+            .client-info h3 { font-size: 8pt; color: #666; margin-bottom: 2px; }
+            .client-info p { font-size: 9pt; margin: 2px 0; }
+            .client-info .name { font-weight: bold; font-size: 11pt; }
             .table-container {
               position: absolute;
               left: ${mmToPx5Str(a5Layout.tableStart.x)};
@@ -342,9 +342,9 @@ export function PrintDocument({
               width: ${mmToPx5Str(a5Layout.tableStart.width)};
             }
             table { width: 100%; border-collapse: collapse; }
-            th { background: ${PRIMARY_COLOR}; color: white; padding: 3px 4px; text-align: left; font-size: 6pt; }
+            th { background: ${PRIMARY_COLOR}; color: white; padding: 4px 5px; text-align: left; font-size: 8pt; }
             th:last-child, td:last-child { text-align: right; }
-            td { padding: 2px 4px; border-bottom: 1px solid #ddd; font-size: 6pt; }
+            td { padding: 3px 5px; border-bottom: 1px solid #ddd; font-size: 8pt; }
             .totals-section {
               position: absolute;
               left: ${mmToPx5Str(a5Layout.totals.x)};
@@ -352,13 +352,13 @@ export function PrintDocument({
               width: ${mmToPx5Str(a5Layout.totals.width)};
               text-align: right;
             }
-            .totals-section p { font-size: 7pt; margin: 2px 0; }
+            .totals-section p { font-size: 9pt; margin: 3px 0; }
             .footer-section {
               position: absolute;
               left: ${mmToPx5Str(a5Layout.footer.x)};
               top: ${mmToPx5Str(a5Layout.footer.y)};
               width: ${mmToPx5Str(a5Layout.footer.width)};
-              font-size: 5pt;
+              font-size: 7pt;
               color: #666;
             }
             .footer-section p { margin: 1px 0; }
