@@ -51,7 +51,7 @@ export default function LoginForm() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
             <h1 className="text-3xl font-bold text-blue-600">ARIV</h1>
-            <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-mono font-bold border border-blue-300">V2.51</span>
+            <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-mono font-bold border border-blue-300">V2.52</span>
           </div>
           <p className="text-sm text-muted-foreground">Gestion de Facturation</p>
         </div>
