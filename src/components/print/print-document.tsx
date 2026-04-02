@@ -102,8 +102,8 @@ const numberToWords = (num: number): string => {
   return result.trim();
 };
 
-// Couleur blue pâle pour V2.52
-const PRIMARY_COLOR = '#ec4899'; // blue-500
+// Couleur bleue pour V2.53
+const PRIMARY_COLOR = '#3b82f6'; // blue-500
 const PRIMARY_LIGHT = '#fce7f3'; // blue-100
 const PRIMARY_TEXT = '#be185d'; // blue-700
 
@@ -129,7 +129,7 @@ export function PrintDocument({
   const previewRef = useRef<HTMLDivElement>(null);
   const [useCustomLayout, setUseCustomLayout] = useState(true);
   
-  // V2.52: Nouvelles options d'impression pour BL
+  // V2.53: Nouvelles options d'impression pour BL
   const isBL = documentType === 'BL';
   const [hidePrices, setHidePrices] = useState(isBL); // Par défaut sans prix pour BL
   const [doubleA5, setDoubleA5] = useState(isBL); // Par défaut A5 double pour BL
@@ -235,7 +235,7 @@ export function PrintDocument({
     const isBLDoc = documentType === 'BL';
     const showPrices = !hidePrices;
     
-    // V2.52: Mode A5 double pour BL
+    // V2.53: Mode A5 double pour BL - 2 A5 portrait sur A4 paysage avec en-tête
     if (isBLDoc && doubleA5) {
       return `
         <!DOCTYPE html>
@@ -243,59 +243,70 @@ export function PrintDocument({
         <head>
           <title>${getTitle()} - ${getNumero()}</title>
           <style>
-            @page { size: A4; margin: 0; }
+            @page { size: A4 landscape; margin: 0; }
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
               font-family: Arial, sans-serif;
               font-size: 9pt;
-              width: 210mm;
-              height: 297mm;
+              width: 297mm;
+              height: 210mm;
             }
             .page {
-              width: 210mm;
-              height: 297mm;
+              width: 297mm;
+              height: 210mm;
               display: flex;
-              flex-direction: column;
+              flex-direction: row;
+              position: relative;
+            }
+            .letterhead-img {
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 297mm;
+              height: 210mm;
+              z-index: 0;
             }
             .bl-half {
-              width: 210mm;
-              height: 148.5mm;
-              padding: 8mm;
-              border-bottom: 1px dashed #ccc;
+              width: 148.5mm;
+              height: 210mm;
+              padding: 6mm;
+              border-right: 1px dashed #ccc;
               overflow: hidden;
+              position: relative;
+              z-index: 1;
             }
             .bl-half:last-child {
-              border-bottom: none;
+              border-right: none;
             }
             .bl-content .header {
               display: flex;
               justify-content: space-between;
               border-bottom: 2px solid ${PRIMARY_COLOR};
-              padding-bottom: 8px;
-              margin-bottom: 10px;
+              padding-bottom: 6px;
+              margin-bottom: 8px;
             }
-            .bl-content .company h1 { font-size: 12pt; color: ${PRIMARY_COLOR}; margin-bottom: 3px; }
+            .bl-content .company h1 { font-size: 11pt; color: ${PRIMARY_COLOR}; margin-bottom: 2px; }
             .bl-content .company p { font-size: 7pt; color: #666; margin: 1px 0; }
             .bl-content .doc-info { text-align: right; }
-            .bl-content .doc-info h2 { font-size: 11pt; margin-bottom: 3px; }
-            .bl-content .doc-info .numero { font-size: 10pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
-            .bl-content .doc-info p { font-size: 8pt; margin: 1px 0; }
+            .bl-content .doc-info h2 { font-size: 10pt; margin-bottom: 2px; }
+            .bl-content .doc-info .numero { font-size: 9pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
+            .bl-content .doc-info p { font-size: 7pt; margin: 1px 0; }
             .bl-content .client-box {
               background: #f8f9fa;
-              padding: 6px 10px;
+              padding: 5px 8px;
               border-radius: 4px;
-              margin-bottom: 10px;
+              margin-bottom: 8px;
             }
             .bl-content .client-box h3 { font-size: 7pt; color: #666; margin-bottom: 2px; }
-            .bl-content .client-box p { font-size: 8pt; margin: 1px 0; }
-            .bl-content .client-box .name { font-weight: bold; font-size: 9pt; }
-            .bl-content table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-            .bl-content th { background: ${PRIMARY_COLOR}; color: white; padding: 5px; text-align: left; font-size: 8pt; }
-            .bl-content td { padding: 4px 5px; border-bottom: 1px solid #ddd; font-size: 8pt; }
-            .bl-content .info { font-size: 7pt; margin: 5px 0; color: #666; }
-            .bl-content .totals { text-align: right; margin-top: 5px; }
-            .bl-content .totals p { font-size: 9pt; }
-            .bl-content .footer { margin-top: auto; border-top: 1px solid #ddd; padding-top: 5px; font-size: 7pt; color: #666; }
+            .bl-content .client-box p { font-size: 7pt; margin: 1px 0; }
+            .bl-content .client-box .name { font-weight: bold; font-size: 8pt; }
+            .bl-content table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+            .bl-content th { background: ${PRIMARY_COLOR}; color: white; padding: 4px; text-align: left; font-size: 7pt; }
+            .bl-content td { padding: 3px 4px; border-bottom: 1px solid #ddd; font-size: 7pt; }
+            .bl-content .info { font-size: 6pt; margin: 4px 0; color: #666; }
+            .bl-content .totals { text-align: right; margin-top: 4px; }
+            .bl-content .totals p { font-size: 8pt; }
+            .bl-content .footer { margin-top: auto; border-top: 1px solid #ddd; padding-top: 4px; font-size: 6pt; color: #666; }
             @media print {
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .bl-half { page-break-inside: avoid; }
@@ -303,6 +314,7 @@ export function PrintDocument({
           </style>
         </head>
         <body>
+          ${letterheadImage ? `<img src="${letterheadImage}" class="letterhead-img" alt="" style="object-fit: cover;" />` : ''}
           <div class="page">
             <div class="bl-half">
               ${generateBLContent(showPrices)}
@@ -644,7 +656,7 @@ export function PrintDocument({
         </DialogHeader>
 
         <div className="flex gap-2 mb-4 flex-wrap">
-          {/* V2.52: Options d'impression pour BL */}
+          {/* V2.53: Options d'impression pour BL */}
           {isBL && (
             <>
               {/* Format A5 double / A4 */}
@@ -690,21 +702,21 @@ export function PrintDocument({
           ref={previewRef}
           className="border rounded-lg bg-white relative overflow-hidden"
           style={{
-            width: '210mm',
-            height: doubleA5 ? '297mm' : '297mm',
+            width: doubleA5 ? '297mm' : '210mm',
+            height: doubleA5 ? '210mm' : '297mm',
             transform: 'scale(0.5)',
             transformOrigin: 'top left',
-            marginBottom: '-148.5mm',
-            marginRight: '-105mm'
+            marginBottom: doubleA5 ? '-105mm' : '-148.5mm',
+            marginRight: doubleA5 ? '-148.5mm' : '-105mm'
           }}
         >
           {/* Background image if letterhead */}
-          {letterheadImage && useCustomLayout && !doubleA5 && (
+          {letterheadImage && ((useCustomLayout && !doubleA5) || (isBL && doubleA5)) && (
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
                 backgroundImage: `url(${letterheadImage})`,
-                backgroundSize: '210mm 297mm',
+                backgroundSize: doubleA5 ? '297mm 210mm' : '210mm 297mm',
                 backgroundPosition: 'top left',
                 backgroundRepeat: 'no-repeat',
                 opacity: 0.3
@@ -712,43 +724,43 @@ export function PrintDocument({
             />
           )}
 
-          {/* V2.52: A5 Double Preview for BL */}
+          {/* V2.53: A5 Double Preview for BL - 2 A5 portrait côte à côte sur A4 paysage */}
           {isBL && doubleA5 ? (
-            <div className="flex flex-col h-full">
-              {/* First copy */}
-              <div className="flex-1 p-4 border-b border-dashed border-gray-300" style={{ height: '148.5mm' }}>
-                <div className="flex justify-between border-b-2 border-blue-600 pb-2 mb-2">
+            <div className="flex flex-row h-full">
+              {/* First copy - Left A5 */}
+              <div className="p-3 border-r border-dashed border-gray-300" style={{ width: '148.5mm', height: '210mm' }}>
+                <div className="flex justify-between border-b-2 border-blue-600 pb-1 mb-2">
                   <div>
-                    <h1 className="text-sm font-bold text-blue-700">{entreprise?.nomEntreprise || 'Entreprise'}</h1>
-                    <p className="text-xs text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
+                    <h1 className="text-xs font-bold text-blue-700">{entreprise?.nomEntreprise || 'Entreprise'}</h1>
+                    <p className="text-[10px] text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
                   </div>
                   <div className="text-right">
-                    <h2 className="text-sm font-bold">Bon de Livraison</h2>
-                    <p className="font-bold text-blue-700 text-xs">{getNumero()}</p>
-                    <p className="text-xs">Date: {formatDate(documentData.dateBL)}</p>
+                    <h2 className="text-xs font-bold">Bon de Livraison</h2>
+                    <p className="font-bold text-blue-700 text-[10px]">{getNumero()}</p>
+                    <p className="text-[10px]">Date: {formatDate(documentData.dateBL)}</p>
                   </div>
                 </div>
                 
-                <div className="mb-2 p-2 bg-gray-50 rounded text-xs">
+                <div className="mb-2 p-1 bg-gray-50 rounded text-[10px]">
                   <span className="text-gray-500">CLIENT: </span>
                   <span className="font-bold">{getTiers()?.raisonSociale}</span>
                 </div>
                 
-                <table className="w-full border-collapse text-xs">
+                <table className="w-full border-collapse text-[10px]">
                   <thead>
                     <tr className="bg-blue-600 text-white">
                       <th className="p-1 text-left">Désignation</th>
-                      <th className="p-1 text-right w-10">Qté</th>
+                      <th className="p-1 text-right w-8">Qté</th>
                       {showPrices && (
                         <>
-                          <th className="p-1 text-right w-14">P.U.</th>
-                          <th className="p-1 text-right w-14">Total</th>
+                          <th className="p-1 text-right w-12">P.U.</th>
+                          <th className="p-1 text-right w-12">Total</th>
                         </>
                       )}
                     </tr>
                   </thead>
                   <tbody>
-                    {lignes.slice(0, 8).map((l: any, i: number) => (
+                    {lignes.slice(0, 10).map((l: any, i: number) => (
                       <tr key={i} className="border-b">
                         <td className="p-1">{l.designation}</td>
                         <td className="p-1 text-right">{l.quantite}</td>
@@ -762,42 +774,47 @@ export function PrintDocument({
                     ))}
                   </tbody>
                 </table>
+                
+                <div className="mt-auto pt-2 border-t border-gray-200 text-[9px] text-gray-500">
+                  <p>{entreprise?.nomEntreprise} {entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
+                  {entreprise?.ice && <p>ICE: {entreprise.ice}</p>}
+                </div>
               </div>
               
-              {/* Second copy */}
-              <div className="flex-1 p-4" style={{ height: '148.5mm' }}>
-                <div className="flex justify-between border-b-2 border-blue-600 pb-2 mb-2">
+              {/* Second copy - Right A5 */}
+              <div className="p-3" style={{ width: '148.5mm', height: '210mm' }}>
+                <div className="flex justify-between border-b-2 border-blue-600 pb-1 mb-2">
                   <div>
-                    <h1 className="text-sm font-bold text-blue-700">{entreprise?.nomEntreprise || 'Entreprise'}</h1>
-                    <p className="text-xs text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
+                    <h1 className="text-xs font-bold text-blue-700">{entreprise?.nomEntreprise || 'Entreprise'}</h1>
+                    <p className="text-[10px] text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
                   </div>
                   <div className="text-right">
-                    <h2 className="text-sm font-bold">Bon de Livraison</h2>
-                    <p className="font-bold text-blue-700 text-xs">{getNumero()}</p>
-                    <p className="text-xs">Date: {formatDate(documentData.dateBL)}</p>
+                    <h2 className="text-xs font-bold">Bon de Livraison</h2>
+                    <p className="font-bold text-blue-700 text-[10px]">{getNumero()}</p>
+                    <p className="text-[10px]">Date: {formatDate(documentData.dateBL)}</p>
                   </div>
                 </div>
                 
-                <div className="mb-2 p-2 bg-gray-50 rounded text-xs">
+                <div className="mb-2 p-1 bg-gray-50 rounded text-[10px]">
                   <span className="text-gray-500">CLIENT: </span>
                   <span className="font-bold">{getTiers()?.raisonSociale}</span>
                 </div>
                 
-                <table className="w-full border-collapse text-xs">
+                <table className="w-full border-collapse text-[10px]">
                   <thead>
                     <tr className="bg-blue-600 text-white">
                       <th className="p-1 text-left">Désignation</th>
-                      <th className="p-1 text-right w-10">Qté</th>
+                      <th className="p-1 text-right w-8">Qté</th>
                       {showPrices && (
                         <>
-                          <th className="p-1 text-right w-14">P.U.</th>
-                          <th className="p-1 text-right w-14">Total</th>
+                          <th className="p-1 text-right w-12">P.U.</th>
+                          <th className="p-1 text-right w-12">Total</th>
                         </>
                       )}
                     </tr>
                   </thead>
                   <tbody>
-                    {lignes.slice(0, 8).map((l: any, i: number) => (
+                    {lignes.slice(0, 10).map((l: any, i: number) => (
                       <tr key={i} className="border-b">
                         <td className="p-1">{l.designation}</td>
                         <td className="p-1 text-right">{l.quantite}</td>
@@ -811,6 +828,11 @@ export function PrintDocument({
                     ))}
                   </tbody>
                 </table>
+                
+                <div className="mt-auto pt-2 border-t border-gray-200 text-[9px] text-gray-500">
+                  <p>{entreprise?.nomEntreprise} {entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
+                  {entreprise?.ice && <p>ICE: {entreprise.ice}</p>}
+                </div>
               </div>
             </div>
           ) : useCustomLayout && printLayout ? (

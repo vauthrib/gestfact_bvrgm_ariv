@@ -462,7 +462,7 @@ export function ReglementsClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-blue-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.52</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.53</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
           <PermissionGate permission="reglements.create">
