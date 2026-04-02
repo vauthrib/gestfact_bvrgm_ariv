@@ -102,26 +102,16 @@ const numberToWords = (num: number): string => {
   return result.trim();
 };
 
-// V2.54 - Couleurs par instance
+// V2.55 - Couleurs par instance
 const PRIMARY_COLOR = '#3b82f6'; // blue-500
 
 const DEFAULT_LAYOUT: PrintLayout = {
   docInfo: { x: 120, y: 10, width: 80, height: 45, visible: true },
   clientInfo: { x: 10, y: 60, width: 90, height: 40, visible: true },
   tableStart: { x: 10, y: 120, width: 190, height: 100, visible: true },
-  totals: { x: 130, y: 250, width: 70, height: 40, visible: true }, // Descendu pour éviter superposition
+  totals: { x: 130, y: 250, width: 70, height: 40, visible: true },
   footer: { x: 10, y: 275, width: 190, height: 20, visible: true },
   margins: { top: 10, right: 10, bottom: 10, left: 10 }
-};
-
-// Layout A5 pour mode double
-const A5_LAYOUT: PrintLayout = {
-  docInfo: { x: 85, y: 5, width: 55, height: 35, visible: true },
-  clientInfo: { x: 5, y: 45, width: 65, height: 30, visible: true },
-  tableStart: { x: 5, y: 85, width: 135, height: 80, visible: true },
-  totals: { x: 95, y: 175, width: 50, height: 25, visible: true },
-  footer: { x: 5, y: 195, width: 135, height: 15, visible: true },
-  margins: { top: 5, right: 5, bottom: 5, left: 5 }
 };
 
 export function PrintDocument({
@@ -137,10 +127,10 @@ export function PrintDocument({
   const previewRef = useRef<HTMLDivElement>(null);
   const [useCustomLayout, setUseCustomLayout] = useState(true);
   
-  // V2.54: Options d'impression pour BL
+  // V2.55: Options d'impression pour BL
   const isBL = documentType === 'BL';
-  const [hidePrices, setHidePrices] = useState(isBL); // Par défaut sans prix pour BL
-  const [doubleA5, setDoubleA5] = useState(isBL); // Par défaut A5 double pour BL
+  const [hidePrices, setHidePrices] = useState(isBL);
+  const [doubleA5, setDoubleA5] = useState(isBL);
   
   const layout = printLayout || DEFAULT_LAYOUT;
 
@@ -166,76 +156,69 @@ export function PrintDocument({
   const getTiers = () => documentData.client || documentData.fournisseur || {};
   const lignes = documentData.lignes || [];
 
-  // Generate single A5 BL content with letterhead - V2.54
-  const generateA5BLContent = (showPrices: boolean, layoutData: PrintLayout) => {
+  // Generate single A5 BL content - V2.55: Layout similaire au A4
+  const generateA5BLContent = (showPrices: boolean) => {
     const docDate = formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement || documentData.dateAvoir);
     
-    // Calcul hauteur disponible pour le tableau (en mm)
-    const tableMaxHeight = layoutData.totals.y - layoutData.tableStart.y - 10;
-    
     return `
-      <div class="bl-page">
+      <div class="a5-content">
         ${letterheadImage ? `<img src="${letterheadImage}" class="letterhead-img" alt="" />` : ''}
         
-        ${layoutData.docInfo.visible ? `
-          <div class="doc-info" style="left: ${layoutData.docInfo.x}mm; top: ${layoutData.docInfo.y}mm; width: ${layoutData.docInfo.width}mm;">
+        <div class="header">
+          <div class="company">
+            <h1>${entreprise?.nomEntreprise || 'Entreprise'}</h1>
+            <p>${entreprise?.adresseEntreprise || ''} ${entreprise?.villeEntreprise || ''}</p>
+          </div>
+          <div class="doc-info">
             <h2>Bon de Livraison</h2>
             <p class="numero">${getNumero()}</p>
             <p>Date: ${docDate}</p>
             ${documentData.bonCommande ? `<p>BC: ${documentData.bonCommande}</p>` : ''}
           </div>
-        ` : ''}
+        </div>
         
-        ${layoutData.clientInfo.visible ? `
-          <div class="client-info" style="left: ${layoutData.clientInfo.x}mm; top: ${layoutData.clientInfo.y}mm; width: ${layoutData.clientInfo.width}mm;">
-            <h3>CLIENT</h3>
-            <p class="name">${getTiers()?.raisonSociale || ''}</p>
-            ${getTiers()?.adresse ? `<p>${getTiers().adresse}</p>` : ''}
-            ${getTiers()?.ville ? `<p>${getTiers().ville}</p>` : ''}
-          </div>
-        ` : ''}
+        <div class="client-box">
+          <h3>CLIENT</h3>
+          <p class="name">${getTiers()?.raisonSociale || ''}</p>
+          ${getTiers()?.adresse ? `<p>${getTiers().adresse}</p>` : ''}
+          ${getTiers()?.ville ? `<p>${getTiers().ville}</p>` : ''}
+        </div>
         
-        ${layoutData.tableStart.visible ? `
-          <div class="table-container" style="left: ${layoutData.tableStart.x}mm; top: ${layoutData.tableStart.y}mm; width: ${layoutData.tableStart.width}mm; max-height: ${tableMaxHeight}mm;">
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: ${showPrices ? '55%' : '75%'};">Désignation</th>
-                  <th style="width: 15%; text-align: right;">Qté</th>
-                  ${showPrices ? `
-                    <th style="width: 15%; text-align: right;">P.U.</th>
-                    <th style="width: 15%; text-align: right;">Total</th>
-                  ` : ''}
-                </tr>
-              </thead>
-              <tbody>
-                ${lignes.map((l: any) => `
-                  <tr>
-                    <td>${l.designation}</td>
-                    <td style="text-align: right;">${l.quantite}</td>
-                    ${showPrices ? `
-                      <td style="text-align: right;">${formatCurrency(l.prixUnitaire)}</td>
-                      <td style="text-align: right;">${formatCurrency(l.totalHT)}</td>
-                    ` : ''}
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : ''}
+        <table>
+          <thead>
+            <tr>
+              <th style="width: ${showPrices ? '50%' : '70%'};">Désignation</th>
+              <th style="width: 15%; text-align: right;">Qté</th>
+              ${showPrices ? `
+                <th style="width: 17%; text-align: right;">P.U.</th>
+                <th style="width: 18%; text-align: right;">Total</th>
+              ` : ''}
+            </tr>
+          </thead>
+          <tbody>
+            ${lignes.map((l: any) => `
+              <tr>
+                <td>${l.designation}</td>
+                <td style="text-align: right;">${l.quantite}</td>
+                ${showPrices ? `
+                  <td style="text-align: right;">${formatCurrency(l.prixUnitaire)}</td>
+                  <td style="text-align: right;">${formatCurrency(l.totalHT)}</td>
+                ` : ''}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
         
-        ${showPrices && layoutData.totals.visible && documentData.totalHT !== undefined ? `
-          <div class="totals-section" style="left: ${layoutData.totals.x}mm; top: ${layoutData.totals.y}mm; width: ${layoutData.totals.width}mm;">
+        ${showPrices && documentData.totalHT !== undefined ? `
+          <div class="totals">
             <p>Total HT: <strong>${formatCurrency(documentData.totalHT)}</strong></p>
           </div>
         ` : ''}
         
-        ${layoutData.footer.visible ? `
-          <div class="footer-section" style="left: ${layoutData.footer.x}mm; top: ${layoutData.footer.y}mm; width: ${layoutData.footer.width}mm;">
-            <p>${entreprise?.nomEntreprise || ''}</p>
-            ${entreprise?.ice ? `<p>ICE: ${entreprise.ice}</p>` : ''}
-          </div>
-        ` : ''}
+        <div class="footer">
+          <p>${entreprise?.nomEntreprise || ''} ${entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
+          ${entreprise?.ice ? `<p>ICE: ${entreprise.ice}</p>` : ''}
+        </div>
       </div>
     `;
   };
@@ -246,7 +229,7 @@ export function PrintDocument({
     const isBLDoc = documentType === 'BL';
     const showPrices = !hidePrices;
     
-    // V2.54: Mode A5 double pour BL - 2 A5 portrait sur A4 paysage avec en-tête doublé
+    // V2.55: Mode A5 double - Layout centré comme le A4
     if (isBLDoc && doubleA5) {
       return `
         <!DOCTYPE html>
@@ -258,7 +241,7 @@ export function PrintDocument({
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
               font-family: Arial, sans-serif;
-              font-size: 8pt;
+              font-size: 7pt;
               width: 297mm;
               height: 210mm;
             }
@@ -273,6 +256,7 @@ export function PrintDocument({
               height: 210mm;
               position: relative;
               border-right: 1px dashed #ccc;
+              padding: 5mm;
               overflow: hidden;
             }
             .bl-half:last-child {
@@ -287,49 +271,43 @@ export function PrintDocument({
               z-index: 0;
               object-fit: contain;
             }
-            .bl-page {
+            .a5-content {
               position: relative;
-              width: 148.5mm;
-              height: 210mm;
               z-index: 1;
+              width: 100%;
+              height: 100%;
+              display: flex;
+              flex-direction: column;
             }
-            .doc-info {
-              position: absolute;
-              text-align: right;
-              z-index: 2;
+            .header {
+              display: flex;
+              justify-content: space-between;
+              border-bottom: 2px solid ${PRIMARY_COLOR};
+              padding-bottom: 3mm;
+              margin-bottom: 3mm;
             }
-            .doc-info h2 { font-size: 10pt; margin-bottom: 2px; }
-            .doc-info .numero { font-size: 9pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
-            .doc-info p { font-size: 7pt; margin: 1px 0; }
-            .client-info {
-              position: absolute;
-              z-index: 2;
+            .company h1 { font-size: 10pt; color: ${PRIMARY_COLOR}; margin-bottom: 1px; }
+            .company p { font-size: 6pt; color: #666; margin: 1px 0; }
+            .doc-info { text-align: right; }
+            .doc-info h2 { font-size: 9pt; margin-bottom: 1px; }
+            .doc-info .numero { font-size: 8pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
+            .doc-info p { font-size: 6pt; margin: 1px 0; }
+            .client-box {
+              background: #f8f9fa;
+              padding: 2mm 3mm;
+              border-radius: 3px;
+              margin-bottom: 3mm;
             }
-            .client-info h3 { font-size: 6pt; color: #666; margin-bottom: 1px; }
-            .client-info p { font-size: 7pt; margin: 1px 0; }
-            .client-info .name { font-weight: bold; font-size: 8pt; }
-            .table-container {
-              position: absolute;
-              z-index: 2;
-              overflow: hidden;
-            }
-            table { width: 100%; border-collapse: collapse; }
-            th { background: ${PRIMARY_COLOR}; color: white; padding: 3px 4px; text-align: left; font-size: 7pt; }
-            td { padding: 2px 4px; border-bottom: 1px solid #ddd; font-size: 7pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            td:first-child { white-space: normal; }
-            .totals-section {
-              position: absolute;
-              text-align: right;
-              z-index: 2;
-            }
-            .totals-section p { font-size: 7pt; margin: 2px 0; }
-            .footer-section {
-              position: absolute;
-              font-size: 6pt;
-              color: #666;
-              z-index: 2;
-            }
-            .footer-section p { margin: 1px 0; }
+            .client-box h3 { font-size: 6pt; color: #666; margin-bottom: 1px; }
+            .client-box p { font-size: 7pt; margin: 1px 0; }
+            .client-box .name { font-weight: bold; font-size: 8pt; }
+            table { width: 100%; border-collapse: collapse; flex: 1; }
+            th { background: ${PRIMARY_COLOR}; color: white; padding: 2px 3px; text-align: left; font-size: 6pt; }
+            td { padding: 2px 3px; border-bottom: 1px solid #ddd; font-size: 6pt; }
+            .totals { text-align: right; margin-top: 2mm; }
+            .totals p { font-size: 7pt; }
+            .footer { margin-top: auto; border-top: 1px solid #ddd; padding-top: 2mm; font-size: 5pt; color: #666; }
+            .footer p { margin: 1px 0; }
             @media print {
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .bl-half { page-break-inside: avoid; }
@@ -339,10 +317,10 @@ export function PrintDocument({
         <body>
           <div class="page">
             <div class="bl-half">
-              ${generateA5BLContent(showPrices, A5_LAYOUT)}
+              ${generateA5BLContent(showPrices)}
             </div>
             <div class="bl-half">
-              ${generateA5BLContent(showPrices, A5_LAYOUT)}
+              ${generateA5BLContent(showPrices)}
             </div>
           </div>
         </body>
@@ -352,12 +330,11 @@ export function PrintDocument({
     
     if (useCustomLayout && printLayout) {
       // Custom Layout Mode - A4 avec en-tête personnalisé
-      // V2.54: Ajustement position totaux pour éviter superposition
       const adjustedLayout = {
         ...layout,
         totals: {
           ...layout.totals,
-          y: Math.max(layout.totals.y, layout.tableStart.y + 130) // Descendre si nécessaire
+          y: Math.max(layout.totals.y, layout.tableStart.y + 130)
         }
       };
       
@@ -406,9 +383,9 @@ export function PrintDocument({
               top: ${mmToPxStr(adjustedLayout.clientInfo.y)};
               width: ${mmToPxStr(adjustedLayout.clientInfo.width)};
             }
-            .client-info h3 { font-size: 8pt; color: #666; margin-bottom: 3px; }
-            .client-info p { font-size: 10pt; margin: 1px 0; }
-            .client-info .name { font-weight: bold; font-size: 11pt; }
+            .client-info h3 { font-size: 9pt; color: #666; margin-bottom: 3px; }
+            .client-info p { font-size: 11pt; margin: 2px 0; }
+            .client-info .name { font-weight: bold; font-size: 13pt; }
             .table-container {
               position: absolute;
               left: ${mmToPxStr(adjustedLayout.tableStart.x)};
@@ -555,9 +532,9 @@ export function PrintDocument({
               border-radius: 5px;
               margin-bottom: 20px;
             }
-            .client-box h3 { font-size: 8pt; color: #666; margin-bottom: 5px; }
-            .client-box p { font-size: 10pt; margin: 1px 0; }
-            .client-box .name { font-weight: bold; font-size: 11pt; }
+            .client-box h3 { font-size: 9pt; color: #666; margin-bottom: 5px; }
+            .client-box p { font-size: 11pt; margin: 2px 0; }
+            .client-box .name { font-weight: bold; font-size: 13pt; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             th { background: ${PRIMARY_COLOR}; color: white; padding: 10px 6px; text-align: left; font-size: 9pt; }
             th:last-child, td:last-child { text-align: right; }
@@ -678,7 +655,7 @@ export function PrintDocument({
         </DialogHeader>
 
         <div className="flex gap-2 mb-4 flex-wrap">
-          {/* V2.54: Options d'impression pour BL */}
+          {/* V2.55: Options d'impression pour BL */}
           {isBL && (
             <>
               {/* Format A5 double / A4 */}
@@ -739,18 +716,18 @@ export function PrintDocument({
               style={{
                 backgroundImage: `url(${letterheadImage})`,
                 backgroundSize: doubleA5 ? '148.5mm 210mm' : '210mm 297mm',
-                backgroundPosition: doubleA5 ? 'top left, top 148.5mm left' : 'top left',
-                backgroundRepeat: doubleA5 ? 'repeat-x' : 'no-repeat',
+                backgroundPosition: 'top left',
+                backgroundRepeat: 'no-repeat',
                 opacity: 0.3
               }}
             />
           )}
 
-          {/* V2.54: A5 Double Preview for BL */}
+          {/* V2.55: A5 Double Preview - Layout centré comme A4 */}
           {isBL && doubleA5 ? (
             <div className="flex flex-row h-full">
-              {/* First copy - Left A5 */}
-              <div className="relative p-2 border-r border-dashed border-gray-300" style={{ width: '148.5mm', height: '210mm' }}>
+              {/* First A5 */}
+              <div className="relative p-3 border-r border-dashed border-gray-300" style={{ width: '148.5mm' }}>
                 {letterheadImage && (
                   <div className="absolute inset-0 pointer-events-none opacity-30" style={{
                     backgroundImage: `url(${letterheadImage})`,
@@ -759,41 +736,42 @@ export function PrintDocument({
                     backgroundRepeat: 'no-repeat'
                   }} />
                 )}
-                <div className="relative z-10">
-                  <div className="flex justify-between border-b-2 border-blue-600 pb-1 mb-1">
+                <div className="relative z-10 h-full flex flex-col">
+                  <div className="flex justify-between border-b-2 border-blue-600 pb-1 mb-2">
                     <div>
                       <h1 className="text-[10px] font-bold text-blue-700">{entreprise?.nomEntreprise}</h1>
-                      <p className="text-[8px] text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
+                      <p className="text-[7px] text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
                     </div>
                     <div className="text-right">
-                      <h2 className="text-[10px] font-bold">Bon de Livraison</h2>
-                      <p className="font-bold text-blue-700 text-[9px]">{getNumero()}</p>
-                      <p className="text-[8px]">Date: {formatDate(documentData.dateBL)}</p>
+                      <h2 className="text-[9px] font-bold">Bon de Livraison</h2>
+                      <p className="font-bold text-blue-700 text-[8px]">{getNumero()}</p>
+                      <p className="text-[6px]">Date: {formatDate(documentData.dateBL)}</p>
                     </div>
                   </div>
                   
-                  <div className="mb-1 p-1 bg-gray-50 rounded text-[8px]">
-                    <span className="text-gray-500">CLIENT: </span>
-                    <span className="font-bold">{getTiers()?.raisonSociale}</span>
+                  <div className="mb-2 p-1 bg-gray-50 rounded">
+                    <span className="text-[6px] text-gray-500">CLIENT: </span>
+                    <span className="font-bold text-[8px]">{getTiers()?.raisonSociale}</span>
+                    {getTiers()?.adresse && <span className="text-[7px]"> - {getTiers()?.adresse}</span>}
                   </div>
                   
-                  <table className="w-full border-collapse text-[7px]">
+                  <table className="w-full border-collapse text-[6px] flex-1">
                     <thead>
                       <tr className="bg-blue-600 text-white">
                         <th className="p-0.5 text-left" style={{width: showPrices ? '50%' : '70%'}}>Désignation</th>
                         <th className="p-0.5 text-right" style={{width: '15%'}}>Qté</th>
                         {showPrices && (
                           <>
-                            <th className="p-0.5 text-right" style={{width: '15%'}}>P.U.</th>
-                            <th className="p-0.5 text-right" style={{width: '20%'}}>Total</th>
+                            <th className="p-0.5 text-right" style={{width: '17%'}}>P.U.</th>
+                            <th className="p-0.5 text-right" style={{width: '18%'}}>Total</th>
                           </>
                         )}
                       </tr>
                     </thead>
                     <tbody>
-                      {lignes.slice(0, 12).map((l: any, i: number) => (
+                      {lignes.map((l: any, i: number) => (
                         <tr key={i} className="border-b">
-                          <td className="p-0.5 truncate">{l.designation}</td>
+                          <td className="p-0.5">{l.designation}</td>
                           <td className="p-0.5 text-right">{l.quantite}</td>
                           {showPrices && (
                             <>
@@ -807,20 +785,19 @@ export function PrintDocument({
                   </table>
                   
                   {showPrices && documentData.totalHT !== undefined && (
-                    <div className="text-right mt-1 text-[8px]">
+                    <div className="text-right text-[7px] mt-1">
                       <p>Total HT: <strong>{formatCurrency(documentData.totalHT)}</strong></p>
                     </div>
                   )}
                   
-                  <div className="absolute bottom-2 left-2 right-2 pt-1 border-t border-gray-200 text-[7px] text-gray-500">
-                    <p>{entreprise?.nomEntreprise} {entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
-                    {entreprise?.ice && <p>ICE: {entreprise.ice}</p>}
+                  <div className="mt-auto pt-1 border-t border-gray-200 text-[5px] text-gray-500">
+                    <p>{entreprise?.nomEntreprise} {entreprise?.ice && `- ICE: ${entreprise.ice}`}</p>
                   </div>
                 </div>
               </div>
               
-              {/* Second copy - Right A5 */}
-              <div className="relative p-2" style={{ width: '148.5mm', height: '210mm' }}>
+              {/* Second A5 */}
+              <div className="relative p-3" style={{ width: '148.5mm' }}>
                 {letterheadImage && (
                   <div className="absolute inset-0 pointer-events-none opacity-30" style={{
                     backgroundImage: `url(${letterheadImage})`,
@@ -829,41 +806,42 @@ export function PrintDocument({
                     backgroundRepeat: 'no-repeat'
                   }} />
                 )}
-                <div className="relative z-10">
-                  <div className="flex justify-between border-b-2 border-blue-600 pb-1 mb-1">
+                <div className="relative z-10 h-full flex flex-col">
+                  <div className="flex justify-between border-b-2 border-blue-600 pb-1 mb-2">
                     <div>
                       <h1 className="text-[10px] font-bold text-blue-700">{entreprise?.nomEntreprise}</h1>
-                      <p className="text-[8px] text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
+                      <p className="text-[7px] text-gray-600">{entreprise?.adresseEntreprise} {entreprise?.villeEntreprise}</p>
                     </div>
                     <div className="text-right">
-                      <h2 className="text-[10px] font-bold">Bon de Livraison</h2>
-                      <p className="font-bold text-blue-700 text-[9px]">{getNumero()}</p>
-                      <p className="text-[8px]">Date: {formatDate(documentData.dateBL)}</p>
+                      <h2 className="text-[9px] font-bold">Bon de Livraison</h2>
+                      <p className="font-bold text-blue-700 text-[8px]">{getNumero()}</p>
+                      <p className="text-[6px]">Date: {formatDate(documentData.dateBL)}</p>
                     </div>
                   </div>
                   
-                  <div className="mb-1 p-1 bg-gray-50 rounded text-[8px]">
-                    <span className="text-gray-500">CLIENT: </span>
-                    <span className="font-bold">{getTiers()?.raisonSociale}</span>
+                  <div className="mb-2 p-1 bg-gray-50 rounded">
+                    <span className="text-[6px] text-gray-500">CLIENT: </span>
+                    <span className="font-bold text-[8px]">{getTiers()?.raisonSociale}</span>
+                    {getTiers()?.adresse && <span className="text-[7px]"> - {getTiers()?.adresse}</span>}
                   </div>
                   
-                  <table className="w-full border-collapse text-[7px]">
+                  <table className="w-full border-collapse text-[6px] flex-1">
                     <thead>
                       <tr className="bg-blue-600 text-white">
                         <th className="p-0.5 text-left" style={{width: showPrices ? '50%' : '70%'}}>Désignation</th>
                         <th className="p-0.5 text-right" style={{width: '15%'}}>Qté</th>
                         {showPrices && (
                           <>
-                            <th className="p-0.5 text-right" style={{width: '15%'}}>P.U.</th>
-                            <th className="p-0.5 text-right" style={{width: '20%'}}>Total</th>
+                            <th className="p-0.5 text-right" style={{width: '17%'}}>P.U.</th>
+                            <th className="p-0.5 text-right" style={{width: '18%'}}>Total</th>
                           </>
                         )}
                       </tr>
                     </thead>
                     <tbody>
-                      {lignes.slice(0, 12).map((l: any, i: number) => (
+                      {lignes.map((l: any, i: number) => (
                         <tr key={i} className="border-b">
-                          <td className="p-0.5 truncate">{l.designation}</td>
+                          <td className="p-0.5">{l.designation}</td>
                           <td className="p-0.5 text-right">{l.quantite}</td>
                           {showPrices && (
                             <>
@@ -877,14 +855,13 @@ export function PrintDocument({
                   </table>
                   
                   {showPrices && documentData.totalHT !== undefined && (
-                    <div className="text-right mt-1 text-[8px]">
+                    <div className="text-right text-[7px] mt-1">
                       <p>Total HT: <strong>{formatCurrency(documentData.totalHT)}</strong></p>
                     </div>
                   )}
                   
-                  <div className="absolute bottom-2 left-2 right-2 pt-1 border-t border-gray-200 text-[7px] text-gray-500">
-                    <p>{entreprise?.nomEntreprise} {entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
-                    {entreprise?.ice && <p>ICE: {entreprise.ice}</p>}
+                  <div className="mt-auto pt-1 border-t border-gray-200 text-[5px] text-gray-500">
+                    <p>{entreprise?.nomEntreprise} {entreprise?.ice && `- ICE: ${entreprise.ice}`}</p>
                   </div>
                 </div>
               </div>
@@ -901,9 +878,6 @@ export function PrintDocument({
                   <h2 className="text-lg font-bold">{getTitle()}</h2>
                   <p className="font-bold text-blue-700">{getNumero()}</p>
                   <p className="text-sm">Date: {formatDate(documentData.dateBL || documentData.dateFacture || documentData.dateReglement)}</p>
-                  {documentData.bonCommande && (
-                    <p className="text-sm">BC: {documentData.bonCommande}</p>
-                  )}
                 </div>
               )}
 
@@ -914,7 +888,7 @@ export function PrintDocument({
                   width: mmToPxStr(layout.clientInfo.width)
                 }}>
                   <h3 className="text-xs text-gray-500 mb-1">{documentType === 'FF' || documentType === 'RF' ? 'FOURNISSEUR' : 'CLIENT'}</h3>
-                  <p className="font-bold">{getTiers()?.raisonSociale}</p>
+                  <p className="font-bold text-base">{getTiers()?.raisonSociale}</p>
                   {getTiers()?.adresse && <p className="text-sm">{getTiers()?.adresse}</p>}
                   {getTiers()?.ville && <p className="text-sm">{getTiers()?.ville}</p>}
                 </div>
@@ -999,7 +973,8 @@ export function PrintDocument({
               
               <div className="mb-4 p-3 bg-gray-50 rounded">
                 <span className="text-xs text-gray-500">{documentType === 'FF' || documentType === 'RF' ? 'FOURNISSEUR' : 'CLIENT'}: </span>
-                <span className="font-bold">{getTiers()?.raisonSociale}</span>
+                <span className="font-bold text-base">{getTiers()?.raisonSociale}</span>
+                {getTiers()?.adresse && <span className="text-sm"> - {getTiers()?.adresse}</span>}
               </div>
               
               <table className="w-full border-collapse mb-4">
