@@ -15,6 +15,10 @@ import { PermissionGate } from '@/components/auth/permission-gate';
 interface Article {
   id: string; code: string; designation: string; prixUnitaire: number;
   unite: string; tauxTVA: number; infoLibre: string | null; actif: boolean;
+  // Nouveaux champs V2.63
+  diametreFil: number | null;
+  poidsGr: number | null;
+  typeAcier: string | null;
 }
 
 const parseNumber = (v: string) => { if (!v) return 0; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
@@ -31,7 +35,9 @@ export function ArticlesView() {
   const [exportOpen, setExportOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [formData, setFormData] = useState({
-    code: '', designation: '', prixUnitaire: '', unite: 'pièce', tauxTVA: '20', infoLibre: '', actif: true
+    code: '', designation: '', prixUnitaire: '', unite: 'pièce', tauxTVA: '20', infoLibre: '', actif: true,
+    // Nouveaux champs V2.63
+    diametreFil: '', poidsGr: '', typeAcier: ''
   });
   
   // Sorting - default by designation ascending
@@ -55,7 +61,11 @@ export function ArticlesView() {
         ...formData, 
         id: editingArticle?.id,
         prixUnitaire: parseNumber(formData.prixUnitaire), 
-        tauxTVA: parseNumber(formData.tauxTVA) 
+        tauxTVA: parseNumber(formData.tauxTVA),
+        // Nouveaux champs V2.63
+        diametreFil: formData.diametreFil ? parseNumber(formData.diametreFil) : null,
+        poidsGr: formData.poidsGr ? parseNumber(formData.poidsGr) : null,
+        typeAcier: formData.typeAcier || null,
       };
       const res = await fetch('/api/articles', {
         method: editingArticle ? 'PUT' : 'POST', 
@@ -74,7 +84,9 @@ export function ArticlesView() {
   };
 
   const resetForm = () => {
-    setFormData({ code: '', designation: '', prixUnitaire: '', unite: 'pièce', tauxTVA: '20', infoLibre: '', actif: true });
+    setFormData({ code: '', designation: '', prixUnitaire: '', unite: 'pièce', tauxTVA: '20', infoLibre: '', actif: true,
+      diametreFil: '', poidsGr: '', typeAcier: ''
+    });
     setEditingArticle(null);
   };
 
@@ -82,7 +94,11 @@ export function ArticlesView() {
     setEditingArticle(a);
     setFormData({
       code: a.code, designation: a.designation, prixUnitaire: a.prixUnitaire.toString(),
-      unite: a.unite, tauxTVA: a.tauxTVA.toString(), infoLibre: a.infoLibre || '', actif: a.actif
+      unite: a.unite, tauxTVA: a.tauxTVA.toString(), infoLibre: a.infoLibre || '', actif: a.actif,
+      // Nouveaux champs V2.63
+      diametreFil: a.diametreFil?.toString() || '',
+      poidsGr: a.poidsGr?.toString() || '',
+      typeAcier: a.typeAcier || '',
     });
     setDialogOpen(true);
   };
@@ -224,6 +240,40 @@ export function ArticlesView() {
 
             {/* Row 4: Info Libres */}
             <div><Label>Info Libres</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
+
+            {/* Row 5: Nouveaux champs V2.63 - Caractéristiques techniques */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-blue-700 mb-3">Caractéristiques techniques</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Diamètre de fil (mm)</Label>
+                  <Input 
+                    type="text" 
+                    value={formData.diametreFil} 
+                    onChange={(e) => setFormData({ ...formData, diametreFil: e.target.value })} 
+                    placeholder="Ex: 2.5"
+                  />
+                </div>
+                <div>
+                  <Label>Poids (gr)</Label>
+                  <Input 
+                    type="text" 
+                    value={formData.poidsGr} 
+                    onChange={(e) => setFormData({ ...formData, poidsGr: e.target.value })} 
+                    placeholder="Ex: 500"
+                  />
+                </div>
+                <div>
+                  <Label>Type d'acier</Label>
+                  <Input 
+                    type="text" 
+                    value={formData.typeAcier} 
+                    onChange={(e) => setFormData({ ...formData, typeAcier: e.target.value })} 
+                    placeholder="Ex: Inox, Galvanisé..."
+                  />
+                </div>
+              </div>
+            </div>
 
             <div className="flex items-center gap-2">
               <input type="checkbox" id="actif" checked={formData.actif} onChange={(e) => setFormData({ ...formData, actif: e.target.checked })} className="w-4 h-4" />

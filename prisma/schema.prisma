@@ -46,6 +46,10 @@ model Article {
   tauxTVA       Float    @default(20)
   infoLibre     String?
   actif         Boolean  @default(true)
+  // Nouveaux champs V2.63
+  diametreFil   Float?   // Diamètre de fil en mm
+  poidsGr       Float?   // Poids en grammes
+  typeAcier     String?  // Type d'acier
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

@@ -77,6 +77,10 @@ export async function PUT(request: NextRequest) {
         tauxTVA: updateData.tauxTVA,
         infoLibre: updateData.infoLibre || null,
         actif: updateData.actif,
+        // Nouveaux champs V2.63
+        diametreFil: updateData.diametreFil !== undefined ? (updateData.diametreFil || null) : undefined,
+        poidsGr: updateData.poidsGr !== undefined ? (updateData.poidsGr || null) : undefined,
+        typeAcier: updateData.typeAcier || null,
       }
     });
     return NextResponse.json(article);
