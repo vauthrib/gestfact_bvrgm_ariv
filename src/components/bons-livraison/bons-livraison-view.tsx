@@ -426,7 +426,7 @@ export function BonsLivraisonView() {
               <Table>
                 <TableHeader><TableRow><TableHead>Article</TableHead><TableHead className="w-[400px]">Désignation</TableHead><TableHead>Qté</TableHead><TableHead>P.U.</TableHead><TableHead>Total HT</TableHead><TableHead></TableHead></TableRow></TableHeader>
                 <TableBody>{lignes.map((l, idx) => (<TableRow key={idx}>
-                  <TableCell><Select value={l.articleId || ''} onValueChange={(v) => updateLigne(idx, 'articleId', v)}><SelectTrigger className="w-32"><SelectValue placeholder="..." /></SelectTrigger><SelectContent>{sortedArticles.map((a) => (<SelectItem key={a.id} value={a.id}>{a.code}</SelectItem>))}</SelectContent></Select></TableCell>
+                  <TableCell><Select value={l.articleId || ''} onValueChange={(v) => updateLigne(idx, 'articleId', v)}><SelectTrigger className="w-72"><SelectValue placeholder="Sélectionner un article..." /></SelectTrigger><SelectContent className="max-h-[300px]">{sortedArticles.map((a) => (<SelectItem key={a.id} value={a.id} className="whitespace-normal">{a.code} - {a.designation}</SelectItem>))}</SelectContent></Select></TableCell>
                   <TableCell><Textarea value={l.designation} onChange={(e) => updateLigne(idx, 'designation', e.target.value)} className="min-h-[40px] min-w-[300px]" /></TableCell>
                   <TableCell><Input type="number" value={l.quantite} onChange={(e) => updateLigne(idx, 'quantite', e.target.value)} className="w-20" /></TableCell>
                   <TableCell><Input type="number" step="0.01" value={l.prixUnitaire} onChange={(e) => updateLigne(idx, 'prixUnitaire', e.target.value)} className="w-24" /></TableCell>
