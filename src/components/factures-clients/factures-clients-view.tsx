@@ -98,7 +98,7 @@ export function FacturesClientsView() {
 
   // Sorted lists for dropdowns
   const sortedClients = [...clients].sort((a, b) => a.raisonSociale.localeCompare(b.raisonSociale));
-  const sortedArticles = [...articles].sort((a, b) => a.designation.localeCompare(b.designation));
+  const sortedArticles = [...articles].sort((a, b) => a.code.localeCompare(b.code));
 
   const calcTotalHT = () => lignes.reduce((s, l) => s + (l.totalHT || 0), 0);
   const calcTotalTVA = () => lignes.reduce((s, l) => s + ((l.totalHT || 0) * parseNumber(l.tauxTVA) / 100), 0);
