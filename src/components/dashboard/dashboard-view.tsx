@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calculator, Printer, Download, ArrowUp, ArrowDown, ArrowUpDown, FileText } from 'lucide-react';
+import { Calculator, Printer, Download, ArrowUp, ArrowDown, ArrowUpDown, FileText, AlertCircle } from 'lucide-react';
 
 const formatCurrency = (a: number) => a.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -184,6 +184,10 @@ export function DashboardView() {
   const [etatClientData, setEtatClientData] = useState<any[]>([]);
   const [etatClientTier, setEtatClientTier] = useState<Tiers | null>(null);
 
+  // Relance Client
+  const [relanceClientOpen, setRelanceClientOpen] = useState(false);
+  const [relanceClientData, setRelanceClientData] = useState<any[]>([]);
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -298,6 +302,60 @@ export function DashboardView() {
   const openEtatClientDialog = () => {
     setEtatClientForm({ clientId: '', dateFrom: '', dateTo: '' });
     setEtatClientDialogOpen(true);
+  };
+
+  const openRelanceClientDialog = async () => {
+    try {
+      const [factures, reglements] = await Promise.all([
+        fetch('/api/factures-clients').then(r => r.json()).catch(() => []),
+        fetch('/api/reglements-clients').then(r => r.json()).catch(() => [])
+      ]);
+      
+      const lines: any[] = [];
+      
+      // Filter validated factures
+      const validatedFactures = (Array.isArray(factures) ? factures : []).filter((f: any) => f.statut === 'VALIDEE');
+      
+      for (const facture of validatedFactures) {
+        const factureTTC = facture.totalTTC || 0;
+        
+        // Get validated reglements for this facture (ENREGISTRE = validé)
+        const factureReglements = (Array.isArray(reglements) ? reglements : []).filter((r: any) => 
+          r.factureId === facture.id && r.statut === 'ENREGISTRE'
+        );
+        const totalReglements = factureReglements.reduce((sum: number, r: any) => sum + (r.montant || 0), 0);
+        
+        // Calculate remaining amount
+        const resteAPayer = factureTTC - totalReglements;
+        
+        // Only show if not fully paid
+        if (resteAPayer > 0.01) {
+          lines.push({
+            clientId: facture.clientId,
+            clientNom: facture.client?.raisonSociale || 'N/A',
+            date: new Date(facture.dateFacture),
+            dateStr: formatDate(facture.dateFacture),
+            numero: facture.numero,
+            montantTTC: factureTTC,
+            totalReglements: totalReglements,
+            resteAPayer: resteAPayer
+          });
+        }
+      }
+      
+      // Sort: 1° by client name, 2° by facture number
+      lines.sort((a, b) => {
+        const clientCompare = a.clientNom.localeCompare(b.clientNom);
+        if (clientCompare !== 0) return clientCompare;
+        return a.numero.localeCompare(b.numero);
+      });
+      
+      setRelanceClientData(lines);
+      setRelanceClientOpen(true);
+    } catch (e) {
+      console.error(e);
+      alert('Erreur lors de la génération de la relance client');
+    }
   };
 
   const generateReleve = async () => {
@@ -752,12 +810,15 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-blue-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur ARIV V2.66</p>
+          <p className="text-muted-foreground">Bienvenue sur ARIV V2.67</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
           <Button variant="outline" className="border-blue-600 text-blue-700" onClick={openEtatClientDialog}>
             <FileText className="w-4 h-4 mr-2" />Etat Client
+          </Button>
+          <Button variant="outline" className="border-blue-600 text-blue-700" onClick={openRelanceClientDialog}>
+            <AlertCircle className="w-4 h-4 mr-2" />Relance client
           </Button>
           <Button className="bg-blue-600 hover:bg-blue-700" onClick={openReleveDialog}>
             <Calculator className="w-4 h-4 mr-2" />Relevé Tiers
@@ -999,6 +1060,53 @@ export function DashboardView() {
             )}
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setEtatClientResultOpen(false)}>Fermer</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Relance Client Dialog */}
+      <Dialog open={relanceClientOpen} onOpenChange={setRelanceClientOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Relance Client - Factures Impayées</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {relanceClientData.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">Aucune facture impayée</div>
+            ) : (
+              <>
+                <div className="mb-4 text-sm text-muted-foreground">
+                  {relanceClientData.length} facture(s) impayée(s) - Total: {formatCurrency(relanceClientData.reduce((s, l) => s + l.resteAPayer, 0))} DH
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>N° Facture</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Montant TTC</TableHead>
+                      <TableHead className="text-right">Réglé</TableHead>
+                      <TableHead className="text-right">Reste à payer</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {relanceClientData.map((line, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium">{line.clientNom}</TableCell>
+                        <TableCell>{line.numero}</TableCell>
+                        <TableCell>{line.dateStr}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(line.montantTTC)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(line.totalReglements)}</TableCell>
+                        <TableCell className="text-right font-bold text-red-600">{formatCurrency(line.resteAPayer)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRelanceClientOpen(false)}>Fermer</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
