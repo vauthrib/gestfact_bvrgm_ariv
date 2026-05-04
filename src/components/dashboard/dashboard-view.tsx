@@ -358,6 +358,119 @@ export function DashboardView() {
     }
   };
 
+  // Print relance client
+  const printRelanceClient = () => {
+    if (relanceClientData.length === 0) return;
+    
+    const totalReste = relanceClientData.reduce((s, l) => s + l.resteAPayer, 0);
+    const totalTTC = relanceClientData.reduce((s, l) => s + l.montantTTC, 0);
+    const totalRegle = relanceClientData.reduce((s, l) => s + l.totalReglements, 0);
+    
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Relance Client - Factures Impayées</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { text-align: center; color: #333; margin-bottom: 20px; }
+          .summary { margin-bottom: 20px; padding: 10px; background: #f5f5f5; border-radius: 5px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f0f0f0; font-weight: bold; }
+          .text-right { text-align: right; }
+          .font-bold { font-weight: bold; }
+          .text-red { color: #dc2626; }
+          .total-row { background-color: #f9f9f9; font-weight: bold; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <h1>Relance Client - Factures Impayées</h1>
+        <div class="summary">
+          <strong>${relanceClientData.length} facture(s) impayée(s)</strong> - Total reste à payer: <strong class="text-red">${formatCurrency(totalReste)} DH</strong>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>N° Facture</th>
+              <th>Date</th>
+              <th class="text-right">Montant TTC</th>
+              <th class="text-right">Réglé</th>
+              <th class="text-right">Reste à payer</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${relanceClientData.map(line => `
+              <tr>
+                <td>${line.clientNom}</td>
+                <td>${line.numero}</td>
+                <td>${line.dateStr}</td>
+                <td class="text-right">${formatCurrency(line.montantTTC)}</td>
+                <td class="text-right">${formatCurrency(line.totalReglements)}</td>
+                <td class="text-right font-bold text-red">${formatCurrency(line.resteAPayer)}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="3">TOTAL</td>
+              <td class="text-right">${formatCurrency(totalTTC)}</td>
+              <td class="text-right">${formatCurrency(totalRegle)}</td>
+              <td class="text-right text-red">${formatCurrency(totalReste)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
+  // Export relance client to CSV
+  const exportRelanceClientCSV = () => {
+    if (relanceClientData.length === 0) return;
+    
+    const headers = ['Client', 'N° Facture', 'Date', 'Montant TTC', 'Réglé', 'Reste à payer'];
+    const rows = relanceClientData.map(line => [
+      line.clientNom,
+      line.numero,
+      line.dateStr,
+      line.montantTTC.toFixed(2),
+      line.totalReglements.toFixed(2),
+      line.resteAPayer.toFixed(2)
+    ]);
+    
+    // Add total row
+    const totalTTC = relanceClientData.reduce((s, l) => s + l.montantTTC, 0);
+    const totalRegle = relanceClientData.reduce((s, l) => s + l.totalReglements, 0);
+    const totalReste = relanceClientData.reduce((s, l) => s + l.resteAPayer, 0);
+    rows.push(['TOTAL', '', '', totalTTC.toFixed(2), totalRegle.toFixed(2), totalReste.toFixed(2)]);
+    
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `relance_client_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const generateReleve = async () => {
     if (!releveForm.tierId) { alert('Sélectionnez un tiers'); return; }
     const tier = tiersList.find(t => t.id === releveForm.tierId);
@@ -810,7 +923,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-blue-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur ARIV V2.76</p>
+          <p className="text-muted-foreground">Bienvenue sur ARIV V2.77</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
@@ -1104,7 +1217,17 @@ export function DashboardView() {
               </>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex gap-2">
+            {relanceClientData.length > 0 && (
+              <>
+                <Button variant="outline" onClick={printRelanceClient}>
+                  <Printer className="w-4 h-4 mr-2" />Imprimer
+                </Button>
+                <Button variant="outline" onClick={exportRelanceClientCSV}>
+                  <Download className="w-4 h-4 mr-2" />Exporter CSV
+                </Button>
+              </>
+            )}
             <Button variant="outline" onClick={() => setRelanceClientOpen(false)}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
