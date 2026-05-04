@@ -63,6 +63,13 @@ export function BonsLivraisonView() {
   const [multiArticleDialogOpen, setMultiArticleDialogOpen] = useState(false);
   const [selectedArticles, setSelectedArticles] = useState<string[]>([]);
 
+  // Multi-BL selection for grouped invoice
+  const [selectedBLs, setSelectedBLs] = useState<string[]>([]);
+  const [convertMultipleDialogOpen, setConvertMultipleDialogOpen] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [conflictResolutions, setConflictResolutions] = useState<Record<string, any>>({});
+
   useEffect(() => { fetchBons(); fetchClients(); fetchArticles(); fetchParametres(); }, []);
   
   useEffect(() => {
@@ -209,6 +216,110 @@ export function BonsLivraisonView() {
     }
   };
 
+  // Check if a BL can be selected for grouped invoice
+  const isBLSelectable = (bl: BonLivraison) => {
+    return bl.statut === 'VALIDEE' && !bl.facture;
+  };
+
+  // Toggle BL selection
+  const toggleBLSelection = (id: string) => {
+    setSelectedBLs(prev => 
+      prev.includes(id) 
+        ? prev.filter(blId => blId !== id)
+        : [...prev, id]
+    );
+  };
+
+  // Handle select all selectable BLs
+  const handleSelectAllBLs = () => {
+    const selectableIds = filtered.filter(isBLSelectable).map(b => b.id);
+    if (selectedBLs.length === selectableIds.length) {
+      setSelectedBLs([]);
+    } else {
+      setSelectedBLs(selectableIds);
+    }
+  };
+
+  // Handle multiple BL to single invoice conversion - analyze first
+  const handleConvertMultipleToFacture = async () => {
+    if (selectedBLs.length === 0) return;
+    
+    // Check if all selected BLs have the same client
+    const selectedBLData = bons.filter(b => selectedBLs.includes(b.id));
+    const clientIds = [...new Set(selectedBLData.map(b => b.clientId))];
+    
+    if (clientIds.length > 1) {
+      alert('Tous les BL sélectionnés doivent appartenir au même client.');
+      return;
+    }
+    
+    // Analyze BLs for duplicates and conflicts
+    try {
+      const res = await fetch(`/api/bons-livraison/convert-multiple?blIds=${selectedBLs.join(',')}`);
+      const analysis = await res.json();
+      
+      if (analysis.error) {
+        alert(analysis.error);
+        return;
+      }
+      
+      setAnalysisResult(analysis);
+      
+      if (analysis.hasConflicts) {
+        // Initialize resolutions with default (use reference price)
+        const initialResolutions: Record<string, any> = {};
+        analysis.conflicts.forEach((c: any) => {
+          const key = c.articleId || `designation:${c.designation}`;
+          initialResolutions[key] = { action: 'useReference', prixUnitaire: c.prixReference };
+        });
+        setConflictResolutions(initialResolutions);
+        setConflictDialogOpen(true);
+      } else {
+        setConvertMultipleDialogOpen(true);
+      }
+    } catch (e) {
+      alert('Erreur lors de l\'analyse des BL');
+    }
+  };
+
+  // Confirm and execute multiple BL conversion
+  const confirmConvertMultiple = async () => {
+    try {
+      const res = await fetch('/api/bons-livraison/convert-multiple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          blIds: selectedBLs,
+          conflictResolutions
+        })
+      });
+      
+      if (res.ok) {
+        const facture = await res.json();
+        alert(`Facture ${facture.numero} créée avec succès depuis ${selectedBLs.length} BL !`);
+        setSelectedBLs([]);
+        setConvertMultipleDialogOpen(false);
+        setConflictDialogOpen(false);
+        setAnalysisResult(null);
+        setConflictResolutions({});
+        fetchBons();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Erreur lors de la conversion');
+      }
+    } catch (e) {
+      alert('Erreur serveur');
+    }
+  };
+
+  // Update conflict resolution
+  const updateConflictResolution = (key: string, action: string, prixUnitaire?: number) => {
+    setConflictResolutions(prev => ({
+      ...prev,
+      [key]: { action, prixUnitaire: prixUnitaire || prev[key]?.prixUnitaire }
+    }));
+  };
+
   const resetForm = () => {
     setFormData({ numero: '', dateBL: new Date().toISOString().split('T')[0], clientId: '', bonCommande: '', infoLibre: '', notesLivraison: '' });
     setLignes([{ designation: '', quantite: 1, prixUnitaire: 0, totalHT: 0 }]);
@@ -310,6 +421,13 @@ export function BonsLivraisonView() {
           <PermissionGate permission="bl.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
+          <PermissionGate permission="facture.create">
+            {selectedBLs.length > 0 && (
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleConvertMultipleToFacture}>
+                <FileText className="w-4 h-4 mr-2" />Créer facture groupée ({selectedBLs.length} BL)
+              </Button>
+            )}
+          </PermissionGate>
           <PermissionGate permission="bl.create">
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           </PermissionGate>
@@ -339,6 +457,12 @@ export function BonsLivraisonView() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox 
+                      checked={filtered.filter(isBLSelectable).length > 0 && selectedBLs.length === filtered.filter(isBLSelectable).length}
+                      onCheckedChange={handleSelectAllBLs}
+                    />
+                  </TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('numero')}>N° <SortIcon field="numero" /></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('dateBL')}>Date <SortIcon field="dateBL" /></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('client')}>Client <SortIcon field="client" /></TableHead>
@@ -348,7 +472,15 @@ export function BonsLivraisonView() {
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>{filtered.map((b) => (<TableRow key={b.id}>
+              <TableBody>{filtered.map((b) => (<TableRow key={b.id} className={selectedBLs.includes(b.id) ? 'bg-blue-50' : ''}>
+                <TableCell>
+                  {isBLSelectable(b) && (
+                    <Checkbox 
+                      checked={selectedBLs.includes(b.id)}
+                      onCheckedChange={() => toggleBLSelection(b.id)}
+                    />
+                  )}
+                </TableCell>
                 <TableCell className="font-medium">{b.numero}</TableCell>
                 <TableCell>{new Date(b.dateBL).toLocaleDateString('fr-FR')}</TableCell>
                 <TableCell>{b.client?.raisonSociale}</TableCell>
@@ -512,6 +644,156 @@ export function BonsLivraisonView() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setCodeDialogOpen(false)}>Annuler</Button>
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCodeSubmit}>Confirmer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Conflict resolution dialog */}
+      <Dialog open={conflictDialogOpen} onOpenChange={setConflictDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Conflits de prix détectés</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Certains articles apparaissent avec des prix différents dans les BL sélectionnés. 
+              Veuillez choisir comment traiter chaque conflit.
+            </p>
+            <div className="space-y-4">
+              {analysisResult?.conflicts?.map((conflict: any, idx: number) => {
+                const key = conflict.articleId || `designation:${conflict.designation}`;
+                const resolution = conflictResolutions[key] || { action: 'useReference' };
+                
+                return (
+                  <div key={idx} className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
+                    <div className="font-medium text-yellow-800 mb-2">
+                      {conflict.designation}
+                    </div>
+                    <div className="text-sm text-yellow-700 mb-2">
+                      <span className="font-medium">Prix différents détectés : </span>
+                      {conflict.prixUnitaires.map((p: number, i: number) => (
+                        <span key={i} className="mx-1 px-2 py-0.5 bg-yellow-200 rounded">
+                          {formatCurrency(p)}
+                        </span>
+                      ))}
+                    </div>
+                    {conflict.prixReference && (
+                      <div className="text-sm text-green-700 mb-2">
+                        Prix de référence (article) : <strong>{formatCurrency(conflict.prixReference)}</strong>
+                      </div>
+                    )}
+                    <div className="text-sm text-muted-foreground mb-3">
+                      Quantité totale : <strong>{conflict.totalQuantite}</strong>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Choisir une action :</Label>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`conflict-${idx}`}
+                            checked={resolution.action === 'useReference'}
+                            onChange={() => updateConflictResolution(key, 'useReference', conflict.prixReference)}
+                            disabled={!conflict.prixReference}
+                          />
+                          <span className="text-sm">
+                            Utiliser le prix de référence ({conflict.prixReference ? formatCurrency(conflict.prixReference) : 'non disponible'})
+                          </span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`conflict-${idx}`}
+                            checked={resolution.action === 'keepSeparate'}
+                            onChange={() => updateConflictResolution(key, 'keepSeparate')}
+                          />
+                          <span className="text-sm">
+                            Garder les lignes séparées (ne pas fusionner)
+                          </span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`conflict-${idx}`}
+                            checked={resolution.action === 'useCustom'}
+                            onChange={() => updateConflictResolution(key, 'useCustom', resolution.prixUnitaire || conflict.prixUnitaires[0])}
+                          />
+                          <span className="text-sm">Utiliser un prix personnalisé :</span>
+                        </label>
+                        {resolution.action === 'useCustom' && (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={resolution.prixUnitaire || ''}
+                            onChange={(e) => updateConflictResolution(key, 'useCustom', parseFloat(e.target.value) || 0)}
+                            className="w-32 ml-6"
+                            placeholder="Prix unitaire"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {analysisResult?.normalLines && analysisResult.normalLines.length > 0 && (
+              <div className="border rounded-lg p-3 bg-green-50">
+                <div className="text-sm font-medium text-green-800 mb-2">
+                  Articles sans conflit (seront fusionnés automatiquement) :
+                </div>
+                <div className="text-sm text-green-700">
+                  {analysisResult.normalLines.map((line: any, idx: number) => (
+                    <div key={idx} className="flex justify-between">
+                      <span>{line.designation}</span>
+                      <span>Qté: {line.quantite} × {formatCurrency(line.prixUnitaire)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConflictDialogOpen(false)}>Annuler</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { setConflictDialogOpen(false); setConvertMultipleDialogOpen(true); }}>
+              Continuer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Confirmation dialog for multiple BL conversion */}
+      <Dialog open={convertMultipleDialogOpen} onOpenChange={setConvertMultipleDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Créer une facture groupée</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Vous allez créer une seule facture à partir de <strong>{selectedBLs.length} bon{selectedBLs.length > 1 ? 's' : ''} de livraison</strong>.
+            </p>
+            <div className="border rounded-lg p-3 bg-blue-50">
+              <div className="text-sm font-medium text-blue-800 mb-2">BL sélectionnés :</div>
+              <div className="text-sm text-blue-700 max-h-32 overflow-y-auto">
+                {bons.filter(b => selectedBLs.includes(b.id)).map(b => (
+                  <div key={b.id} className="flex justify-between">
+                    <span>{b.numero}</span>
+                    <span>{formatCurrency(b.totalHT)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-blue-200 mt-2 pt-2 flex justify-between font-bold text-blue-800">
+                <span>Total</span>
+                <span>{formatCurrency(bons.filter(b => selectedBLs.includes(b.id)).reduce((sum, b) => sum + b.totalHT, 0))}</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Client : {bons.find(b => selectedBLs.includes(b.id))?.client?.raisonSociale}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConvertMultipleDialogOpen(false)}>Annuler</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={confirmConvertMultiple}>
+              Créer la facture
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
