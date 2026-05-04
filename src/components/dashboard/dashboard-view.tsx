@@ -319,9 +319,9 @@ export function DashboardView() {
       for (const facture of validatedFactures) {
         const factureTTC = facture.totalTTC || 0;
         
-        // Get validated reglements for this facture (ENREGISTRE = validé)
+        // Get all reglements for this facture (ENREGISTRE ou VALIDE)
         const factureReglements = (Array.isArray(reglements) ? reglements : []).filter((r: any) => 
-          r.factureId === facture.id && r.statut === 'ENREGISTRE'
+          r.factureId === facture.id && (r.statut === 'ENREGISTRE' || r.statut === 'VALIDE')
         );
         const totalReglements = factureReglements.reduce((sum: number, r: any) => sum + (r.montant || 0), 0);
         
@@ -810,50 +810,50 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-blue-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur ARIV V2.75</p>
+          <p className="text-muted-foreground">Bienvenue sur ARIV V2.76</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
           <Button variant="outline" className="border-blue-600 text-blue-700" onClick={openEtatClientDialog}>
             <FileText className="w-4 h-4 mr-2" />Etat Client
           </Button>
-          <Button variant="outline" className="border-blue-600 text-blue-700" onClick={openRelanceClientDialog}>
+          <Button variant="outline" className="border-orange-600 text-orange-700" onClick={openRelanceClientDialog}>
             <AlertCircle className="w-4 h-4 mr-2" />Relance client
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={openReleveDialog}>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={openReleveDialog}>
             <Calculator className="w-4 h-4 mr-2" />Relevé Tiers
           </Button>
         </div>
       </div>
 
-      <div className="bg-blue-50 rounded-lg border border-blue-200 overflow-hidden">
+      <div className="bg-green-50 rounded-lg border border-green-200 overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-blue-100 hover:bg-blue-100">
-              <TableHead className="font-bold text-blue-700 border-r border-blue-200">Libellé</TableHead>
-              <TableHead className="text-center font-bold text-blue-700 bg-blue-200">Ce mois</TableHead>
+              <TableHead className="font-bold text-blue-700 border-r border-green-200">Libellé</TableHead>
+              <TableHead className="text-center font-bold text-blue-700 bg-green-200">Ce mois</TableHead>
               <TableHead className="text-center font-bold text-blue-700">m-1</TableHead>
               <TableHead className="text-center font-bold text-blue-700">m-2</TableHead>
               <TableHead className="text-center font-bold text-blue-700">m-3</TableHead>
               <TableHead className="text-center font-bold text-blue-700">m-4</TableHead>
               <TableHead className="text-center font-bold text-blue-700">m-5</TableHead>
               <TableHead className="text-center font-bold text-blue-700">m-6</TableHead>
-              <TableHead className="text-center font-bold text-blue-700 bg-blue-300">Cumul Année</TableHead>
+              <TableHead className="text-center font-bold text-blue-700 bg-green-300">Cumul Année</TableHead>
             </TableRow>
-            <TableRow className="bg-blue-50 hover:bg-blue-50">
-              <TableHead className="border-r border-blue-200"></TableHead>
+            <TableRow className="bg-green-50 hover:bg-green-50">
+              <TableHead className="border-r border-green-200"></TableHead>
               {[0, 1, 2, 3, 4, 5, 6].map((m) => (
-                <TableHead key={m} className={`text-center text-xs text-blue-600 ${m === 0 ? 'bg-blue-100' : ''}`}>
+                <TableHead key={m} className={`text-center text-xs text-green-600 ${m === 0 ? 'bg-blue-100' : ''}`}>
                   {getMonthName(m)}
                 </TableHead>
               ))}
-              <TableHead className="text-center text-xs text-blue-600 bg-blue-200">{new Date().getFullYear()}</TableHead>
+              <TableHead className="text-center text-xs text-green-600 bg-green-200">{new Date().getFullYear()}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {tableRows.map((row, idx) => (
               <TableRow key={idx} className="hover:bg-blue-100/50">
-                <TableCell className={`font-medium text-green-800 border-r border-blue-200 ${row.isTTC ? 'text-xs' : ''}`}>{row.label}</TableCell>
+                <TableCell className={`font-medium text-green-800 border-r border-green-200 ${row.isTTC ? 'text-xs' : ''}`}>{row.label}</TableCell>
                 {[0, 1, 2, 3, 4, 5, 6].map((m) => {
                   const key = `m${m}` as keyof MonthlyData;
                   return (
@@ -862,7 +862,7 @@ export function DashboardView() {
                     </TableCell>
                   );
                 })}
-                <TableCell className={`text-right font-mono bg-blue-200 font-bold ${row.isTTC ? 'text-xs' : ''}`}>
+                <TableCell className={`text-right font-mono bg-green-200 font-bold ${row.isTTC ? 'text-xs' : ''}`}>
                   {formatCurrency(row.yearly)}
                 </TableCell>
               </TableRow>
@@ -894,7 +894,7 @@ export function DashboardView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setReleveDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={generateReleve}>Générer</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={generateReleve}>Générer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -917,8 +917,8 @@ export function DashboardView() {
           <div className="py-4">
             {releveData.length === 0 ? (<div className="text-center text-muted-foreground py-8">Aucune donnée sur la période</div>) : (
               <>
-                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <span className="text-sm text-blue-600 font-medium">Solde Final:</span>
+                <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <span className="text-sm text-green-600 font-medium">Solde Final:</span>
                   <div className="text-xl font-bold text-blue-700">{formatCurrency(Math.abs(finalSolde))}
                     <span className="text-sm ml-2">{finalSolde >= 0 ? (isClient ? 'Créditeur' : 'Débiteur') : (isClient ? 'Débiteur' : 'Créditeur')}</span>
                   </div>
@@ -943,13 +943,13 @@ export function DashboardView() {
                         <TableCell>{line.numero}</TableCell>
                         <TableCell className="text-gray-600">{line.numeroRef || ''}</TableCell>
                         <TableCell className="text-right">{line.montantTTC > 0 ? formatCurrency(line.montantTTC) : ''}</TableCell>
-                        <TableCell className={`text-right font-medium ${line.type.includes('Règlement') ? 'text-blue-600' : line.type.includes('Facture') ? 'text-red-600' : ''}`}>
+                        <TableCell className={`text-right font-medium ${line.type.includes('Règlement') ? 'text-green-600' : line.type.includes('Facture') ? 'text-red-600' : ''}`}>
                           {line.montant !== 0 ? `${line.montant < 0 ? '-' : '+'}${formatCurrency(Math.abs(line.montant))}` : ''}
                         </TableCell>
                         <TableCell className="text-right font-bold">{formatCurrency(Math.abs(line.solde))}<span className="text-xs ml-1">{line.solde >= 0 ? (isClient ? '(C)' : '(D)') : (isClient ? '(D)' : '(C)')}</span></TableCell>
                       </TableRow>
                     ))}
-                    <TableRow className="bg-blue-50 font-bold"><TableCell colSpan={4}>TOTAL</TableCell><TableCell></TableCell><TableCell className="text-right">{formatCurrency(Math.abs(releveData.reduce((s, l) => s + l.montant, 0)))}</TableCell><TableCell></TableCell></TableRow>
+                    <TableRow className="bg-green-50 font-bold"><TableCell colSpan={4}>TOTAL</TableCell><TableCell></TableCell><TableCell className="text-right">{formatCurrency(Math.abs(releveData.reduce((s, l) => s + l.montant, 0)))}</TableCell><TableCell></TableCell></TableRow>
                   </TableBody>
                 </Table>
               </>
@@ -982,7 +982,7 @@ export function DashboardView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEtatClientDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={generateEtatClient}>Générer</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={generateEtatClient}>Générer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1038,9 +1038,9 @@ export function DashboardView() {
                     {etatClientData.map((line, idx) => {
                       let bgClass = '';
                       let typeLabel = '';
-                      if (line.type === 'facture') { bgClass = 'bg-blue-50'; typeLabel = 'Facture'; }
+                      if (line.type === 'facture') { bgClass = 'bg-green-50'; typeLabel = 'Facture'; }
                       else if (line.type === 'avoir') { bgClass = 'bg-yellow-50'; typeLabel = '  └ Avoir'; }
-                      else if (line.type === 'reglement') { bgClass = 'bg-blue-50'; typeLabel = '  └ Règlement'; }
+                      else if (line.type === 'reglement') { bgClass = 'bg-green-50'; typeLabel = '  └ Règlement'; }
                       else if (line.type === 'reste') { bgClass = 'bg-red-50 font-bold'; typeLabel = '  └ Reste à payer'; }
                       
                       return (
