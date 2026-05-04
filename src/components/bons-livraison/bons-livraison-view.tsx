@@ -415,21 +415,21 @@ export function BonsLivraisonView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-blue-700">Bons de Livraison</h1><p className="text-muted-foreground">Gérez vos BL</p></div>
+        <div><h1 className="text-3xl font-bold text-green-700">Bons de Livraison</h1><p className="text-muted-foreground">Gérez vos BL</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01</span>
+          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01</span>
           <PermissionGate permission="bl.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
           <PermissionGate permission="facture.create">
             {selectedBLs.length > 0 && (
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleConvertMultipleToFacture}>
+              <Button className="bg-green-600 hover:bg-green-700" onClick={handleConvertMultipleToFacture}>
                 <FileText className="w-4 h-4 mr-2" />Créer facture groupée ({selectedBLs.length} BL)
               </Button>
             )}
           </PermissionGate>
           <PermissionGate permission="bl.create">
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           </PermissionGate>
         </div>
       </div>
@@ -472,7 +472,7 @@ export function BonsLivraisonView() {
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>{filtered.map((b) => (<TableRow key={b.id} className={selectedBLs.includes(b.id) ? 'bg-blue-50' : ''}>
+              <TableBody>{filtered.map((b) => (<TableRow key={b.id} className={selectedBLs.includes(b.id) ? 'bg-green-50' : ''}>
                 <TableCell>
                   {isBLSelectable(b) && (
                     <Checkbox 
@@ -485,10 +485,10 @@ export function BonsLivraisonView() {
                 <TableCell>{new Date(b.dateBL).toLocaleDateString('fr-FR')}</TableCell>
                 <TableCell>{b.client?.raisonSociale}</TableCell>
                 <TableCell>{formatCurrency(b.totalHT)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
                 <TableCell>
                   {b.facture ? (
-                    <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 font-medium">
+                    <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800 font-medium">
                       ✓ {b.facture.numero}
                     </span>
                   ) : (
@@ -497,13 +497,13 @@ export function BonsLivraisonView() {
                 </TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
                   <PermissionGate permission="bl.validate">
-                    {b.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(b.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                    {b.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(b.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
                   </PermissionGate>
                   {b.statut === 'VALIDEE' && (
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className={b.facture ? "text-gray-400 cursor-not-allowed" : "text-blue-600"} 
+                      className={b.facture ? "text-gray-400 cursor-not-allowed" : "text-green-600"} 
                       onClick={() => !b.facture && handleConvertToFacture(b)} 
                       disabled={!!b.facture}
                       title={b.facture ? `Déjà facturé (${b.facture.numero})` : "Créer facture"}
@@ -527,7 +527,7 @@ export function BonsLivraisonView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} BL</DialogTitle>
-              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01-DLG</span>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -538,7 +538,7 @@ export function BonsLivraisonView() {
                   <Input value={formData.numero} disabled className="bg-gray-100" />
                 ) : (
                   <div className="space-y-1">
-                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-blue-700" />
+                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-green-700" />
                     <span className="text-xs text-muted-foreground">(Numéro automatique)</span>
                   </div>
                 )}
@@ -572,7 +572,7 @@ export function BonsLivraisonView() {
               <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
               <div><Label>Notes</Label><Textarea value={formData.notesLivraison} onChange={(e) => setFormData({ ...formData, notesLivraison: e.target.value })} /></div>
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -616,7 +616,7 @@ export function BonsLivraisonView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setMultiArticleDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleAddMultipleArticles} disabled={selectedArticles.length === 0}>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleAddMultipleArticles} disabled={selectedArticles.length === 0}>
               Ajouter {selectedArticles.length} article{selectedArticles.length > 1 ? 's' : ''}
             </Button>
           </DialogFooter>
@@ -643,7 +643,7 @@ export function BonsLivraisonView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCodeDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCodeSubmit}>Confirmer</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleCodeSubmit}>Confirmer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -754,7 +754,7 @@ export function BonsLivraisonView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConflictDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { setConflictDialogOpen(false); setConvertMultipleDialogOpen(true); }}>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { setConflictDialogOpen(false); setConvertMultipleDialogOpen(true); }}>
               Continuer
             </Button>
           </DialogFooter>
@@ -770,9 +770,9 @@ export function BonsLivraisonView() {
             <p className="text-sm text-muted-foreground">
               Vous allez créer une seule facture à partir de <strong>{selectedBLs.length} bon{selectedBLs.length > 1 ? 's' : ''} de livraison</strong>.
             </p>
-            <div className="border rounded-lg p-3 bg-blue-50">
-              <div className="text-sm font-medium text-blue-800 mb-2">BL sélectionnés :</div>
-              <div className="text-sm text-blue-700 max-h-32 overflow-y-auto">
+            <div className="border rounded-lg p-3 bg-green-50">
+              <div className="text-sm font-medium text-green-800 mb-2">BL sélectionnés :</div>
+              <div className="text-sm text-green-700 max-h-32 overflow-y-auto">
                 {bons.filter(b => selectedBLs.includes(b.id)).map(b => (
                   <div key={b.id} className="flex justify-between">
                     <span>{b.numero}</span>
@@ -780,7 +780,7 @@ export function BonsLivraisonView() {
                   </div>
                 ))}
               </div>
-              <div className="border-t border-blue-200 mt-2 pt-2 flex justify-between font-bold text-blue-800">
+              <div className="border-t border-green-200 mt-2 pt-2 flex justify-between font-bold text-green-800">
                 <span>Total</span>
                 <span>{formatCurrency(bons.filter(b => selectedBLs.includes(b.id)).reduce((sum, b) => sum + b.totalHT, 0))}</span>
               </div>
@@ -791,7 +791,7 @@ export function BonsLivraisonView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConvertMultipleDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={confirmConvertMultiple}>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={confirmConvertMultiple}>
               Créer la facture
             </Button>
           </DialogFooter>
