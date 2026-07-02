@@ -264,6 +264,13 @@ export function ReglementsClientsView() {
       .reduce((sum, a) => sum + a.totalTTC, 0);
   };
 
+  // Récupérer les avoirs liés à un règlement groupé via le marqueur infoLibre
+  const getAvoirsForReglement = (baseNumber: string) => {
+    return avoirs.filter(a =>
+      a.infoLibre && a.infoLibre.includes(`REGLEMENT:${baseNumber}`)
+    );
+  };
+
   const formatDateShort = (d: string) => {
     if (!d) return '';
     return new Date(d).toLocaleDateString('fr-FR');
@@ -506,14 +513,14 @@ export function ReglementsClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-blue-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.55</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.81</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
           <PermissionGate permission="reglements.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
           <PermissionGate permission="reglements.create">
-            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           </PermissionGate>
         </div>
       </div>
@@ -597,43 +604,77 @@ export function ReglementsClientsView() {
                             </div>
                           </TableCell>
                         </TableRow>
-                        {isExpanded && item.reglements.map((r) => (
-                          <TableRow key={r.id} className="bg-gray-50">
-                            <TableCell></TableCell>
-                            <TableCell className="pl-8 text-sm text-muted-foreground">{r.numero}</TableCell>
-                            <TableCell className="text-sm">{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
-                            <TableCell className="text-sm">{r.facture?.client?.raisonSociale}</TableCell>
-                            <TableCell className="text-sm">{r.facture?.numero}</TableCell>
-                            <TableCell className="text-sm">{formatCurrency(r.montant)}</TableCell>
-                            <TableCell className="text-sm">{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
-                            <TableCell className="text-sm">
-                              <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                {r.statut === 'VALIDE' ? 'Validé' : 'En attente'}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                {r.statut === 'ENREGISTRE' && (
-                                  <PermissionGate permission="reglements.validate">
-                                    <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(r.id)} title="Valider">
-                                      <CheckCircle className="h-4 w-4" />
-                                    </Button>
-                                  </PermissionGate>
-                                )}
-                                <PermissionGate permission="reglements.edit">
-                                  <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                </PermissionGate>
-                                <PermissionGate permission="reglements.edit">
-                                  <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </PermissionGate>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {isExpanded && (
+                          <>
+                            {item.reglements.map((r) => (
+                              <TableRow key={r.id} className="bg-gray-50">
+                                <TableCell></TableCell>
+                                <TableCell className="pl-8 text-sm text-muted-foreground">{r.numero}</TableCell>
+                                <TableCell className="text-sm">{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
+                                <TableCell className="text-sm">{r.facture?.client?.raisonSociale}</TableCell>
+                                <TableCell className="text-sm">{r.facture?.numero}</TableCell>
+                                <TableCell className="text-sm">{formatCurrency(r.montant)}</TableCell>
+                                <TableCell className="text-sm">{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
+                                <TableCell className="text-sm">
+                                  <span className={`px-2 py-1 rounded text-xs ${r.statut === 'VALIDE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                    {r.statut === 'VALIDE' ? 'Validé' : 'En attente'}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    {r.statut === 'ENREGISTRE' && (
+                                      <PermissionGate permission="reglements.validate">
+                                        <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(r.id)} title="Valider">
+                                          <CheckCircle className="h-4 w-4" />
+                                        </Button>
+                                      </PermissionGate>
+                                    )}
+                                    <PermissionGate permission="reglements.edit">
+                                      <Button size="sm" variant="outline" onClick={() => openEditDialog(r)} disabled={r.statut === 'VALIDE'} title="Modifier">
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                    </PermissionGate>
+                                    <PermissionGate permission="reglements.edit">
+                                      <Button size="sm" variant="destructive" onClick={() => handleDelete(r.id)} disabled={r.statut === 'VALIDE'} title="Supprimer">
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </PermissionGate>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            {/* Avoirs inclus dans ce règlement groupé */}
+                            {(() => {
+                              const reglementAvoirs = getAvoirsForReglement(item.baseNumber);
+                              if (reglementAvoirs.length === 0) return null;
+                              const totalAvoirs = reglementAvoirs.reduce((sum, a) => sum + a.totalTTC, 0);
+                              return (
+                                <TableRow className="bg-orange-50">
+                                  <TableCell></TableCell>
+                                  <TableCell colSpan={7}>
+                                    <div className="pl-4 py-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded">AVOIRS INCLUS ({reglementAvoirs.length})</span>
+                                        <span className="text-sm font-bold text-orange-700">Total: -{formatCurrency(totalAvoirs)}</span>
+                                        <span className="text-xs text-muted-foreground">| Net: {formatCurrency(item.totalMontant - totalAvoirs)}</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-3 pl-1">
+                                        {reglementAvoirs.map((a) => (
+                                          <span key={a.id} className="text-xs bg-white border border-orange-200 rounded px-2 py-1">
+                                            <span className="font-semibold text-orange-800">{a.numero}</span>
+                                            <span className="text-muted-foreground ml-1">{a.motif || ''}</span>
+                                            <span className="font-semibold text-orange-600 ml-1">-{formatCurrency(a.totalTTC)}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell></TableCell>
+                                </TableRow>
+                              );
+                            })()}
+                          </>
+                        )}
                       </>
                     );
                   } else {
@@ -916,7 +957,7 @@ export function ReglementsClientsView() {
             )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-              <Button type="submit" className="bg-green-600 hover:bg-green-700">{editingReglement ? 'Modifier' : 'Créer'}</Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editingReglement ? 'Modifier' : 'Créer'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
