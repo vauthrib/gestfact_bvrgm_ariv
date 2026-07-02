@@ -513,7 +513,7 @@ export function ReglementsClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-blue-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.81</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.82</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
           <PermissionGate permission="reglements.create">
@@ -578,7 +578,21 @@ export function ReglementsClientsView() {
                           <TableCell>{new Date(item.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
                           <TableCell>{item.client}</TableCell>
                           <TableCell className="text-blue-600 italic">{item.reglements.length} facture(s)</TableCell>
-                          <TableCell className="font-bold text-blue-700">{formatCurrency(item.totalMontant)}</TableCell>
+                          <TableCell className="font-bold text-blue-700">
+                            {(() => {
+                              const regAvoirs = getAvoirsForReglement(item.baseNumber);
+                              const totalAvoirs = regAvoirs.reduce((s, a) => s + a.totalTTC, 0);
+                              if (totalAvoirs > 0) {
+                                return (
+                                  <span>
+                                    <span className="line-through text-muted-foreground font-normal mr-1">{formatCurrency(item.totalMontant)}</span>
+                                    <span className="text-orange-600 font-bold">{formatCurrency(item.totalMontant - totalAvoirs)}</span>
+                                  </span>
+                                );
+                              }
+                              return <>{formatCurrency(item.totalMontant)}</>;
+                            })()}
+                          </TableCell>
                           <TableCell>{getModePaiementDisplay(item.modePaiement, null)}</TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded text-xs ${item.statut === 'VALIDE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
