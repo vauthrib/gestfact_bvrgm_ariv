@@ -29,6 +29,12 @@ interface Tiers {
   id: string; code: string; type: string; raisonSociale: string;
 }
 
+interface AvoirClient {
+  id: string; numero: string; clientId: string; factureId: string | null;
+  dateAvoir: string; motif: string | null; statut: string;
+  totalHT: number; totalTVA: number; totalTTC: number;
+}
+
 const parseNumber = (v: string) => { if (!v) return 0; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH`;
 
@@ -59,6 +65,7 @@ const ALL_CLIENTS = '__ALL__';
 export function ReglementsClientsView() {
   const [reglements, setReglements] = useState<ReglementClient[]>([]);
   const [factures, setFactures] = useState<FactureClient[]>([]);
+  const [avoirs, setAvoirs] = useState<AvoirClient[]>([]);
   const [tiers, setTiers] = useState<Tiers[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -86,9 +93,10 @@ export function ReglementsClientsView() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  useEffect(() => { fetchReglements(); fetchFactures(); fetchTiers(); }, []);
+  useEffect(() => { fetchReglements(); fetchFactures(); fetchTiers(); fetchAvoirs(); }, []);
   const fetchReglements = async () => { try { const res = await fetch('/api/reglements-clients'); const data = await res.json(); setReglements(Array.isArray(data) ? data : []); } catch (e) { console.error(e); } finally { setLoading(false); } };
   const fetchFactures = async () => { try { const res = await fetch('/api/factures-clients'); const data = await res.json(); setFactures(Array.isArray(data) ? data : []); } catch (e) { console.error(e); } };
+  const fetchAvoirs = async () => { try { const res = await fetch('/api/avoirs-clients'); const data = await res.json(); setAvoirs(Array.isArray(data) ? data : []); } catch (e) { console.error(e); } };
   const fetchTiers = async () => { try { const res = await fetch('/api/tiers'); const data = await res.json(); setTiers(Array.isArray(data) ? data.filter((t: Tiers) => t.type === 'CLIENT').sort((a, b) => a.raisonSociale.localeCompare(b.raisonSociale)) : []); } catch (e) { console.error(e); } };
 
   const calculerResteAPayer = (factureId: string, excludeReglementId?: string) => {
@@ -227,6 +235,21 @@ export function ReglementsClientsView() {
 
   const calculateTotalMultiPayment = () => {
     return multiPayments.reduce((sum, p) => sum + parseNumber(p.montant), 0);
+  };
+
+  const getAvoirsForClient = (clientId: string) => {
+    return avoirs.filter(a =>
+      a.statut === 'VALIDEE' && a.clientId === clientId
+    );
+  };
+
+  const calculateTotalAvoirs = (clientId: string) => {
+    return getAvoirsForClient(clientId).reduce((sum, a) => sum + a.totalTTC, 0);
+  };
+
+  const formatDateShort = (d: string) => {
+    if (!d) return '';
+    return new Date(d).toLocaleDateString('fr-FR');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -469,7 +492,7 @@ export function ReglementsClientsView() {
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
           <PermissionGate permission="reglements.create">
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           </PermissionGate>
         </div>
       </div>
@@ -728,10 +751,53 @@ export function ReglementsClientsView() {
                         ))}
                       </TableBody>
                     </Table>
+                    {/* Avoirs du client */}
+                    {selectedClientId !== ALL_CLIENTS && (() => {
+                      const clientAvoirs = getAvoirsForClient(selectedClientId);
+                      const totalAvoirs = calculateTotalAvoirs(selectedClientId);
+                      if (clientAvoirs.length === 0) return null;
+                      return (
+                        <div className="mt-4 border border-orange-300 rounded-lg p-4 bg-orange-50">
+                          <Label className="text-base font-semibold mb-2 block text-orange-800">
+                            Avoirs du client ({clientAvoirs.length} avoir{clientAvoirs.length > 1 ? 's' : ''} validé{clientAvoirs.length > 1 ? 's' : ''})
+                          </Label>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>N° Avoir</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Motif</TableHead>
+                                <TableHead className="text-right">Montant TTC</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {clientAvoirs.map((a) => (
+                                <TableRow key={a.id}>
+                                  <TableCell className="font-medium">{a.numero}</TableCell>
+                                  <TableCell>{formatDateShort(a.dateAvoir)}</TableCell>
+                                  <TableCell className="text-sm text-muted-foreground">{a.motif || '-'}</TableCell>
+                                  <TableCell className="text-right font-semibold text-orange-700">-{formatCurrency(a.totalTTC)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                          <div className="mt-3 p-3 bg-white rounded border border-orange-200 flex justify-between items-center">
+                            <span className="font-semibold text-orange-800">Total avoirs (crédit client):</span>
+                            <span className="text-xl font-bold text-orange-700">-{formatCurrency(totalAvoirs)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div className="mt-4 p-3 bg-white rounded border flex justify-between items-center">
                       <span className="font-semibold">Total à régler:</span>
                       <span className="text-xl font-bold text-blue-600">{formatCurrency(calculateTotalMultiPayment())}</span>
                     </div>
+                    {selectedClientId !== ALL_CLIENTS && calculateTotalAvoirs(selectedClientId) > 0 && (
+                      <div className="mt-2 p-3 bg-blue-50 rounded border border-blue-200 flex justify-between items-center">
+                        <span className="font-semibold">Solde net (après déduction avoirs):</span>
+                        <span className="text-xl font-bold text-blue-700">{formatCurrency(calculateTotalMultiPayment() - calculateTotalAvoirs(selectedClientId))}</span>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -817,7 +883,7 @@ export function ReglementsClientsView() {
             )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editingReglement ? 'Modifier' : 'Créer'}</Button>
+              <Button type="submit" className="bg-green-600 hover:bg-green-700">{editingReglement ? 'Modifier' : 'Créer'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
