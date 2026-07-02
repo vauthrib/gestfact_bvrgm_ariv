@@ -72,6 +72,17 @@ export async function POST(request: NextRequest) {
         createdReglements.push(reglement);
       }
       
+      // Mark selected avoirs as used in this règlement
+      if (data.avoirIds && Array.isArray(data.avoirIds) && data.avoirIds.length > 0) {
+        const avoirMark = `REGLEMENT:${baseNumber}`;
+        await prisma.avoirClient.updateMany({
+          where: { id: { in: data.avoirIds } },
+          data: {
+            infoLibre: avoirMark
+          }
+        });
+      }
+
       return NextResponse.json({ 
         success: true, 
         count: createdReglements.length,

@@ -33,6 +33,7 @@ interface AvoirClient {
   id: string; numero: string; clientId: string; factureId: string | null;
   dateAvoir: string; motif: string | null; statut: string;
   totalHT: number; totalTVA: number; totalTTC: number;
+  infoLibre: string | null;
 }
 
 const parseNumber = (v: string) => { if (!v) return 0; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
@@ -80,6 +81,7 @@ export function ReglementsClientsView() {
   const [isMultiPayment, setIsMultiPayment] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>(ALL_CLIENTS);
   const [multiPayments, setMultiPayments] = useState<MultiFacturePayment[]>([]);
+  const [selectedAvoirIds, setSelectedAvoirIds] = useState<Set<string>>(new Set());
   
   const [formData, setFormData] = useState({
     factureId: '', dateReglement: new Date().toISOString().split('T')[0],
@@ -237,14 +239,29 @@ export function ReglementsClientsView() {
     return multiPayments.reduce((sum, p) => sum + parseNumber(p.montant), 0);
   };
 
+  // Avoir utilisé = son infoLibre contient le marqueur REGLEMENT:
+  const isAvoirUsed = (avoir: AvoirClient) => {
+    return !!(avoir.infoLibre && avoir.infoLibre.includes('REGLEMENT:'));
+  };
+
   const getAvoirsForClient = (clientId: string) => {
     return avoirs.filter(a =>
-      a.statut === 'VALIDEE' && a.clientId === clientId
+      a.statut === 'VALIDEE' && a.clientId === clientId && !isAvoirUsed(a)
     );
   };
 
-  const calculateTotalAvoirs = (clientId: string) => {
-    return getAvoirsForClient(clientId).reduce((sum, a) => sum + a.totalTTC, 0);
+  const toggleAvoirSelection = (avoirId: string) => {
+    setSelectedAvoirIds(prev => {
+      const next = new Set(prev);
+      if (next.has(avoirId)) { next.delete(avoirId); } else { next.add(avoirId); }
+      return next;
+    });
+  };
+
+  const calculateTotalSelectedAvoirs = () => {
+    return avoirs
+      .filter(a => selectedAvoirIds.has(a.id))
+      .reduce((sum, a) => sum + a.totalTTC, 0);
   };
 
   const formatDateShort = (d: string) => {
@@ -270,6 +287,7 @@ export function ReglementsClientsView() {
       }
       
       try {
+        const selectedAvoirIdsArr = Array.from(selectedAvoirIds);
         const res = await fetch('/api/reglements-clients', {
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' },
@@ -278,6 +296,7 @@ export function ReglementsClientsView() {
               factureId: p.factureId,
               montant: parseNumber(p.montant)
             })),
+            avoirIds: selectedAvoirIdsArr,
             dateReglement: formData.dateReglement,
             modePaiement: formData.modePaiement,
             reference: formData.reference,
@@ -291,7 +310,9 @@ export function ReglementsClientsView() {
           const result = await res.json();
           setDialogOpen(false);
           resetForm();
+          setSelectedAvoirIds(new Set());
           fetchReglements();
+          fetchAvoirs();
           alert(`Règlement groupé ${result.baseNumber} créé avec ${result.count} éclaté(s)`);
         } else {
           const err = await res.json();
@@ -685,9 +706,11 @@ export function ReglementsClientsView() {
                         setIsMultiPayment(e.target.checked);
                         if (!e.target.checked) {
                           setMultiPayments([]);
+                          setSelectedAvoirIds(new Set());
                         } else if (selectedClientId !== ALL_CLIENTS) {
                           const clientFactures = getFacturesForClient(selectedClientId);
                           setMultiPayments(clientFactures);
+                          setSelectedAvoirIds(new Set());
                         }
                       }}
                       className="w-4 h-4"
@@ -751,19 +774,19 @@ export function ReglementsClientsView() {
                         ))}
                       </TableBody>
                     </Table>
-                    {/* Avoirs du client */}
+                    {/* Avoirs du client - disponibles */}
                     {selectedClientId !== ALL_CLIENTS && (() => {
                       const clientAvoirs = getAvoirsForClient(selectedClientId);
-                      const totalAvoirs = calculateTotalAvoirs(selectedClientId);
                       if (clientAvoirs.length === 0) return null;
                       return (
                         <div className="mt-4 border border-orange-300 rounded-lg p-4 bg-orange-50">
                           <Label className="text-base font-semibold mb-2 block text-orange-800">
-                            Avoirs du client ({clientAvoirs.length} avoir{clientAvoirs.length > 1 ? 's' : ''} validé{clientAvoirs.length > 1 ? 's' : ''})
+                            Avoirs du client ({clientAvoirs.length} avoir{clientAvoirs.length > 1 ? 's' : ''} disponible{clientAvoirs.length > 1 ? 's' : ''})
                           </Label>
                           <Table>
                             <TableHeader>
                               <TableRow>
+                                <TableHead className="w-10">Appliquer</TableHead>
                                 <TableHead>N° Avoir</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Motif</TableHead>
@@ -772,7 +795,15 @@ export function ReglementsClientsView() {
                             </TableHeader>
                             <TableBody>
                               {clientAvoirs.map((a) => (
-                                <TableRow key={a.id}>
+                                <TableRow key={a.id} className={selectedAvoirIds.has(a.id) ? 'bg-orange-100' : ''}>
+                                  <TableCell>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedAvoirIds.has(a.id)}
+                                      onChange={() => toggleAvoirSelection(a.id)}
+                                      className="w-4 h-4 accent-orange-600"
+                                    />
+                                  </TableCell>
                                   <TableCell className="font-medium">{a.numero}</TableCell>
                                   <TableCell>{formatDateShort(a.dateAvoir)}</TableCell>
                                   <TableCell className="text-sm text-muted-foreground">{a.motif || '-'}</TableCell>
@@ -781,10 +812,12 @@ export function ReglementsClientsView() {
                               ))}
                             </TableBody>
                           </Table>
-                          <div className="mt-3 p-3 bg-white rounded border border-orange-200 flex justify-between items-center">
-                            <span className="font-semibold text-orange-800">Total avoirs (crédit client):</span>
-                            <span className="text-xl font-bold text-orange-700">-{formatCurrency(totalAvoirs)}</span>
-                          </div>
+                          {selectedAvoirIds.size > 0 && (
+                            <div className="mt-3 p-3 bg-white rounded border border-orange-200 flex justify-between items-center">
+                              <span className="font-semibold text-orange-800">Avoirs sélectionnés ({selectedAvoirIds.size}):</span>
+                              <span className="text-xl font-bold text-orange-700">-{formatCurrency(calculateTotalSelectedAvoirs())}</span>
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
@@ -792,10 +825,10 @@ export function ReglementsClientsView() {
                       <span className="font-semibold">Total à régler:</span>
                       <span className="text-xl font-bold text-blue-600">{formatCurrency(calculateTotalMultiPayment())}</span>
                     </div>
-                    {selectedClientId !== ALL_CLIENTS && calculateTotalAvoirs(selectedClientId) > 0 && (
+                    {calculateTotalSelectedAvoirs() > 0 && (
                       <div className="mt-2 p-3 bg-blue-50 rounded border border-blue-200 flex justify-between items-center">
-                        <span className="font-semibold">Solde net (après déduction avoirs):</span>
-                        <span className="text-xl font-bold text-blue-700">{formatCurrency(calculateTotalMultiPayment() - calculateTotalAvoirs(selectedClientId))}</span>
+                        <span className="font-semibold">Solde net (après déduction avoirs cochés):</span>
+                        <span className="text-xl font-bold text-blue-700">{formatCurrency(calculateTotalMultiPayment() - calculateTotalSelectedAvoirs())}</span>
                       </div>
                     )}
                   </>
