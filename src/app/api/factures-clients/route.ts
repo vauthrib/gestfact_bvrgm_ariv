@@ -79,9 +79,18 @@ export async function PUT(request: NextRequest) {
     // Supprimer les anciennes lignes et créer les nouvelles
     await prisma.ligneFactureClient.deleteMany({ where: { factureId: id } });
 
+    // Si changement de client, vérifier que le nouveau client existe
+    if (factureData.clientId) {
+      const newClient = await prisma.tiers.findUnique({ where: { id: factureData.clientId } });
+      if (!newClient) {
+        return NextResponse.json({ error: 'Client introuvable' }, { status: 400 });
+      }
+    }
+
     const facture = await prisma.factureClient.update({
       where: { id },
       data: {
+        clientId: factureData.clientId || undefined,
         dateFacture: factureData.dateFacture ? new Date(factureData.dateFacture) : undefined,
         dateEcheance: factureData.dateEcheance ? new Date(factureData.dateEcheance) : undefined,
         bonCommande: factureData.bonCommande || null,
