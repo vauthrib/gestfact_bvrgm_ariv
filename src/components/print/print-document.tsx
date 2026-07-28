@@ -165,14 +165,14 @@ export function PrintDocument({
     // V2.59: Mode A5 double - Valeurs médianes entre V2.57 et V2.58
     if (isBLDoc && doubleA5) {
       // Scale médian pour la largeur (entre 0.707 et 1.0)
-      const A5_SCALE = 0.85;
+      const A5_SCALE = 0.707;
 
       // Convert mm to px pour A5 (avec échelle médiane)
       const mmToPx5 = (mm: number) => Math.round(mm * 3.779527559 * A5_SCALE);
       const mmToPx5Str = (mm: number) => `${mmToPx5(mm)}px`;
 
       // Décalage vertical médian (entre 0 et 25mm)
-      const Y_OFFSET = 12;
+      const Y_OFFSET = 0;
 
       // Adapter le layout pour A5
       const a5Layout = {
@@ -282,41 +282,38 @@ export function PrintDocument({
           <style>
             @page { size: A4 landscape; margin: 0; }
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
+            html, body {
               font-family: Arial, sans-serif;
               font-size: 8pt;
-              width: 297mm;
-              height: 210mm;
+              width: 100%;
+              height: 100%;
+              overflow: hidden;
             }
             .page-container {
-              width: 297mm;
-              height: 210mm;
+              width: 100%;
+              height: 100%;
               display: flex;
               flex-direction: row;
             }
             .bl-half {
-              width: 148.5mm;
-              height: 210mm;
+              width: 50%;
+              height: 100%;
               position: relative;
-              border-right: 1px dashed #ccc;
               overflow: hidden;
-            }
-            .bl-half:last-child {
-              border-right: none;
             }
             .letterhead-img {
               position: absolute;
               top: 0;
               left: 0;
-              width: 148.5mm;
-              height: 210mm;
+              width: 100%;
+              height: 100%;
               z-index: 0;
               object-fit: contain;
             }
             .page {
               position: relative;
-              width: 148.5mm;
-              height: 210mm;
+              width: 100%;
+              height: 100%;
               z-index: 1;
             }
             .doc-info {
