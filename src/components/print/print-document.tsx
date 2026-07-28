@@ -162,16 +162,16 @@ export function PrintDocument({
     const isBLDoc = documentType === 'BL';
     const showPrices = !hidePrices;
 
-    // V2.59: Mode A5 double - Valeurs médianes entre V2.57 et V2.58
+    // V2.86: Mode A5 double - Scale réduit pour éviter coupure en bas (3-4mm)
     if (isBLDoc && doubleA5) {
-      // Scale médian pour la largeur (entre 0.707 et 1.0)
-      const A5_SCALE = 0.707;
+      // Scale réduit pour laisser une marge en bas de page A5
+      const A5_SCALE = 0.695;
 
       // Convert mm to px pour A5 (avec échelle médiane)
       const mmToPx5 = (mm: number) => Math.round(mm * 3.779527559 * A5_SCALE);
       const mmToPx5Str = (mm: number) => `${mmToPx5(mm)}px`;
 
-      // Décalage vertical médian (entre 0 et 25mm)
+      // Décalage vertical (0 = pas de décalage)
       const Y_OFFSET = 0;
 
       // Adapter le layout pour A5
