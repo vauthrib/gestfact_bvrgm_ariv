@@ -103,7 +103,7 @@ const numberToWords = (num: number): string => {
 };
 
 // V2.60 - Couleurs par instance
-const PRIMARY_COLOR = '#3b82f6'; // blue-500
+const PRIMARY_COLOR = '#22c55e'; // green-500
 
 const DEFAULT_LAYOUT: PrintLayout = {
   docInfo: { x: 120, y: 10, width: 80, height: 45, visible: true },
@@ -327,7 +327,8 @@ export function PrintDocument({
               text-align: right;
             }
             .doc-info h2 { font-size: 10pt; margin-bottom: 2px; }
-            .doc-info .numero { font-size: 9pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
+            .doc-info .numero { font-size: 13pt; font-weight: 900; color: #000; }
+            .doc-info .numero-bl { font-size: 11pt; font-weight: 900; color: #000; }
             .doc-info p { font-size: 7pt; margin: 1px 0; }
             .client-info {
               position: absolute;
@@ -432,7 +433,8 @@ export function PrintDocument({
               text-align: right;
             }
             .doc-info h2 { font-size: 14pt; margin-bottom: 5px; }
-            .doc-info .numero { font-size: 12pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
+            .doc-info .numero { font-size: 16pt; font-weight: 900; color: #000; }
+            .doc-info .numero-bl { font-size: 13pt; font-weight: 900; color: #000; }
             .doc-info p { font-size: 10pt; margin: 2px 0; }
             .client-info {
               position: absolute;
@@ -462,7 +464,7 @@ export function PrintDocument({
               text-align: right;
             }
             .totals-section p { font-size: 10pt; margin: 3px 0; }
-            .totals-section .total-ttc { font-size: 12pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
+            .totals-section .total-ttc { font-size: 15pt; font-weight: 900; color: #000; }
             .footer-section {
               position: absolute;
               left: ${mmToPxStr(adjustedLayout.footer.x)};
@@ -486,7 +488,7 @@ export function PrintDocument({
                 <p class="numero">${getNumero()}</p>
                 <p>Date: ${docDate}</p>
                 ${documentData.bonCommande ? `<p>BC: ${documentData.bonCommande}</p>` : ''}
-                ${documentData.numeroBL ? `<p>BL: ${documentData.numeroBL}</p>` : ''}
+                ${documentData.numeroBL ? `<p class="numero-bl">BL: ${documentData.numeroBL}</p>` : ''}
                 ${documentData.dateEcheance ? `<p>Échéance: ${formatDate(documentData.dateEcheance)}</p>` : ''}
               </div>
             ` : ''}
@@ -581,7 +583,8 @@ export function PrintDocument({
             .company p { font-size: 9pt; color: #666; margin: 2px 0; }
             .doc-info { text-align: right; }
             .doc-info h2 { font-size: 14pt; margin-bottom: 5px; }
-            .doc-info .numero { font-size: 12pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
+            .doc-info .numero { font-size: 16pt; font-weight: 900; color: #000; }
+            .doc-info .numero-bl { font-size: 13pt; font-weight: 900; color: #000; }
             .doc-info p { font-size: 10pt; margin: 2px 0; }
             .client-box {
               background: #f8f9fa;
@@ -599,7 +602,7 @@ export function PrintDocument({
             tr:nth-child(even) { background: #f8f9fa; }
             .totals { text-align: right; margin-top: 20px; margin-bottom: 30px; }
             .totals p { font-size: 10pt; margin: 5px 0; }
-            .totals .total-ttc { font-size: 14pt; font-weight: bold; color: ${PRIMARY_COLOR}; }
+            .totals .total-ttc { font-size: 16pt; font-weight: 900; color: #000; }
             .footer { border-top: 1px solid #ddd; padding-top: 15px; font-size: 8pt; color: #666; }
             .footer p { margin: 2px 0; }
             @media print {
@@ -621,7 +624,7 @@ export function PrintDocument({
               <p class="numero">${getNumero()}</p>
               <p>Date: ${docDate}</p>
               ${documentData.bonCommande ? `<p>BC: ${documentData.bonCommande}</p>` : ''}
-              ${documentData.numeroBL ? `<p>BL: ${documentData.numeroBL}</p>` : ''}
+              ${documentData.numeroBL ? `<p class="numero-bl">BL: ${documentData.numeroBL}</p>` : ''}
               ${documentData.dateEcheance ? `<p>Échéance: ${formatDate(documentData.dateEcheance)}</p>` : ''}
             </div>
           </div>
