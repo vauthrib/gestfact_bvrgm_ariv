@@ -345,7 +345,7 @@ export function PrintDocument({
             table { width: 100%; border-collapse: collapse; }
             th { background: ${PRIMARY_COLOR}; color: white; padding: 3px 4px; text-align: left; font-size: 7pt; }
             th:last-child, td:last-child { text-align: right; }
-            td { padding: 2px 4px; border-bottom: 1px solid #ddd; font-size: 7pt; }
+            td { padding: 2px 4px; border-bottom: 1px solid #ddd; font-size: 7pt; white-space: pre-line; }
             .totals-section {
               position: absolute;
               left: ${mmToPx5Str(a5Layout.totals.x)};
@@ -451,7 +451,7 @@ export function PrintDocument({
             table { width: 100%; border-collapse: collapse; }
             th { background: ${PRIMARY_COLOR}; color: white; padding: 8px 6px; text-align: left; font-size: 9pt; }
             th:last-child, td:last-child { text-align: right; }
-            td { padding: 6px; border-bottom: 1px solid #ddd; font-size: 9pt; }
+            td { padding: 6px; border-bottom: 1px solid #ddd; font-size: 9pt; white-space: pre-line; }
             td:first-child { max-width: 80mm; }
             .totals-section {
               position: absolute;
@@ -528,8 +528,8 @@ export function PrintDocument({
                     `).join('')}
                   </tbody>
                 </table>
-                ${documentData.infoLibre ? `<p style="margin-top: 10px; font-size: 9pt;"><strong>Info:</strong> ${documentData.infoLibre}</p>` : ''}
-                ${documentData.notes ? `<p style="margin-top: 5px; font-size: 9pt;"><strong>Notes:</strong> ${documentData.notes}</p>` : ''}
+                ${documentData.infoLibre ? `<p style="margin-top: 10px; font-size: 9pt; white-space: pre-line;"><strong>Info:</strong> ${documentData.infoLibre}</p>` : ''}
+                ${documentData.notes ? `<p style="margin-top: 5px; font-size: 9pt; white-space: pre-line;"><strong>Notes:</strong> ${documentData.notes}</p>` : ''}
               </div>
             ` : ''}
             
@@ -595,7 +595,7 @@ export function PrintDocument({
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             th { background: ${PRIMARY_COLOR}; color: white; padding: 10px 6px; text-align: left; font-size: 9pt; }
             th:last-child, td:last-child { text-align: right; }
-            td { padding: 8px 6px; border-bottom: 1px solid #ddd; font-size: 9pt; }
+            td { padding: 8px 6px; border-bottom: 1px solid #ddd; font-size: 9pt; white-space: pre-line; }
             tr:nth-child(even) { background: #f8f9fa; }
             .totals { text-align: right; margin-top: 20px; margin-bottom: 30px; }
             .totals p { font-size: 10pt; margin: 5px 0; }
@@ -661,8 +661,8 @@ export function PrintDocument({
                 `).join('')}
               </tbody>
             </table>
-            ${documentData.infoLibre ? `<p style="margin-top: 10px; font-size: 9pt;"><strong>Info:</strong> ${documentData.infoLibre}</p>` : ''}
-            ${documentData.notes ? `<p style="margin-top: 5px; font-size: 9pt;"><strong>Notes:</strong> ${documentData.notes}</p>` : ''}
+            ${documentData.infoLibre ? `<p style="margin-top: 10px; font-size: 9pt; white-space: pre-line;"><strong>Info:</strong> ${documentData.infoLibre}</p>` : ''}
+            ${documentData.notes ? `<p style="margin-top: 5px; font-size: 9pt; white-space: pre-line;"><strong>Notes:</strong> ${documentData.notes}</p>` : ''}
           ` : ''}
           
           ${showPrices ? `
