@@ -353,7 +353,7 @@ export function PrintDocument({
               width: ${mmToPx5Str(a5Layout.totals.width)};
               text-align: right;
             }
-            .totals-section p { font-size: 8pt; margin: 2px 0; }
+            .totals-section p { font-size: 8pt; margin: 2px 0; white-space: nowrap; }
             .footer-section {
               position: absolute;
               left: ${mmToPx5Str(a5Layout.footer.x)};
@@ -460,8 +460,8 @@ export function PrintDocument({
               width: ${mmToPxStr(adjustedLayout.totals.width)};
               text-align: right;
             }
-            .totals-section p { font-size: 10pt; margin: 3px 0; }
-            .totals-section .total-ttc { font-size: 15pt; font-weight: 900; color: #000; }
+            .totals-section p { font-size: 10pt; margin: 3px 0; white-space: nowrap; }
+            .totals-section .total-ttc { font-size: 15pt; font-weight: 900; color: #000; white-space: nowrap; }
             .footer-section {
               position: absolute;
               left: ${mmToPxStr(adjustedLayout.footer.x)};
@@ -598,8 +598,8 @@ export function PrintDocument({
             td { padding: 8px 6px; border-bottom: 1px solid #ddd; font-size: 9pt; white-space: pre-line; }
             tr:nth-child(even) { background: #f8f9fa; }
             .totals { text-align: right; margin-top: 20px; margin-bottom: 30px; }
-            .totals p { font-size: 10pt; margin: 5px 0; }
-            .totals .total-ttc { font-size: 16pt; font-weight: 900; color: #000; }
+            .totals p { font-size: 10pt; margin: 5px 0; white-space: nowrap; }
+            .totals .total-ttc { font-size: 16pt; font-weight: 900; color: #000; white-space: nowrap; }
             .footer { border-top: 1px solid #ddd; padding-top: 15px; font-size: 8pt; color: #666; }
             .footer p { margin: 2px 0; }
             @media print {
