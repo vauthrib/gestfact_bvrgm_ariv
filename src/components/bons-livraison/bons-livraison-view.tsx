@@ -500,16 +500,18 @@ export function BonsLivraisonView() {
                     {b.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(b.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
                   </PermissionGate>
                   {b.statut === 'VALIDEE' && (
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className={b.facture ? "text-gray-400 cursor-not-allowed" : "text-green-600"} 
-                      onClick={() => !b.facture && handleConvertToFacture(b)} 
-                      disabled={!!b.facture}
-                      title={b.facture ? `Déjà facturé (${b.facture.numero})` : "Créer facture"}
-                    >
-                      <FileText className="h-4 w-4" />
-                    </Button>
+                    <PermissionGate permission="facture.create">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className={b.facture ? "text-gray-400 cursor-not-allowed" : "text-green-600"} 
+                        onClick={() => !b.facture && handleConvertToFacture(b)} 
+                        disabled={!!b.facture}
+                        title={b.facture ? `Déjà facturé (${b.facture.numero})` : "Créer facture"}
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
+                    </PermissionGate>
                   )}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(b)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
                   <PermissionGate permission="bl.edit">

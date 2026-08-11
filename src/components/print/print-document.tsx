@@ -322,10 +322,11 @@ export function PrintDocument({
               top: ${mmToPx5Str(a5Layout.docInfo.y)};
               width: ${mmToPx5Str(a5Layout.docInfo.width)};
               text-align: right;
+              overflow: hidden;
             }
             .doc-info h2 { font-size: 10pt; margin-bottom: 2px; }
             .doc-info .numero { font-size: 13pt; font-weight: 900; color: #000; }
-            .doc-info .numero-bl { font-size: 11pt; font-weight: 900; color: #000; }
+            .doc-info .numero-bl { font-size: 11pt; font-weight: 900; color: #000; word-wrap: break-word; overflow-wrap: break-word; }
             .doc-info p { font-size: 7pt; margin: 1px 0; }
             .client-info {
               position: absolute;
@@ -428,10 +429,11 @@ export function PrintDocument({
               top: ${mmToPxStr(adjustedLayout.docInfo.y)};
               width: ${mmToPxStr(adjustedLayout.docInfo.width)};
               text-align: right;
+              overflow: hidden;
             }
             .doc-info h2 { font-size: 14pt; margin-bottom: 5px; }
             .doc-info .numero { font-size: 16pt; font-weight: 900; color: #000; }
-            .doc-info .numero-bl { font-size: 13pt; font-weight: 900; color: #000; }
+            .doc-info .numero-bl { font-size: 13pt; font-weight: 900; color: #000; word-wrap: break-word; overflow-wrap: break-word; }
             .doc-info p { font-size: 10pt; margin: 2px 0; }
             .client-info {
               position: absolute;
@@ -578,10 +580,10 @@ export function PrintDocument({
             }
             .company h1 { font-size: 18pt; color: ${PRIMARY_COLOR}; margin-bottom: 5px; }
             .company p { font-size: 9pt; color: #666; margin: 2px 0; }
-            .doc-info { text-align: right; }
+            .doc-info { text-align: right; overflow: hidden; }
             .doc-info h2 { font-size: 14pt; margin-bottom: 5px; }
             .doc-info .numero { font-size: 16pt; font-weight: 900; color: #000; }
-            .doc-info .numero-bl { font-size: 13pt; font-weight: 900; color: #000; }
+            .doc-info .numero-bl { font-size: 13pt; font-weight: 900; color: #000; word-wrap: break-word; overflow-wrap: break-word; }
             .doc-info p { font-size: 10pt; margin: 2px 0; }
             .client-box {
               background: #f8f9fa;

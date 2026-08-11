@@ -923,7 +923,7 @@ export function DashboardView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-blue-700">Tableau de bord</h1>
-          <p className="text-muted-foreground">Bienvenue sur ARIV V2.88</p>
+          <p className="text-muted-foreground">Bienvenue sur ARIV V2.89</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">TDB01</span>
