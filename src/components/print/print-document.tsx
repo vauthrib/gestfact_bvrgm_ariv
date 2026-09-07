@@ -429,11 +429,23 @@ export function PrintDocument({
               top: ${mmToPxStr(adjustedLayout.docInfo.y)};
               width: ${mmToPxStr(adjustedLayout.docInfo.width)};
               text-align: right;
-              overflow: hidden;
             }
             .doc-info h2 { font-size: 14pt; margin-bottom: 5px; }
             .doc-info .numero { font-size: 16pt; font-weight: 900; color: #000; }
-            .doc-info .numero-bl { font-size: 13pt; font-weight: 900; color: #000; word-wrap: break-word; overflow-wrap: break-word; }
+            /* V2.90 - Liste BL groupés: police réduite + largeur pleine page (évite chevauchement des articles) */
+            .doc-info .numero-bl {
+              position: absolute;
+              left: ${mmToPxStr(-(adjustedLayout.docInfo.x - adjustedLayout.margins.left))};
+              right: 0;
+              top: 100%;
+              font-size: 8pt;
+              font-weight: 900;
+              color: #000;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
+              white-space: pre-wrap;
+              text-align: right;
+            }
             .doc-info p { font-size: 10pt; margin: 2px 0; }
             .client-info {
               position: absolute;
@@ -580,10 +592,11 @@ export function PrintDocument({
             }
             .company h1 { font-size: 18pt; color: ${PRIMARY_COLOR}; margin-bottom: 5px; }
             .company p { font-size: 9pt; color: #666; margin: 2px 0; }
-            .doc-info { text-align: right; overflow: hidden; }
+            .doc-info { text-align: right; }
             .doc-info h2 { font-size: 14pt; margin-bottom: 5px; }
             .doc-info .numero { font-size: 16pt; font-weight: 900; color: #000; }
-            .doc-info .numero-bl { font-size: 13pt; font-weight: 900; color: #000; word-wrap: break-word; overflow-wrap: break-word; }
+            /* V2.90 - Liste BL groupés: police réduite + largeur pleine page */
+            .doc-info .numero-bl { font-size: 9pt; font-weight: 900; color: #000; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap; }
             .doc-info p { font-size: 10pt; margin: 2px 0; }
             .client-box {
               background: #f8f9fa;
