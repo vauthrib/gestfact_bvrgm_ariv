@@ -178,19 +178,49 @@ export function ReglementsClientsView() {
     // Combine groups and singles
     const result: (GroupedReglement | ReglementClient)[] = [];
     
-    // Add groups first
-    for (const baseNumber of Object.keys(groups).sort((a, b) => b.localeCompare(a))) {
+    const groupBaseNumbers = new Set(Object.keys(groups));
+    for (const baseNumber of Object.keys(groups)) {
       result.push(groups[baseNumber]);
     }
-    
-    // Add singles that are not part of a group
-    const groupBaseNumbers = new Set(Object.keys(groups));
     for (const r of sorted) {
       const match = r.numero.match(/^(.+)-([a-z])$/);
       if (!match && !groupBaseNumbers.has(r.numero)) {
         result.push(r);
       }
     }
+    
+    // V2.91 - Triage: appliquer le tri choisi (date, nom, N°, montant...) aux groupes ET aux règlements isolés
+    const sortValue = (item: GroupedReglement | ReglementClient): string | number => {
+      if (sortField === 'modePaiement') return item.modePaiement || '';
+      if (sortField === 'statut') return item.statut || '';
+      if ('reglements' in item) {
+        switch (sortField) {
+          case 'numero': return item.baseNumber;
+          case 'dateReglement': return new Date(item.dateReglement).getTime();
+          case 'client': return item.client || '';
+          case 'facture': return item.reglements[0]?.facture?.numero || '';
+          case 'montant': return item.totalMontant;
+          default: return 0;
+        }
+      }
+      switch (sortField) {
+        case 'numero': return item.numero;
+        case 'dateReglement': return new Date(item.dateReglement).getTime();
+        case 'client': return item.facture?.client?.raisonSociale || '';
+        case 'facture': return item.facture?.numero || '';
+        case 'montant': return item.montant;
+        default: return 0;
+      }
+    };
+    result.sort((a, b) => {
+      const va = sortValue(a);
+      const vb = sortValue(b);
+      if (typeof va === 'string' || typeof vb === 'string') {
+        const cmp = String(va).localeCompare(String(vb));
+        return sortDirection === 'asc' ? cmp : -cmp;
+      }
+      return sortDirection === 'asc' ? va - vb : vb - va;
+    });
     
     return result;
   };
@@ -513,7 +543,7 @@ export function ReglementsClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-blue-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.82</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-700">Règlements Clients</h1><p className="text-muted-foreground">Gérez les règlements reçus - V2.91</p></div>
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">MFC01</span>
           <PermissionGate permission="reglements.create">

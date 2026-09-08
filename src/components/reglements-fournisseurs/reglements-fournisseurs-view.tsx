@@ -151,11 +151,43 @@ export function ReglementsFournisseursView() {
     }
     
     const result: (GroupedReglement | ReglementFournisseur)[] = [];
-    for (const baseNumber of Object.keys(groups).sort((a, b) => b.localeCompare(a))) result.push(groups[baseNumber]);
+    for (const baseNumber of Object.keys(groups)) result.push(groups[baseNumber]);
     for (const r of sorted) {
       const match = r.infoLibre?.match(/GROUPE:([A-Z0-9-]+)/);
       if (!match) result.push(r);
     }
+    
+    // V2.91 - Triage: appliquer le tri choisi (date, nom, N°, montant...) aux groupes ET aux règlements isolés
+    const sortValue = (item: GroupedReglement | ReglementFournisseur): string | number => {
+      if (sortField === 'modePaiement') return item.modePaiement || '';
+      if (sortField === 'statut') return item.statut || '';
+      if ('reglements' in item) {
+        switch (sortField) {
+          case 'dateReglement': return new Date(item.dateReglement).getTime();
+          case 'fournisseur': return item.fournisseur || '';
+          case 'facture': return item.reglements[0]?.facture?.numeroFacture || '';
+          case 'montant': return item.totalMontant;
+          default: return 0;
+        }
+      }
+      switch (sortField) {
+        case 'dateReglement': return new Date(item.dateReglement).getTime();
+        case 'fournisseur': return item.facture?.fournisseur?.raisonSociale || '';
+        case 'facture': return item.facture?.numeroFacture || '';
+        case 'montant': return item.montant;
+        default: return 0;
+      }
+    };
+    result.sort((a, b) => {
+      const va = sortValue(a);
+      const vb = sortValue(b);
+      if (typeof va === 'string' || typeof vb === 'string') {
+        const cmp = String(va).localeCompare(String(vb));
+        return sortDirection === 'asc' ? cmp : -cmp;
+      }
+      return sortDirection === 'asc' ? va - vb : vb - va;
+    });
+    
     return result;
   };
 
