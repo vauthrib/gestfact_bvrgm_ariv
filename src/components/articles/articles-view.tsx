@@ -11,6 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Pencil, Trash2, Search, Package, Download, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PermissionGate } from '@/components/auth/permission-gate';
+import { LabelTemplateEditor, LabelTemplateData } from '@/components/print/label-template-editor';
+import { Tag } from 'lucide-react';
 
 interface Article {
   id: string; code: string; designation: string; prixUnitaire: number;
@@ -35,6 +37,8 @@ export function ArticlesView() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [labelEditorOpen, setLabelEditorOpen] = useState(false);
+  const [labelTemplates, setLabelTemplates] = useState<LabelTemplateData[]>([]);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [formData, setFormData] = useState({
     code: '', designation: '', prixUnitaire: '', unite: 'pièce', tauxTVA: '20', infoLibre: '', actif: true,
@@ -48,7 +52,20 @@ export function ArticlesView() {
   const [sortField, setSortField] = useState<SortField>('designation');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  useEffect(() => { fetchArticles(); }, []);
+  useEffect(() => { fetchArticles(); fetchLabelTemplates(); }, []);
+
+  const fetchLabelTemplates = async () => {
+    try { const res = await fetch('/api/label-templates'); const d = await res.json(); setLabelTemplates(Array.isArray(d) ? d : []); } catch (e) {}
+  };
+
+  const handleSaveLabelTemplate = async (template: LabelTemplateData) => {
+    try {
+      const method = template.id ? 'PUT' : 'POST';
+      const body = template.id ? template : { ...template, id: undefined };
+      await fetch('/api/label-templates', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      fetchLabelTemplates();
+    } catch (e) { alert('Erreur sauvegarde template'); }
+  };
 
   const fetchArticles = async () => {
     try {
@@ -158,6 +175,7 @@ export function ArticlesView() {
           <PermissionGate permission="articles.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
+          <Button variant="outline" onClick={() => setLabelEditorOpen(true)}><Tag className="w-4 h-4 mr-2" />Étiquettes</Button>
           <PermissionGate permission="articles.create">
             <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           </PermissionGate>
@@ -297,6 +315,7 @@ export function ArticlesView() {
           </form>
         </DialogContent>
       </Dialog>
+      <LabelTemplateEditor open={labelEditorOpen} onOpenChange={setLabelEditorOpen} template={null} onSave={handleSaveLabelTemplate} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="articles" code="ART01" />
     </div>
   );

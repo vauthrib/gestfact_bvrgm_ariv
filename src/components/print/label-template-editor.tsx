@@ -10,7 +10,7 @@ import { Trash2, Plus, Upload, Eye } from 'lucide-react';
 
 export interface LabelField {
   id: string;
-  type: 'code' | 'designation' | 'date' | 'numero' | 'quantite' | 'barcode' | 'client' | 'text';
+  type: 'code' | 'designation' | 'date' | 'numero' | 'quantite' | 'barcode' | 'qrcode' | 'client' | 'text';
   label?: string;
   value?: string; // pour type 'text'
   x: number;      // position X en mm

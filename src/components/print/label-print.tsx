@@ -1,13 +1,17 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, Settings, QrCode } from 'lucide-react';
+import { Printer, Settings } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import JsBarcode from 'jsbarcode';
-import { QRCodeSVG } from 'qrcode.react';
 import { LabelTemplateEditor, LabelTemplateData, LabelField } from './label-template-editor';
+
+// Import dynamique de QRCodeSVG pour éviter les erreurs SSR
+const QRCodeSVG = dynamic(() => import('qrcode.react').then(mod => mod.QRCodeSVG), { ssr: false });
 
 interface LigneBL {
   id?: string;
@@ -44,7 +48,6 @@ interface LabelPrintProps {
 
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH`;
 
-// Calculer les étiquettes à imprimer pour un BL
 function calculerEtiquettes(bl: BonLivraison, articles: Article[]): Array<{
   designation: string;
   code: string;
@@ -85,7 +88,6 @@ function calculerEtiquettes(bl: BonLivraison, articles: Article[]): Array<{
   return result;
 }
 
-// Générer le nom de fichier codé pour l'étiquette
 function generateLabelFileName(blNumero: string, articleCode: string, labelNum: number): string {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const blHash = blNumero.replace(/[^A-Za-z0-9]/g, '').slice(-4);
@@ -93,7 +95,6 @@ function generateLabelFileName(blNumero: string, articleCode: string, labelNum: 
   return `LBL-${date}-${blHash}-${artHash}-${String(labelNum).padStart(3, '0')}`;
 }
 
-// Rendre un champ dynamique
 function renderField(field: LabelField, data: Record<string, string>, scale: number, baseUrl: string) {
   if (field.type === 'qrcode') {
     const qrValue = `${baseUrl}/article/${encodeURIComponent(data.code || '')}`;
@@ -111,9 +112,7 @@ function renderField(field: LabelField, data: Record<string, string>, scale: num
     );
   }
 
-  if (field.type === 'barcode') {
-    return null; // Géré séparément
-  }
+  if (field.type === 'barcode') return null;
 
   let content = '';
   switch (field.type) {
@@ -155,16 +154,14 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
   const etiquettes = bl ? calculerEtiquettes(bl, articles) : [];
   const totalLabels = etiquettes.reduce((sum, e) => sum + e.nbEtiquettes, 0);
 
-  // Template sélectionné
   const selectedTemplate: LabelTemplateData | null = 
     selectedTemplateId === 'default' 
       ? (templates.find(t => t.isDefault) || templates[0] || null)
       : templates.find(t => t.id === selectedTemplateId) || null;
 
-  const scale = 3; // 1mm = 3px
+  const scale = 3;
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
-  // Générer les codes-barres après chaque rendu
   useEffect(() => {
     if (!open) return;
     const timer = setTimeout(() => {
@@ -191,7 +188,6 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
     return () => clearTimeout(timer);
   }, [open, etiquettes.length, selectedTemplateId]);
 
-  // Impression A5 sur A4 (2 étiquettes côte à côte)
   const handlePrint = () => {
     const printContent = document.getElementById('label-print-area');
     if (!printContent) return;
@@ -206,54 +202,15 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
       <head>
         <title>Étiquettes - ${bl?.numero || ''}</title>
         <style>
-          @page { 
-            margin: 10mm; 
-            size: A4 landscape; 
-          }
-          body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 0; 
-          }
-          .print-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5mm;
-            padding: 5mm;
-          }
-          .label-card { 
-            border: 1px solid #ccc; 
-            page-break-inside: avoid;
-            position: relative;
-            overflow: hidden;
-            width: ${lw}mm;
-            height: ${lh}mm;
-          }
-          .label-image { 
-            position: absolute; top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            object-fit: contain; 
-            opacity: 0.15; 
-            z-index: 0; 
-          }
-          .label-content { 
-            position: relative; 
-            z-index: 1; 
-            width: 100%; 
-            height: 100%; 
-          }
-          .label-footer {
-            position: absolute;
-            bottom: 1mm;
-            right: 1mm;
-            font-size: 6px;
-            color: #999;
-          }
+          @page { margin: 10mm; size: A4 landscape; }
+          body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+          .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; padding: 5mm; }
+          .label-card { border: 1px solid #ccc; page-break-inside: avoid; position: relative; overflow: hidden; width: ${lw}mm; height: ${lh}mm; }
+          .label-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0.15; z-index: 0; }
+          .label-content { position: relative; z-index: 1; width: 100%; height: 100%; }
+          .label-footer { position: absolute; bottom: 1mm; right: 1mm; font-size: 6px; color: #999; }
           svg { max-width: 100%; }
-          @media print { 
-            .no-print { display: none; } 
-            .print-grid { gap: 3mm; padding: 3mm; }
-          }
+          @media print { .no-print { display: none; } .print-grid { gap: 3mm; padding: 3mm; } }
         </style>
       </head>
       <body>
@@ -328,7 +285,6 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
             </div>
           </DialogHeader>
           <div className="py-2 space-y-4">
-            {/* Sélection du template */}
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <Label className="mb-1 block">Template d'étiquette</Label>
@@ -345,7 +301,6 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
               <Button variant="outline" size="sm" onClick={handleNewTemplate}>+ Nouveau</Button>
               <Button variant="outline" size="sm" onClick={handleEditTemplate}><Settings className="h-4 w-4 mr-1" />Éditer</Button>
             </div>
-            {/* Récapitulatif */}
             <div className="text-sm text-muted-foreground">
               {etiquettes.length} article(s) — <strong>{totalLabels} étiquette(s)</strong> — Format A5 (2 par feuille A4)
             </div>
@@ -366,14 +321,11 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                     <td className="p-2 text-right">{e.qteBL}</td>
                     <td className="p-2 text-right">{e.qteParEtiquette}</td>
                     <td className="p-2 text-right font-bold">{e.nbEtiquettes}</td>
-                    <td className="p-2 font-mono text-xs text-muted-foreground">
-                      {generateLabelFileName(bl.numero, e.code, 1)}
-                    </td>
+                    <td className="p-2 font-mono text-xs text-muted-foreground">{generateLabelFileName(bl.numero, e.code, 1)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {/* Aperçu des étiquettes */}
             <div id="label-print-area">
               {etiquettes.map((e, idx) =>
                 Array.from({ length: e.nbEtiquettes }).map((_, j) => {
@@ -443,7 +395,6 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Éditeur de template */}
       <LabelTemplateEditor
         open={editorOpen}
         onOpenChange={setEditorOpen}
