@@ -77,6 +77,8 @@ export async function PUT(request: NextRequest) {
         tauxTVA: updateData.tauxTVA,
         infoLibre: updateData.infoLibre || null,
         actif: updateData.actif,
+        // V2.93
+        conditionnement: updateData.conditionnement !== undefined ? updateData.conditionnement : undefined,
         // Nouveaux champs V2.63
         diametreFil: updateData.diametreFil !== undefined ? (updateData.diametreFil || null) : undefined,
         poidsGr: updateData.poidsGr !== undefined ? (updateData.poidsGr || null) : undefined,

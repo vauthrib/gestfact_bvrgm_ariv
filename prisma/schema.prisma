@@ -40,12 +40,12 @@ model Tiers {
 model Article {
   id            String   @id @default(cuid())
   code          String   @unique
-  designation   String
-  prixUnitaire  Float    @default(0)
-  unite         String    @default("pièce")
+  designation   String  prixUnitaire  Float    @default(0)
+  unite         String   @default("pièce")
   tauxTVA       Float    @default(20)
   infoLibre     String?
   actif         Boolean  @default(true)
+  conditionnement Float  @default(0) // V2.93: Qté par emballage (0 = pas d'étiquettes)
   // Nouveaux champs V2.63
   diametreFil   Float?   // Diamètre de fil en mm
   poidsGr       Float?   // Poids en grammes

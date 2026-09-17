@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, ArrowUp, ArrowDown, ArrowUpDown, ListPlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, EyeOff } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
@@ -62,6 +62,12 @@ export function FacturesClientsView() {
   // Multi-article dialog
   const [multiArticleDialogOpen, setMultiArticleDialogOpen] = useState(false);
   const [selectedArticles, setSelectedArticles] = useState<string[]>([]);
+
+  // V2.93 - Visualisation facture + détaillée (avec BL liés)
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewingFacture, setViewingFacture] = useState<FactureClient | null>(null);
+  const [viewingBLs, setViewingBLs] = useState<any[]>([]);
+  const [viewDetailed, setViewDetailed] = useState(false);
 
   useEffect(() => { fetchFactures(); fetchClients(); fetchArticles(); fetchParametres(); }, []);
   
@@ -185,6 +191,81 @@ export function FacturesClientsView() {
     } catch (e) { setSelectedFacture(facture); setPrintOpen(true); }
   };
 
+  // V2.93 - Visualiser les données de la facture (simple)
+  const handleView = async (facture: FactureClient) => {
+    try {
+      const res = await fetch('/api/factures-clients');
+      const all = await res.json();
+      const full = all.find((f: any) => f.id === facture.id);
+      setViewingFacture(full || facture);
+      setViewDetailed(false);
+      setViewingBLs([]);
+      setViewDialogOpen(true);
+    } catch (e) {
+      setViewingFacture(facture);
+      setViewDialogOpen(true);
+    }
+  };
+
+  // V2.93 - Visualiser détaillé: liste des BL liés + recap par ref
+  const handleViewDetailed = async (facture: FactureClient) => {
+    try {
+      // Charger la facture complète
+      const resF = await fetch('/api/factures-clients');
+      const allF = await resF.json();
+      const full = allF.find((f: any) => f.id === facture.id);
+      const f = full || facture;
+      setViewingFacture(f);
+      // Charger les BL liés
+      const resBL = await fetch('/api/bons-livraison');
+      const allBL = await resBL.json();
+      const linkedBLs = Array.isArray(allBL) ? allBL.filter((b: any) => b.facture?.id === f.id) : [];
+      // Charger les articles pour les noms
+      const resA = await fetch('/api/articles');
+      const allA = await resA.json();
+      const articleMap = new Map((Array.isArray(allA) ? allA : []).map((a: any) => [a.id, a]));
+      // Enrichir les BL avec les infos articles
+      const enrichedBLs = linkedBLs.map((bl: any) => ({
+        ...bl,
+        lignes: (bl.lignes || []).map((l: any) => ({
+          ...l,
+          articleCode: articleMap.get(l.articleId)?.code || '-'
+        }))
+      }));
+      setViewingBLs(enrichedBLs);
+      setViewDetailed(true);
+      setViewDialogOpen(true);
+    } catch (e) {
+      setViewingFacture(facture);
+      setViewingBLs([]);
+      setViewDetailed(true);
+      setViewDialogOpen(true);
+    }
+  };
+
+  // V2.93 - Construire le recap: regroupement par ref article × BL
+  const buildRecapTable = () => {
+    if (!viewingBLs.length) return [];
+    const recap: Record<string, any> = {};
+    for (const bl of viewingBLs) {
+      for (const l of (bl.lignes || [])) {
+        const key = l.articleId || l.designation;
+        if (!recap[key]) {
+          recap[key] = {
+            articleId: l.articleId,
+            code: l.articleCode || '-',
+            designation: l.designation || '-',
+            totalQte: 0,
+            blDetails: {}
+          };
+        }
+        recap[key].totalQte += l.quantite;
+        recap[key].blDetails[bl.numero] = (recap[key].blDetails[bl.numero] || 0) + l.quantite;
+      }
+    }
+    return Object.values(recap);
+  };
+
   const openEditDialog = async (facture: FactureClient) => {
     // Si la facture est validée, demander le code
     if (facture.statut === 'VALIDEE') {
@@ -281,14 +362,14 @@ export function FacturesClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-blue-700">Factures Clients</h1><p className="text-muted-foreground">Gérez vos factures</p></div>
+        <div><h1 className="text-3xl font-bold text-green-700">Factures Clients</h1><p className="text-muted-foreground">Gérez vos factures</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
+          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
           <PermissionGate permission="factures.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
           <PermissionGate permission="factures.create">
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           </PermissionGate>
         </div>
       </div>
@@ -333,10 +414,18 @@ export function FacturesClientsView() {
                 <TableCell>{formatCurrency(f.totalHT)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTVA)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTTC)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
                   <PermissionGate permission="factures.validate">
-                    {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                    {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  {/* V2.93 - Visualiser facture si validée */}
+                  {f.statut === 'VALIDEE' && (
+                    <Button size="sm" variant="outline" className="text-green-700" onClick={() => handleView(f)} title="Visualiser la facture"><Eye className="h-4 w-4" /></Button>
+                  )}
+                  {/* V2.93 - Visualiser détaillé (BL liés) si facture groupée */}
+                  {f.statut === 'VALIDEE' && f.numeroBL && (
+                    <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleViewDetailed(f)} title="Visualiser détaillé (BL liés)"><EyeOff className="h-4 w-4" /></Button>
+                  )}
                   </PermissionGate>
                   <Button size="sm" variant="outline" onClick={() => handlePrint(f)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
                   <PermissionGate permission="factures.edit">
@@ -356,7 +445,7 @@ export function FacturesClientsView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Facture</DialogTitle>
-              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DLG</span>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -367,7 +456,7 @@ export function FacturesClientsView() {
                   <Input value={formData.numero} disabled className="bg-gray-100" />
                 ) : (
                   <div className="space-y-1">
-                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-blue-700" />
+                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-green-700" />
                     <span className="text-xs text-muted-foreground">(Numéro automatique)</span>
                   </div>
                 )}
@@ -410,7 +499,7 @@ export function FacturesClientsView() {
               <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
               <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} /></div>
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -435,7 +524,7 @@ export function FacturesClientsView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCodeDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCodeSubmit}>Confirmer</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleCodeSubmit}>Confirmer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -479,9 +568,146 @@ export function FacturesClientsView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setMultiArticleDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleAddMultipleArticles} disabled={selectedArticles.length === 0}>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleAddMultipleArticles} disabled={selectedArticles.length === 0}>
               Ajouter {selectedArticles.length} article{selectedArticles.length > 1 ? 's' : ''}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* V2.93 - Dialog visualisation simple de la facture */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Facture {viewingFacture?.numero}</DialogTitle>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-VISU</span>
+            </div>
+          </DialogHeader>
+          {viewingFacture && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-4 gap-4">
+                <div><Label className="text-muted-foreground">N° Facture</Label><div className="font-bold text-green-700">{viewingFacture.numero}</div></div>
+                <div><Label className="text-muted-foreground">Date</Label><div>{new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</div></div>
+                <div><Label className="text-muted-foreground">Échéance</Label><div>{viewingFacture.dateEcheance ? new Date(viewingFacture.dateEcheance).toLocaleDateString('fr-FR') : '-'}</div></div>
+                <div><Label className="text-muted-foreground">Statut</Label><div><span className={`px-2 py-1 rounded text-xs ${viewingFacture.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{viewingFacture.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></div></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div><Label className="text-muted-foreground">Client</Label><div>{viewingFacture.client?.raisonSociale}</div></div>
+                <div><Label className="text-muted-foreground">Bon de commande</Label><div>{viewingFacture.bonCommande || '-'}</div></div>
+                <div><Label className="text-muted-foreground">N° BL</Label><div>{viewingFacture.numeroBL || '-'}</div></div>
+              </div>
+              <div className="border rounded-lg p-4">
+                <Label className="mb-2 block">Lignes</Label>
+                <Table>
+                  <TableHeader><TableRow><TableHead>Désignation</TableHead><TableHead>Qté</TableHead><TableHead>P.U.</TableHead><TableHead>TVA%</TableHead><TableHead>Total HT</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {(viewingFacture.lignes || []).map((l, idx) => (
+                      <TableRow key={l.id || idx}>
+                        <TableCell className="whitespace-pre-wrap">{l.designation}</TableCell>
+                        <TableCell>{l.quantite}</TableCell>
+                        <TableCell>{formatCurrency(parseNumber(l.prixUnitaire))}</TableCell>
+                        <TableCell>{l.tauxTVA}%</TableCell>
+                        <TableCell>{formatCurrency(l.totalHT)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="flex justify-end gap-8 mt-2 font-bold">
+                  <span>HT: {formatCurrency(viewingFacture.totalHT)}</span>
+                  <span>TVA: {formatCurrency(viewingFacture.totalTVA)}</span>
+                  <span>TTC: {formatCurrency(viewingFacture.totalTTC)}</span>
+                </div>
+              </div>
+              {(viewingFacture.infoLibre || viewingFacture.notes) && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Info libre</Label><div className="whitespace-pre-wrap text-sm border rounded p-2 bg-gray-50">{viewingFacture.infoLibre || '-'}</div></div>
+                  <div><Label>Notes</Label><div className="whitespace-pre-wrap text-sm border rounded p-2 bg-gray-50">{viewingFacture.notes || '-'}</div></div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setViewDialogOpen(false); if (viewingFacture) handlePrint(viewingFacture); }}><Printer className="h-4 w-4 mr-1" />Imprimer</Button>
+            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* V2.93 - Dialog visualisation détaillée: recap par ref + BL liés */}
+      <Dialog open={viewDialogOpen && viewDetailed} onOpenChange={(open) => { if (!open) { setViewDialogOpen(false); setViewDetailed(false); } }}>
+        <DialogContent className="max-w-5xl max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Visualisation détaillée - {viewingFacture?.numero}</DialogTitle>
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DETAILED</span>
+            </div>
+          </DialogHeader>
+          {viewingFacture && (
+            <div className="space-y-6 py-2">
+              {/* En-tête facture */}
+              <div className="grid grid-cols-4 gap-4 text-sm">
+                <div><span className="text-muted-foreground">Client :</span> <span className="font-medium">{viewingFacture.client?.raisonSociale}</span></div>
+                <div><span className="text-muted-foreground">Date :</span> <span className="font-medium">{new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</span></div>
+                <div><span className="text-muted-foreground">N° BL :</span> <span className="font-medium">{viewingFacture.numeroBL || '-'}</span></div>
+                <div><span className="text-muted-foreground">TTC :</span> <span className="font-bold">{formatCurrency(viewingFacture.totalTTC)}</span></div>
+              </div>
+              {/* Recap par référence article × BL */}
+              {viewingBLs.length > 0 && (
+                <div className="border rounded-lg p-4">
+                  <Label className="mb-2 block font-semibold text-blue-700">Récapitulatif par référence</Label>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Réf</TableHead>
+                        <TableHead>Désignation</TableHead>
+                        <TableHead className="text-right">Qté totale</TableHead>
+                        {viewingBLs.map((bl) => (
+                          <TableHead key={bl.id} className="text-right">{bl.numero}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {buildRecapTable().map((r: any, idx: number) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium font-mono">{r.code}</TableCell>
+                          <TableCell>{r.designation}</TableCell>
+                          <TableCell className="text-right font-bold">{r.totalQte}</TableCell>
+                          {viewingBLs.map((bl) => (
+                            <TableCell key={bl.id} className="text-right">{r.blDetails[bl.numero] || '-'}</TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+              {/* Détails par BL */}
+              {viewingBLs.map((bl) => (
+                <div key={bl.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="font-semibold">BL {bl.numero}</Label>
+                    <span className="text-sm text-muted-foreground">{new Date(bl.dateBL).toLocaleDateString('fr-FR')} — Total HT: {formatCurrency(bl.totalHT)}</span>
+                  </div>
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Réf</TableHead><TableHead>Désignation</TableHead><TableHead className="text-right">Qté</TableHead><TableHead className="text-right">P.U.</TableHead><TableHead className="text-right">Total HT</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {(bl.lignes || []).map((l: any, idx: number) => (
+                        <TableRow key={l.id || idx}>
+                          <TableCell className="font-mono text-sm">{l.articleCode || '-'}</TableCell>
+                          <TableCell className="whitespace-pre-wrap text-sm">{l.designation}</TableCell>
+                          <TableCell className="text-right">{l.quantite}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(l.prixUnitaire)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(l.totalHT)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setViewDialogOpen(false); setViewDetailed(false); if (viewingFacture) handlePrint(viewingFacture); }}><Printer className="h-4 w-4 mr-1" />Imprimer</Button>
+            <Button variant="outline" onClick={() => { setViewDialogOpen(false); setViewDetailed(false); }}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
