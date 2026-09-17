@@ -46,6 +46,7 @@ const FIELD_TYPES = [
   { value: 'numero', label: 'N° BL' },
   { value: 'quantite', label: 'Quantité' },
   { value: 'barcode', label: 'Code-barres (Code128)' },
+  { value: 'qrcode', label: 'QR Code (lien article)' },
   { value: 'client', label: 'Client' },
   { value: 'text', label: 'Texte fixe' },
 ];
@@ -230,6 +231,8 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                 }}>
                   {field.type === 'barcode' ? (
                     <div className="w-full h-full flex items-center justify-center text-xs bg-gray-100"> barcode </div>
+                  ) : field.type === 'qrcode' ? (
+                    <div className="w-full h-full flex items-center justify-center text-xs bg-gray-100"> QR </div>
                   ) : field.type === 'text' ? (
                     field.value || 'Texte'
                   ) : (

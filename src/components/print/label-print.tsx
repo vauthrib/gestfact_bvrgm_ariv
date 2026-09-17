@@ -3,9 +3,10 @@
 import { useRef, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, Settings, Eye } from 'lucide-react';
+import { Printer, Settings, QrCode } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import JsBarcode from 'jsbarcode';
+import { QRCodeSVG } from 'qrcode.react';
 import { LabelTemplateEditor, LabelTemplateData, LabelField } from './label-template-editor';
 
 interface LigneBL {
@@ -84,8 +85,36 @@ function calculerEtiquettes(bl: BonLivraison, articles: Article[]): Array<{
   return result;
 }
 
+// Générer le nom de fichier codé pour l'étiquette
+function generateLabelFileName(blNumero: string, articleCode: string, labelNum: number): string {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const blHash = blNumero.replace(/[^A-Za-z0-9]/g, '').slice(-4);
+  const artHash = articleCode.replace(/[^A-Za-z0-9]/g, '').slice(-4);
+  return `LBL-${date}-${blHash}-${artHash}-${String(labelNum).padStart(3, '0')}`;
+}
+
 // Rendre un champ dynamique
-function renderField(field: LabelField, data: Record<string, string>, scale: number) {
+function renderField(field: LabelField, data: Record<string, string>, scale: number, baseUrl: string) {
+  if (field.type === 'qrcode') {
+    const qrValue = `${baseUrl}/article/${encodeURIComponent(data.code || '')}`;
+    const size = Math.min(field.width, field.height) * scale * 0.8;
+    return (
+      <div key={field.id} style={{
+        position: 'absolute',
+        left: field.x * scale,
+        top: field.y * scale,
+        width: size,
+        height: size,
+      }}>
+        <QRCodeSVG value={qrValue} size={size} level="M" />
+      </div>
+    );
+  }
+
+  if (field.type === 'barcode') {
+    return null; // Géré séparément
+  }
+
   let content = '';
   switch (field.type) {
     case 'code': content = data.code || '-'; break;
@@ -95,11 +124,10 @@ function renderField(field: LabelField, data: Record<string, string>, scale: num
     case 'quantite': content = data.quantite || '-'; break;
     case 'client': content = data.client || '-'; break;
     case 'text': content = field.value || ''; break;
-    case 'barcode': return null; // Géré séparément
   }
 
   return (
-    <div style={{
+    <div key={field.id} style={{
       position: 'absolute',
       left: field.x * scale,
       top: field.y * scale,
@@ -127,13 +155,14 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
   const etiquettes = bl ? calculerEtiquettes(bl, articles) : [];
   const totalLabels = etiquettes.reduce((sum, e) => sum + e.nbEtiquettes, 0);
 
-  // Template sélectionné (par défaut ou premier)
+  // Template sélectionné
   const selectedTemplate: LabelTemplateData | null = 
     selectedTemplateId === 'default' 
       ? (templates.find(t => t.isDefault) || templates[0] || null)
       : templates.find(t => t.id === selectedTemplateId) || null;
 
   const scale = 3; // 1mm = 3px
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   // Générer les codes-barres après chaque rendu
   useEffect(() => {
@@ -141,7 +170,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
     const timer = setTimeout(() => {
       labelRefs.current.forEach((ref) => {
         if (ref) {
-          const svg = ref.querySelector('svg');
+          const svg = ref.querySelector('svg[data-barcode]');
           if (svg) {
             try {
               JsBarcode(svg, svg.getAttribute('data-code') || 'UNKNOWN', {
@@ -162,33 +191,75 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
     return () => clearTimeout(timer);
   }, [open, etiquettes.length, selectedTemplateId]);
 
+  // Impression A5 sur A4 (2 étiquettes côte à côte)
   const handlePrint = () => {
     const printContent = document.getElementById('label-print-area');
     if (!printContent) return;
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) return;
+    
+    const lw = selectedTemplate?.width || 100;
+    const lh = selectedTemplate?.height || 60;
+    
     printWindow.document.write(`
       <html>
       <head>
         <title>Étiquettes - ${bl?.numero || ''}</title>
         <style>
-          @page { margin: 5mm; size: auto; }
-          body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+          @page { 
+            margin: 10mm; 
+            size: A4 landscape; 
+          }
+          body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+          }
+          .print-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5mm;
+            padding: 5mm;
+          }
           .label-card { 
             border: 1px solid #ccc; 
-            margin: 4px 0; 
             page-break-inside: avoid;
             position: relative;
             overflow: hidden;
+            width: ${lw}mm;
+            height: ${lh}mm;
           }
-          .label-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0.15; z-index: 0; }
-          .label-content { position: relative; z-index: 1; }
+          .label-image { 
+            position: absolute; top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            object-fit: contain; 
+            opacity: 0.15; 
+            z-index: 0; 
+          }
+          .label-content { 
+            position: relative; 
+            z-index: 1; 
+            width: 100%; 
+            height: 100%; 
+          }
+          .label-footer {
+            position: absolute;
+            bottom: 1mm;
+            right: 1mm;
+            font-size: 6px;
+            color: #999;
+          }
           svg { max-width: 100%; }
-          @media print { .no-print { display: none; } }
+          @media print { 
+            .no-print { display: none; } 
+            .print-grid { gap: 3mm; padding: 3mm; }
+          }
         </style>
       </head>
       <body>
-        ${printContent.innerHTML}
+        <div class="print-grid">
+          ${printContent.innerHTML}
+        </div>
       </body>
       </html>
     `);
@@ -252,7 +323,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
         <DialogContent className="max-w-5xl max-h-[calc(100vh-4rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>Étiquettes - {bl.numero}</DialogTitle>
+              <DialogTitle>Étiquettes — {bl.numero}</DialogTitle>
               <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ÉTIQ-{totalLabels}</span>
             </div>
           </DialogHeader>
@@ -271,12 +342,12 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" size="sm" onClick={handleNewTemplate}><Plus className="h-4 w-4 mr-1" />Nouveau</Button>
+              <Button variant="outline" size="sm" onClick={handleNewTemplate}>+ Nouveau</Button>
               <Button variant="outline" size="sm" onClick={handleEditTemplate}><Settings className="h-4 w-4 mr-1" />Éditer</Button>
             </div>
             {/* Récapitulatif */}
             <div className="text-sm text-muted-foreground">
-              {etiquettes.length} article(s) avec conditionnement — <strong>{totalLabels} étiquette(s)</strong> à imprimer
+              {etiquettes.length} article(s) — <strong>{totalLabels} étiquette(s)</strong> — Format A5 (2 par feuille A4)
             </div>
             <table className="w-full text-sm border rounded-lg">
               <thead className="bg-gray-50"><tr>
@@ -285,10 +356,20 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                 <th className="text-right p-2">Qté BL</th>
                 <th className="text-right p-2">Cond.</th>
                 <th className="text-right p-2">Étiquettes</th>
+                <th className="text-left p-2">Fichier</th>
               </tr></thead>
               <tbody>
                 {etiquettes.map((e, i) => (
-                  <tr key={i} className="border-t"><td className="p-2 font-mono">{e.code}</td><td className="p-2">{e.designation}</td><td className="p-2 text-right">{e.qteBL}</td><td className="p-2 text-right">{e.qteParEtiquette}</td><td className="p-2 text-right font-bold">{e.nbEtiquettes}</td></tr>
+                  <tr key={i} className="border-t">
+                    <td className="p-2 font-mono">{e.code}</td>
+                    <td className="p-2">{e.designation}</td>
+                    <td className="p-2 text-right">{e.qteBL}</td>
+                    <td className="p-2 text-right">{e.qteParEtiquette}</td>
+                    <td className="p-2 text-right font-bold">{e.nbEtiquettes}</td>
+                    <td className="p-2 font-mono text-xs text-muted-foreground">
+                      {generateLabelFileName(bl.numero, e.code, 1)}
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -313,13 +394,15 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
 
                   const labelWidth = selectedTemplate?.width || 100;
                   const labelHeight = selectedTemplate?.height || 60;
+                  const fileName = generateLabelFileName(bl.numero, e.code, labelNum);
 
                   return (
                     <div
                       key={`${idx}-${j}`}
                       ref={(el) => { labelRefs.current[labelNum - 1] = el; }}
                       className="label-card"
-                      style={{ width: labelWidth * scale, height: labelHeight * scale, position: 'relative', overflow: 'hidden' }}
+                      style={{ width: labelWidth * scale, height: labelHeight * scale, position: 'relative', overflow: 'hidden', border: '1px solid #ddd', margin: '2px' }}
+                      data-filename={fileName}
                     >
                       {selectedTemplate?.backgroundImage && (
                         <img src={selectedTemplate.backgroundImage} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', opacity: 0.15, zIndex: 0 }} />
@@ -335,13 +418,17 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                                 width: field.width * scale,
                                 height: field.height * scale,
                               }}>
-                                <svg data-code={e.code}></svg>
+                                <svg data-barcode data-code={e.code}></svg>
                               </div>
                             );
                           }
-                          return <div key={field.id}>{renderField(field, fieldData, scale)}</div>;
+                          if (field.type === 'qrcode') {
+                            return <div key={field.id}>{renderField(field, fieldData, scale, baseUrl)}</div>;
+                          }
+                          return <div key={field.id}>{renderField(field, fieldData, scale, baseUrl)}</div>;
                         })}
                       </div>
+                      <div className="label-footer">{fileName}</div>
                     </div>
                   );
                 })
@@ -350,7 +437,9 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handlePrint}><Printer className="h-4 w-4 mr-2" />Imprimer {totalLabels} étiquette(s)</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />Imprimer {totalLabels} étiquette(s) (A5 × 2)
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
