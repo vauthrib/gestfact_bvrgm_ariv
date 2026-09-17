@@ -219,7 +219,7 @@ export function ArticlesView() {
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[8000px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingArticle ? 'Modifier' : 'Nouveau'} Article</DialogTitle>
@@ -228,7 +228,7 @@ export function ArticlesView() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Row 1: Code */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <Label>Code Article</Label>
                 <Input 
@@ -258,7 +258,7 @@ export function ArticlesView() {
             </div>
 
             {/* Row 3: Unité | TVA % | Conditionnement */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div><Label>Unité</Label><Input value={formData.unite} onChange={(e) => setFormData({ ...formData, unite: e.target.value })} /></div>
               <div><Label>TVA %</Label><Input type="text" value={formData.tauxTVA} onChange={(e) => setFormData({ ...formData, tauxTVA: e.target.value })} /></div>
               <div>

@@ -324,7 +324,7 @@ export function AvoirsClientsView() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Avoir</DialogTitle>
             <DialogDescription>Créez ou modifiez un avoir client</DialogDescription>

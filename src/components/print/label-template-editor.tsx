@@ -142,10 +142,10 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
         <DialogHeader>
           <DialogTitle>{template?.id ? 'Modifier' : 'Nouveau'} template d'étiquette</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-6 py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4 min-w-0">
           {/* Colonne gauche: configuration */}
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>Nom du template</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Étiquette colis" />
@@ -155,7 +155,7 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                 <Label htmlFor="isDefault">Template par défaut</Label>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><Label>Largeur (mm)</Label><Input type="number" value={width} onChange={(e) => setWidth(Number(e.target.value))} /></div>
               <div><Label>Hauteur (mm)</Label><Input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} /></div>
             </div>
@@ -193,7 +193,7 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                       <Button type="button" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); removeField(field.id); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                     {selectedField === field.id && (
-                      <div className="grid grid-cols-4 gap-2 mt-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                         <div><Label className="text-xs">X (mm)</Label><Input type="number" value={field.x} onChange={(e) => updateField(field.id, { x: Number(e.target.value) })} /></div>
                         <div><Label className="text-xs">Y (mm)</Label><Input type="number" value={field.y} onChange={(e) => updateField(field.id, { y: Number(e.target.value) })} /></div>
                         <div><Label className="text-xs">Larg. (mm)</Label><Input type="number" value={field.width} onChange={(e) => updateField(field.id, { width: Number(e.target.value) })} /></div>
@@ -211,7 +211,7 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
           {/* Colonne droite: preview */}
           <div>
             <Label className="mb-2 block">Aperçu ({width}mm × {height}mm)</Label>
-            <div className="border-2 border-dashed rounded-lg bg-gray-50 overflow-hidden" style={{ width: width * scale, height: height * scale, position: 'relative' }}>
+            <div className="max-w-full overflow-auto border-2 border-dashed rounded-lg bg-gray-50 p-2"><div style={{ width: width * scale, height: height * scale, position: 'relative' }}>
               {backgroundImage && <img src={backgroundImage} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />}
               {fields.map((field) => (
                 <div key={field.id} style={{
@@ -240,7 +240,7 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                   )}
                 </div>
               ))}
-            </div>
+            </div></div>
           </div>
         </div>
         <DialogFooter>

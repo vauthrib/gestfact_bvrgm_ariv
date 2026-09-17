@@ -434,7 +434,7 @@ export function ParametresView({ userRole }: ParametresViewProps) {
         <Card>
           <CardHeader><CardTitle>Numérotation</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
               <div><Label>Préfixe Facture</Label><Input value={parametres?.prefixeFacture || ''} onChange={(e) => setParametres(p => p ? { ...p, prefixeFacture: e.target.value } : null)} /></div>
               <div><Label>N° Départ Facture</Label><Input type="number" value={parametres?.numeroFactureDepart || ''} onChange={(e) => setParametres(p => p ? { ...p, numeroFactureDepart: parseInt(e.target.value) } : null)} /></div>
               <div><Label>Préfixe BL</Label><Input value={parametres?.prefixeBL || ''} onChange={(e) => setParametres(p => p ? { ...p, prefixeBL: e.target.value } : null)} /></div>

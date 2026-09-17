@@ -540,7 +540,7 @@ export function FacturesClientsView() {
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-[8000px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Facture</DialogTitle>
@@ -684,7 +684,7 @@ export function FacturesClientsView() {
           </DialogHeader>
           {viewingFacture && (
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div><Label className="text-muted-foreground">N° Facture</Label><div className="font-bold text-blue-700">{viewingFacture.numero}</div></div>
                 <div><Label className="text-muted-foreground">Date</Label><div>{new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</div></div>
                 <div><Label className="text-muted-foreground">Échéance</Label><div>{viewingFacture.dateEcheance ? new Date(viewingFacture.dateEcheance).toLocaleDateString('fr-FR') : '-'}</div></div>
@@ -744,7 +744,7 @@ export function FacturesClientsView() {
             <div className="space-y-5 py-2">
               {/* En-tête facture harmonisé */}
               <div className="bg-gray-50 border rounded-lg p-4">
-                <div className="grid grid-cols-5 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
                   <div><span className="text-muted-foreground text-xs">N° Facture</span><div className="font-bold text-blue-700">{viewingFacture.numero}</div></div>
                   <div><span className="text-muted-foreground text-xs">Client</span><div className="font-medium">{viewingFacture.client?.raisonSociale}</div></div>
                   <div><span className="text-muted-foreground text-xs">Date</span><div className="font-medium">{new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</div></div>

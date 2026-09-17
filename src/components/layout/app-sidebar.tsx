@@ -69,13 +69,13 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle, use
     <div
       className={cn(
         'bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300',
-        collapsed ? 'w-16' : 'w-64'
+        collapsed ? 'w-16' : 'w-16 sm:w-64'
       )}
     >
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
           <span className="font-bold text-lg">
-            ARIV <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">V3.04</span>
+            ARIV <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">V3.05</span>
           </span>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle}>
@@ -95,7 +95,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle, use
               onClick={() => onViewChange(item.id)}
             >
               {item.icon}
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && <span className="hidden sm:inline">{item.label}</span>}
             </Button>
             {item.separatorAfter && (
               <div className="my-2 border-t border-black" />

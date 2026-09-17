@@ -631,7 +631,7 @@ export function BonsLivraisonView() {
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-[8000px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} BL</DialogTitle>
@@ -639,7 +639,7 @@ export function BonsLivraisonView() {
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <Label>N° Bon</Label>
                 {editing ? (
@@ -695,7 +695,7 @@ export function BonsLivraisonView() {
           </DialogHeader>
           {viewingBL && (
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label className="text-muted-foreground">N° Bon</Label>
                   <div className="font-bold text-blue-700">{viewingBL.numero}</div>
