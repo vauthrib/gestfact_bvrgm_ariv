@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown, ListPlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, RefreshCw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
@@ -16,7 +16,7 @@ import { PrintDocument } from '@/components/print/print-document';
 import { PermissionGate } from '@/components/auth/permission-gate';
 
 interface LigneBL { id?: string; articleId?: string; designation: string; quantite: number; prixUnitaire: number; totalHT: number; }
-interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; bonCommande: string | null; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; facture?: { id: string; numero: string } | null; }
+interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; bonCommande: string | null; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; updatedAt?: string; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; facture?: { id: string; numero: string; updatedAt?: string } | null; }
 interface Tiers { id: string; code: string; raisonSociale: string; type: string; }
 interface Article { id: string; code: string; designation: string; prixUnitaire: number; }
 interface Parametres { 
@@ -69,6 +69,17 @@ export function BonsLivraisonView() {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, any>>({});
+
+  // V2.92 - Visualiser le BL (données détaillées) si validé
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewingBL, setViewingBL] = useState<BonLivraison | null>(null);
+
+  // V2.92 - Mise à jour d'une facture groupée après modification d'un BL (super code 5555)
+  const [superCodeDialogOpen, setSuperCodeDialogOpen] = useState(false);
+  const [superCodeInput, setSuperCodeInput] = useState('');
+  const [superCodeError, setSuperCodeError] = useState(false);
+  const [pendingUpdateFacture, setPendingUpdateFacture] = useState<{ factureId: string; factureNumero: string; blsModifies: string[] } | null>(null);
+  const [updatingFacture, setUpdatingFacture] = useState(false);
 
   useEffect(() => { fetchBons(); fetchClients(); fetchArticles(); fetchParametres(); }, []);
   
@@ -213,6 +224,74 @@ export function BonsLivraisonView() {
       }
     } catch (e) {
       alert('Erreur serveur');
+    }
+  };
+
+  // V2.92 - Visualiser les données du BL (bouton affiché si le BL est validé)
+  const handleViewBL = async (bl: BonLivraison) => {
+    try {
+      const res = await fetch('/api/bons-livraison');
+      const allBL = await res.json();
+      const fullBL = allBL.find((b: any) => b.id === bl.id);
+      setViewingBL(fullBL || bl);
+    } catch (e) {
+      setViewingBL(bl);
+    }
+    setViewDialogOpen(true);
+  };
+
+  // V2.92 - Liste des BL modifiés rattachés à une facture groupée.
+  // Un BL est "modifié" si son updatedAt est postérieur à celui de la facture (tolérance 2s
+  // pour les données historiques créées avant V2.92, où BL et facture étaient créés à la même seconde).
+  const getBlsModifies = (factureId: string) => {
+    const factureBLs = bons.filter(b => b.facture?.id === factureId);
+    const faList = factureBLs.map(b => (b.facture as any)?.updatedAt).filter(Boolean).map((fa: string) => new Date(fa).getTime());
+    if (faList.length === 0) return [];
+    const factureUpdatedAt = Math.max(...faList);
+    return factureBLs.filter(b => b.updatedAt && new Date(b.updatedAt).getTime() > factureUpdatedAt + 2000);
+  };
+
+  // V2.92 - Demande du super code 5555 puis régénération de la facture groupée
+  const openSuperCodeDialog = (bl: BonLivraison) => {
+    if (!bl.facture) return;
+    const blsModifies = getBlsModifies(bl.facture.id);
+    setPendingUpdateFacture({
+      factureId: bl.facture.id,
+      factureNumero: bl.facture.numero,
+      blsModifies: blsModifies.map(b => b.numero)
+    });
+    setSuperCodeInput('');
+    setSuperCodeError(false);
+    setSuperCodeDialogOpen(true);
+  };
+
+  const handleSuperCodeSubmit = async () => {
+    if (superCodeInput !== '5555') {
+      setSuperCodeError(true);
+      setTimeout(() => setSuperCodeError(false), 2000);
+      return;
+    }
+    if (!pendingUpdateFacture) return;
+    setUpdatingFacture(true);
+    try {
+      const res = await fetch('/api/bons-livraison/convert-multiple', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ factureId: pendingUpdateFacture.factureId, superCode: superCodeInput })
+      });
+      if (res.ok) {
+        alert(`Facture ${pendingUpdateFacture.factureNumero} mise à jour avec succès depuis les BL !`);
+        setSuperCodeDialogOpen(false);
+        setPendingUpdateFacture(null);
+        fetchBons();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Erreur lors de la mise à jour de la facture');
+      }
+    } catch (e) {
+      alert('Erreur serveur');
+    } finally {
+      setUpdatingFacture(false);
     }
   };
 
@@ -488,8 +567,8 @@ export function BonsLivraisonView() {
                 <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
                 <TableCell>
                   {b.facture ? (
-                    <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800 font-medium">
-                      ✓ {b.facture.numero}
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getBlsModifies(b.facture.id).length > 0 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`} title={getBlsModifies(b.facture.id).length > 0 ? 'BL modifié(s) après facturation - mise à jour de la facture requise' : ''}>
+                      ✓ {b.facture.numero}{getBlsModifies(b.facture.id).length > 0 ? ' ⚠' : ''}
                     </span>
                   ) : (
                     <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-500">-</span>
@@ -510,6 +589,20 @@ export function BonsLivraisonView() {
                         title={b.facture ? `Déjà facturé (${b.facture.numero})` : "Créer facture"}
                       >
                         <FileText className="h-4 w-4" />
+                      </Button>
+                    </PermissionGate>
+                  )}
+                  {/* V2.92 - Visualiser le BL si validé */}
+                  {b.statut === 'VALIDEE' && (
+                    <Button size="sm" variant="outline" className="text-green-700" onClick={() => handleViewBL(b)} title="Visualiser le BL">
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {/* V2.92 - Mettre à jour la facture groupée si un BL lié a été modifié (super code 5555) */}
+                  {b.statut === 'VALIDEE' && b.facture && getBlsModifies(b.facture.id).length > 0 && (
+                    <PermissionGate permission="facture.create">
+                      <Button size="sm" variant="outline" className="text-orange-600 border-orange-300" onClick={() => openSuperCodeDialog(b)} title={`Mettre à jour la facture ${b.facture.numero} (BL modifié : ${getBlsModifies(b.facture.id).map(x => x.numero).join(', ')})`}>
+                        <RefreshCw className="h-4 w-4" />
                       </Button>
                     </PermissionGate>
                   )}
@@ -576,6 +669,112 @@ export function BonsLivraisonView() {
             </div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* V2.92 - Dialog de visualisation des données du BL */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Visualisation du BL {viewingBL?.numero}</DialogTitle>
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01-VUE</span>
+            </div>
+          </DialogHeader>
+          {viewingBL && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">N° Bon</Label>
+                  <div className="font-bold text-green-700">{viewingBL.numero}</div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Date</Label>
+                  <div>{new Date(viewingBL.dateBL).toLocaleDateString('fr-FR')}</div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Client</Label>
+                  <div>{viewingBL.client?.raisonSociale}</div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Bon de commande</Label>
+                  <div>{viewingBL.bonCommande || '-'}</div>
+                </div>
+              </div>
+              <div className="border rounded-lg p-4">
+                <Label className="mb-2 block">Lignes</Label>
+                <Table>
+                  <TableHeader><TableRow><TableHead>Article</TableHead><TableHead>Désignation</TableHead><TableHead>Qté</TableHead><TableHead>P.U.</TableHead><TableHead>Total HT</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {(viewingBL.lignes || []).map((l, idx) => (
+                      <TableRow key={l.id || idx}>
+                        <TableCell>{articles.find(a => a.id === l.articleId)?.code || '-'}</TableCell>
+                        <TableCell className="whitespace-pre-wrap">{l.designation}</TableCell>
+                        <TableCell>{l.quantite}</TableCell>
+                        <TableCell>{formatCurrency(l.prixUnitaire)}</TableCell>
+                        <TableCell>{formatCurrency(l.totalHT)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="text-right font-bold mt-2">Total HT: {formatCurrency((viewingBL.lignes || []).reduce((s, l) => s + (l.totalHT || 0), 0))}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Info libre</Label>
+                  <div className="whitespace-pre-wrap text-sm">{viewingBL.infoLibre || '-'}</div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Notes de livraison</Label>
+                  <div className="whitespace-pre-wrap text-sm">{viewingBL.notesLivraison || '-'}</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <span className={`px-2 py-1 rounded text-xs ${viewingBL.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{viewingBL.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span>
+                {viewingBL.facture && <span className="text-sm text-muted-foreground">Facturé : <strong>{viewingBL.facture.numero}</strong></span>}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setViewDialogOpen(false); if (viewingBL) handlePrint(viewingBL); }}><Printer className="h-4 w-4 mr-1" />Imprimer</Button>
+            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* V2.92 - Dialog super validation (code 5555) pour mise à jour facture groupée */}
+      <Dialog open={superCodeDialogOpen} onOpenChange={setSuperCodeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Super validation requise</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Un ou plusieurs BL rattachés à la facture <strong>{pendingUpdateFacture?.factureNumero}</strong> ont été modifiés après facturation.
+              La facture sera régénérée depuis les BL (même après validation).
+            </p>
+            {pendingUpdateFacture && pendingUpdateFacture.blsModifies.length > 0 && (
+              <div className="border rounded-lg p-3 bg-orange-50 border-orange-200">
+                <div className="text-sm font-medium text-orange-800 mb-1">BL modifié(s) détecté(s) :</div>
+                <div className="text-sm text-orange-700">{pendingUpdateFacture.blsModifies.join(', ')}</div>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground">Entrez le code de super validation pour confirmer.</p>
+            <Input
+              type="password"
+              placeholder="Code à 4 chiffres"
+              value={superCodeInput}
+              onChange={(e) => setSuperCodeInput(e.target.value)}
+              className={`text-center text-xl ${superCodeError ? 'border-red-500' : ''}`}
+              maxLength={4}
+              autoFocus
+            />
+            {superCodeError && <p className="text-red-500 text-sm text-center">Code incorrect</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSuperCodeDialogOpen(false)} disabled={updatingFacture}>Annuler</Button>
+            <Button className="bg-orange-600 hover:bg-orange-700" onClick={handleSuperCodeSubmit} disabled={updatingFacture || superCodeInput.length < 4}>
+              {updatingFacture ? 'Mise à jour...' : 'Mettre à jour la facture'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       {/* Multi-article dialog */}

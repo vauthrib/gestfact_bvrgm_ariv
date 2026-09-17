@@ -90,12 +90,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       include: { client: true, lignes: true }
     });
 
-    // Update BL to mark as converted
+    // Update BL to mark as converted (V2.92: aligne updatedAt du BL sur celui de la facture
+    // pour permettre la détection de modification postérieure à la facturation)
     await prisma.bonLivraison.update({
       where: { id },
       data: { 
         factureId: facture.id,
-        infoLibre: `Converti en facture ${numeroFacture}`
+        infoLibre: `Converti en facture ${numeroFacture}`,
+        updatedAt: facture.updatedAt
       }
     });
 
