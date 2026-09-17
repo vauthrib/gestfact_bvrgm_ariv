@@ -40,7 +40,8 @@ model Tiers {
 model Article {
   id            String   @id @default(cuid())
   code          String   @unique
-  designation   String  prixUnitaire  Float    @default(0)
+  designation   String
+  prixUnitaire  Float    @default(0)
   unite         String   @default("pièce")
   tauxTVA       Float    @default(20)
   infoLibre     String?
