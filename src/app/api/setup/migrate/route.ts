@@ -5,40 +5,32 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // V2.97: Ajouter la colonne conditionnement à la table Article
-    // Cette migration est idempotent (ne plante pas si la colonne existe déjà)
+    // V2.98: Migration conditionnement + LabelTemplate
+    await prisma.$executeRaw`ALTER TABLE "Article" ADD COLUMN IF NOT EXISTS "conditionnement" DOUBLE PRECISION NOT NULL DEFAULT 0`;
+    
+    // Créer la table LabelTemplate si elle n'existe pas
     await prisma.$executeRaw`
-      ALTER TABLE "Article" ADD COLUMN IF NOT EXISTS "conditionnement" DOUBLE PRECISION NOT NULL DEFAULT 0
+      CREATE TABLE IF NOT EXISTS "LabelTemplate" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "width" DOUBLE PRECISION NOT NULL DEFAULT 100,
+        "height" DOUBLE PRECISION NOT NULL DEFAULT 60,
+        "backgroundImage" TEXT,
+        "fields" TEXT NOT NULL DEFAULT '[]',
+        "isDefault" BOOLEAN NOT NULL DEFAULT false,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "LabelTemplate_pkey" PRIMARY KEY ("id")
+      )
     `;
     
-    // Vérifier que la colonne existe maintenant
-    const result = await prisma.$queryRaw`
-      SELECT column_name FROM information_schema.columns 
-      WHERE table_name = 'Article' AND column_name = 'conditionnement'
-    `;
-    
-    const columnExists = Array.isArray(result) && result.length > 0;
-    
-    if (columnExists) {
-      // Compter les articles pour confirmation
-      const count = await prisma.article.count();
-      return NextResponse.json({ 
-        success: true, 
-        message: `Migration appliquée. Colonne conditionnement ajoutée. ${count} article(s) dans la base.`,
-        columnExists: true,
-        articleCount: count
-      });
-    } else {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'La colonne conditionnement n\'a pas pu être ajoutée' 
-      }, { status: 500 });
-    }
+    const count = await prisma.article.count();
+    return NextResponse.json({ 
+      success: true, 
+      message: `Migration V2.98 appliquée. ${count} article(s). Table LabelTemplate créée.`,
+      articleCount: count
+    });
   } catch (error: any) {
-    console.error('Migration error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

@@ -270,6 +270,20 @@ model Parametres {
   updatedAt             DateTime @updatedAt
 }
 
+// ============ V2.98: TEMPLATES D'ÉTIQUETTES ============
+
+model LabelTemplate {
+  id              String   @id @default(cuid())
+  name            String   // Nom du template (ex: "Étiquette colis", "Étiquette article")
+  width           Float    @default(100)  // Largeur en mm
+  height          Float    @default(60)   // Hauteur en mm
+  backgroundImage String?  // Image de fond en base64 (JPG/PNG)
+  fields          String   @default("[]") // JSON: tableau de champs dynamiques
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 // ============ AUTHENTICATION - NextAuth.js ============
 
 model User {

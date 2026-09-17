@@ -67,6 +67,10 @@ export function BonsLivraisonView() {
   // V2.93 - Impression étiquettes produits
   const [labelPrintOpen, setLabelPrintOpen] = useState(false);
   const [selectedBLForLabels, setSelectedBLForLabels] = useState<BonLivraison | null>(null);
+  // V2.98 - Templates d'étiquettes
+  const [labelTemplates, setLabelTemplates] = useState<any[]>([]);
+  const fetchLabelTemplates = async () => { try { const res = await fetch('/api/label-templates'); const d = await res.json(); setLabelTemplates(Array.isArray(d) ? d : []); } catch (e) {} };
+  useEffect(() => { fetchLabelTemplates(); }, []);
 
   // Multi-BL selection for grouped invoice
   const [selectedBLs, setSelectedBLs] = useState<string[]>([]);
@@ -1008,13 +1012,14 @@ export function BonsLivraisonView() {
         </DialogContent>
       </Dialog>
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="bons-livraison" code="NBL01" />
-      {/* V2.93 - Impression étiquettes produits */}
+      {/* V2.98 - Impression étiquettes produits avec templates */}
       <LabelPrint
         open={labelPrintOpen}
         onOpenChange={setLabelPrintOpen}
         bl={selectedBLForLabels}
         articles={articles.map(a => ({ id: a.id, code: a.code, designation: a.designation, conditionnement: (a as any).conditionnement || 0 }))}
-        labelImage={null}
+        templates={labelTemplates}
+        onRefreshTemplates={fetchLabelTemplates}
       />
       <PrintDocument 
         open={printOpen} 
