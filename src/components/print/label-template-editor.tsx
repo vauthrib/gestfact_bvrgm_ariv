@@ -77,17 +77,21 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
   }, [template, open]);
 
   const resetForm = () => {
-    setName('');
-    setWidth(100);
-    setHeight(60);
-    setBackgroundImage(null);
+    // Préremplissage avec le modèle fourni model_etiquette.png.
+    // Le ratio original 634x720 est conservé : 88x100 mm.
+    setName('Modèle étiquette produit');
+    setWidth(88);
+    setHeight(100);
+    setBackgroundImage('/model_etiquette.png');
     setFields([{
       id: generateId(),
-      type: 'code',
-      x: 5, y: 5, width: 40, height: 10,
-      fontSize: 14, bold: true, color: '#000000'
+      type: 'qrcode',
+      label: 'QR Code article',
+      x: 74, y: 86, width: 11, height: 11,
+      fontSize: 8, bold: false, color: '#000000'
     }]);
-    setIsDefault(false);
+    setIsDefault(true);
+    setSelectedField(null);
   };
 
   const addField = () => {

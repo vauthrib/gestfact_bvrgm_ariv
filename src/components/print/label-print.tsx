@@ -81,7 +81,7 @@ function TemplateMiniPreview({ template }: { template: LabelTemplateData }) {
   return (
     <div className="relative bg-white border border-gray-200 rounded overflow-hidden" style={{ width: w, height: h, minHeight: 40 }}>
       {template.backgroundImage && (
-        <img src={template.backgroundImage} alt="" className="absolute inset-0 w-full h-full object-contain opacity-10" />
+        <img src={template.backgroundImage} alt="" className="absolute inset-0 w-full h-full object-fill opacity-100" />
       )}
       {(template.fields || []).map((field) => {
         if (field.type === 'barcode' || field.type === 'qrcode') {
@@ -193,28 +193,31 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
 
   const handlePrint = () => {
     const printContent = document.getElementById('label-print-area');
-    if (!printContent) return;
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printContent || !selectedTemplate) return;
+    const printWindow = window.open('', '_blank', 'width=1100,height=800');
     if (!printWindow) return;
-    const lw = selectedTemplate?.width || 100;
-    const lh = selectedTemplate?.height || 60;
+    const lw = selectedTemplate.width || 100;
+    const lh = selectedTemplate.height || 60;
+    const labels = Array.from(printContent.querySelectorAll<HTMLElement>('.label-card')).map((label) => label.outerHTML).join('');
     printWindow.document.write(`
       <html><head><title>Étiquettes - ${bl?.numero || ''}</title>
       <style>
-        @page { margin: 10mm; size: A4 landscape; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-        .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; padding: 5mm; }
-        .label-card { border: 1px solid #ccc; page-break-inside: avoid; position: relative; overflow: hidden; width: ${lw}mm; height: ${lh}mm; }
-        .label-content { position: relative; z-index: 1; width: 100%; height: 100%; }
-        .label-footer { position: absolute; bottom: 1mm; right: 1mm; font-size: 6px; color: #999; }
+        @page { size: A4 landscape; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; background: white; }
+        body { font-family: Arial, sans-serif; }
+        .print-grid { width: 297mm; min-height: 210mm; display: grid; grid-template-columns: repeat(2, ${lw}mm); grid-auto-rows: ${lh}mm; gap: 1mm; padding: 1mm; justify-content: center; align-content: start; }
+        .label-card { border: 0 !important; page-break-inside: avoid; break-inside: avoid; position: relative !important; overflow: hidden !important; width: ${lw}mm !important; height: ${lh}mm !important; margin: 0 !important; }
+        .label-card img { opacity: 1 !important; filter: none !important; object-fit: fill !important; }
+        .label-content { position: relative; z-index: 1; width: 79.375%; height: 79.375%; transform: scale(1.25984); transform-origin: top left; }
+        .label-footer { display: none !important; }
         svg { max-width: 100%; }
-        @media print { .no-print { display: none; } .print-grid { gap: 3mm; padding: 3mm; } }
-      </style></head><body>
-      <div class="print-grid">${printContent.innerHTML}</div>
-      </body></html>
+        @media print { .print-grid { page-break-after: always; } }
+      </style></head><body><div class="print-grid">${labels}</div></body></html>
     `);
     printWindow.document.close();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+    const printImages = Array.from(printWindow.document.images);
+    Promise.all(printImages.map((image) => image.complete ? Promise.resolve() : new Promise<void>((resolve) => { image.onload = () => resolve(); image.onerror = () => resolve(); }))).then(() => setTimeout(() => { printWindow.print(); printWindow.close(); }, 300));
   };
 
   const handleSaveTemplate = async (template: LabelTemplateData) => {
@@ -424,7 +427,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                         data-filename={fileName}
                       >
                         {selectedTemplate?.backgroundImage && (
-                          <img src={selectedTemplate.backgroundImage} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', opacity: 0.15, zIndex: 0 }} />
+                          <img src={selectedTemplate.backgroundImage} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'fill', opacity: 1, filter: 'none', zIndex: 0 }} />
                         )}
                         <div className="label-content" style={{ position: 'relative', zIndex: 1 }}>
                           {(selectedTemplate?.fields || []).map((field) => {
