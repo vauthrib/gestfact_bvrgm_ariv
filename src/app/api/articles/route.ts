@@ -6,6 +6,15 @@ export async function GET() {
     const articles = await prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
     return NextResponse.json(articles);
   } catch (error: any) {
+    // Fallback: si la colonne conditionnement n'existe pas encore, faire un SELECT sans elle
+    if (error.message?.includes('conditionnement') || error.message?.includes('column')) {
+      try {
+        const articles = await prisma.$queryRaw`SELECT id, code, designation, "prixUnitaire", unite, "tauxTVA", "infoLibre", actif, "diametreFil", "poidsGr", "typeAcier", "createdAt", "updatedAt", 0 as conditionnement FROM "Article" ORDER BY "createdAt" DESC`;
+        return NextResponse.json(articles);
+      } catch (fallbackError: any) {
+        return NextResponse.json({ error: fallbackError.message }, { status: 500 });
+      }
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -61,7 +70,7 @@ export async function PUT(request: NextRequest) {
       where: { 
         code,
         NOT: { id }
-      } 
+      }
     });
     if (existing) {
       return NextResponse.json({ error: `Le code "${code}" existe déjà. Veuillez utiliser un code unique.` }, { status: 400 });

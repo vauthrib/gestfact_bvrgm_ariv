@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+function parseTemplateFields(template: any) {
+  return {
+    ...template,
+    fields: typeof template.fields === 'string' ? JSON.parse(template.fields || '[]') : (template.fields || []),
+  };
+}
+
 // GET: Lister tous les templates d'étiquettes
 export async function GET() {
   try {
     const templates = await prisma.labelTemplate.findMany({
       orderBy: { createdAt: 'desc' }
     });
-    return NextResponse.json(templates);
+    return NextResponse.json(templates.map(parseTemplateFields));
   } catch (error: any) {
+    // Si la table n'existe pas encore, retourner un tableau vide
+    if (error.message?.includes('does not exist') || error.code === 'P2021') {
+      return NextResponse.json([]);
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -41,7 +52,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(template);
+    return NextResponse.json(parseTemplateFields(template));
   } catch (error: any) {
     console.error('Erreur création template:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -78,7 +89,7 @@ export async function PUT(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(template);
+    return NextResponse.json(parseTemplateFields(template));
   } catch (error: any) {
     console.error('Erreur update template:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
