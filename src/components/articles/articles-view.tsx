@@ -169,15 +169,15 @@ export function ArticlesView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-green-700">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-700">Articles</h1><p className="text-muted-foreground">Gérez votre catalogue</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
+          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01</span>
           <PermissionGate permission="articles.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
           <Button variant="outline" onClick={() => setLabelEditorOpen(true)}><Tag className="w-4 h-4 mr-2" />Étiquettes</Button>
           <PermissionGate permission="articles.create">
-            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           </PermissionGate>
         </div>
       </div>
@@ -204,7 +204,7 @@ export function ArticlesView() {
                 <TableCell>{formatCurrency(a.prixUnitaire)}</TableCell>
                 <TableCell>{a.unite}</TableCell>
                 <TableCell>{a.tauxTVA}%</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${a.actif ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{a.actif ? 'Actif' : 'Inactif'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${a.actif ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{a.actif ? 'Actif' : 'Inactif'}</span></TableCell>
                 <TableCell><div className="flex gap-2">
                   <PermissionGate permission="articles.edit">
                     <Button size="sm" variant="outline" onClick={() => openEditDialog(a)}><Pencil className="h-4 w-4" /></Button>
@@ -223,7 +223,7 @@ export function ArticlesView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editingArticle ? 'Modifier' : 'Nouveau'} Article</DialogTitle>
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01-DLG</span>
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">ART01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -274,7 +274,7 @@ export function ArticlesView() {
 
             {/* Row 5: Nouveaux champs V2.63 - Caractéristiques techniques */}
             <div className="border-t pt-4 mt-4">
-              <h3 className="text-sm font-semibold text-green-700 mb-3">Caractéristiques techniques</h3>
+              <h3 className="text-sm font-semibold text-blue-700 mb-3">Caractéristiques techniques</h3>
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Diamètre de fil (mm)</Label>
@@ -311,7 +311,7 @@ export function ArticlesView() {
               <Label htmlFor="actif">Article actif</Label>
             </div>
 
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annuler</Button><Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editingArticle ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

@@ -369,7 +369,7 @@ export function ParametresView({ userRole }: ParametresViewProps) {
                         variant="ghost" 
                         size="sm"
                         onClick={() => handleToggleUserActif(user)}
-                        className={user.actif ? 'text-green-600' : 'text-red-600'}
+                        className={user.actif ? 'text-blue-600' : 'text-red-600'}
                       >
                         {user.actif ? 'Actif' : 'Inactif'}
                       </Button>

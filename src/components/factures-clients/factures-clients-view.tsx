@@ -461,14 +461,14 @@ export function FacturesClientsView() {
   return (
     <div className="p-6 space-y-6 w-full">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold text-green-700">Factures Clients</h1><p className="text-muted-foreground">Gérez vos factures</p></div>
+        <div><h1 className="text-3xl font-bold text-blue-700">Factures Clients</h1><p className="text-muted-foreground">Gérez vos factures</p></div>
         <div className="flex items-center gap-2">
-          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
+          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01</span>
           <PermissionGate permission="factures.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
           <PermissionGate permission="factures.create">
-            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           </PermissionGate>
         </div>
       </div>
@@ -513,13 +513,13 @@ export function FacturesClientsView() {
                 <TableCell>{formatCurrency(f.totalHT)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTVA)}</TableCell>
                 <TableCell>{formatCurrency(f.totalTTC)}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
+                <TableCell><span className={`px-2 py-1 rounded text-xs ${f.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{f.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></TableCell>
                 <TableCell><div className="flex gap-1 flex-wrap">
                   <PermissionGate permission="factures.validate">
-                    {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                    {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
                   {/* V2.93 - Visualiser facture si validée */}
                   {f.statut === 'VALIDEE' && (
-                    <Button size="sm" variant="outline" className="text-green-700" onClick={() => handleView(f)} title="Visualiser la facture"><Eye className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="outline" className="text-blue-700" onClick={() => handleView(f)} title="Visualiser la facture"><Eye className="h-4 w-4" /></Button>
                   )}
                   {/* V2.93 - Visualiser détaillé (BL liés) si facture groupée */}
                   {f.statut === 'VALIDEE' && f.numeroBL && (
@@ -544,7 +544,7 @@ export function FacturesClientsView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} Facture</DialogTitle>
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DLG</span>
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DLG</span>
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -555,7 +555,7 @@ export function FacturesClientsView() {
                   <Input value={formData.numero} disabled className="bg-gray-100" />
                 ) : (
                   <div className="space-y-1">
-                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-green-700" />
+                    <Input value={getProchainNumero()} disabled className="bg-gray-100 font-bold text-blue-700" />
                     <span className="text-xs text-muted-foreground">(Numéro automatique)</span>
                   </div>
                 )}
@@ -598,7 +598,7 @@ export function FacturesClientsView() {
               <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
               <div><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} /></div>
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-green-600 hover:bg-green-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -623,7 +623,7 @@ export function FacturesClientsView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCodeDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-green-600 hover:bg-green-700" onClick={handleCodeSubmit}>Confirmer</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleCodeSubmit}>Confirmer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -667,7 +667,7 @@ export function FacturesClientsView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setMultiArticleDialogOpen(false)}>Annuler</Button>
-            <Button className="bg-green-600 hover:bg-green-700" onClick={handleAddMultipleArticles} disabled={selectedArticles.length === 0}>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleAddMultipleArticles} disabled={selectedArticles.length === 0}>
               Ajouter {selectedArticles.length} article{selectedArticles.length > 1 ? 's' : ''}
             </Button>
           </DialogFooter>
@@ -679,16 +679,16 @@ export function FacturesClientsView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>Facture {viewingFacture?.numero}</DialogTitle>
-              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-VISU</span>
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-VISU</span>
             </div>
           </DialogHeader>
           {viewingFacture && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-4 gap-4">
-                <div><Label className="text-muted-foreground">N° Facture</Label><div className="font-bold text-green-700">{viewingFacture.numero}</div></div>
+                <div><Label className="text-muted-foreground">N° Facture</Label><div className="font-bold text-blue-700">{viewingFacture.numero}</div></div>
                 <div><Label className="text-muted-foreground">Date</Label><div>{new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</div></div>
                 <div><Label className="text-muted-foreground">Échéance</Label><div>{viewingFacture.dateEcheance ? new Date(viewingFacture.dateEcheance).toLocaleDateString('fr-FR') : '-'}</div></div>
-                <div><Label className="text-muted-foreground">Statut</Label><div><span className={`px-2 py-1 rounded text-xs ${viewingFacture.statut === 'VALIDEE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{viewingFacture.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></div></div>
+                <div><Label className="text-muted-foreground">Statut</Label><div><span className={`px-2 py-1 rounded text-xs ${viewingFacture.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{viewingFacture.statut === 'VALIDEE' ? 'Validée' : 'Brouillon'}</span></div></div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div><Label className="text-muted-foreground">Client</Label><div>{viewingFacture.client?.raisonSociale}</div></div>
@@ -745,11 +745,11 @@ export function FacturesClientsView() {
               {/* En-tête facture harmonisé */}
               <div className="bg-gray-50 border rounded-lg p-4">
                 <div className="grid grid-cols-5 gap-4 text-sm">
-                  <div><span className="text-muted-foreground text-xs">N° Facture</span><div className="font-bold text-green-700">{viewingFacture.numero}</div></div>
+                  <div><span className="text-muted-foreground text-xs">N° Facture</span><div className="font-bold text-blue-700">{viewingFacture.numero}</div></div>
                   <div><span className="text-muted-foreground text-xs">Client</span><div className="font-medium">{viewingFacture.client?.raisonSociale}</div></div>
                   <div><span className="text-muted-foreground text-xs">Date</span><div className="font-medium">{new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</div></div>
                   <div><span className="text-muted-foreground text-xs">N° BL</span><div className="font-medium font-mono">{viewingFacture.numeroBL || '-'}</div></div>
-                  <div><span className="text-muted-foreground text-xs">Total TTC</span><div className="font-bold text-green-700">{formatCurrency(viewingFacture.totalTTC)}</div></div>
+                  <div><span className="text-muted-foreground text-xs">Total TTC</span><div className="font-bold text-blue-700">{formatCurrency(viewingFacture.totalTTC)}</div></div>
                 </div>
               </div>
               {/* Recap par référence article × BL */}
@@ -776,7 +776,7 @@ export function FacturesClientsView() {
                           <TableRow key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                             <TableCell className="font-mono font-semibold text-sm">{r.code}</TableCell>
                             <TableCell>{r.designation}</TableCell>
-                            <TableCell className="text-right font-bold text-green-700">{r.totalQte}</TableCell>
+                            <TableCell className="text-right font-bold text-blue-700">{r.totalQte}</TableCell>
                             {viewingBLs.map((bl) => (
                               <TableCell key={bl.id} className="text-right font-mono">{r.blDetails[bl.numero] != null ? r.blDetails[bl.numero] : '-'}</TableCell>
                             ))}
@@ -797,7 +797,7 @@ export function FacturesClientsView() {
                       <span className="bg-blue-100 text-blue-700 text-xs font-mono font-bold px-2 py-0.5 rounded">BL {blIdx + 1}/{viewingBLs.length}</span>
                       <Label className="font-semibold">{bl.numero}</Label>
                     </div>
-                    <span className="text-sm text-muted-foreground">{new Date(bl.dateBL).toLocaleDateString('fr-FR')} — <span className="font-medium text-green-700">{formatCurrency(bl.totalHT || blTotal)}</span></span>
+                    <span className="text-sm text-muted-foreground">{new Date(bl.dateBL).toLocaleDateString('fr-FR')} — <span className="font-medium text-blue-700">{formatCurrency(bl.totalHT || blTotal)}</span></span>
                   </div>
                   <div className="overflow-x-auto">
                     <Table>
