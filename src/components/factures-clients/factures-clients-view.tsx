@@ -266,6 +266,105 @@ export function FacturesClientsView() {
     return Object.values(recap);
   };
 
+  // V1.94 - Imprimer le récap par référence
+  const printRecap = () => {
+    if (!viewingFacture || !viewingBLs.length) return;
+    const recap = buildRecapTable();
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) return;
+    win.document.write(`<html><head><title>Récap - ${viewingFacture.numero}</title>
+    <style>
+      @page{margin:15mm;size:landscape}
+      body{font-family:Arial,sans-serif;font-size:11px;margin:0;padding:20px}
+      h1{font-size:16px;color:#166534;margin:0 0 4px}
+      h2{font-size:12px;color:#666;margin:0 0 12px;font-weight:normal}
+      .info{display:flex;gap:30px;margin-bottom:12px;font-size:11px}
+      .info span{color:#666}
+      table{width:100%;border-collapse:collapse;margin-top:8px}
+      th{background:#f3f4f6;border:1px solid #d1d5db;padding:6px 8px;text-align:left;font-size:10px;color:#374151}
+      th.num,td.num{text-align:right}
+      td{border:1px solid #e5e7eb;padding:5px 8px}
+      tr:nth-child(even){background:#f9fafb}
+      .total{font-weight:bold;background:#ecfdf5}
+      .footer{margin-top:16px;font-size:9px;color:#999;text-align:right}
+    </style></head><body>
+    <h1>Récapitulatif par référence</h1>
+    <h2>Facture ${viewingFacture.numero} — ${viewingFacture.client?.raisonSociale || ''}</h2>
+    <div class="info">
+      <span>Date: ${new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</span>
+      <span>N° BL: ${viewingFacture.numeroBL || '-'}</span>
+      <span>TTC: ${formatCurrency(viewingFacture.totalTTC)}</span>
+      <span>${viewingBLs.length} BL</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:100px">Réf</th>
+        <th>Désignation</th>
+        <th class="num" style="width:80px">Qté totale</th>
+        ${viewingBLs.map((bl: any) => `<th class="num" style="width:90px">${bl.numero}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${recap.map((r: any) => `<tr>
+          <td style="font-family:monospace;font-weight:bold">${r.code}</td>
+          <td>${r.designation}</td>
+          <td class="num total">${r.totalQte}</td>
+          ${viewingBLs.map((bl: any) => `<td class="num">${r.blDetails[bl.numero] || '-'}</td>`).join('')}
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="footer">Imprimé le ${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR')}</div>
+    </body></html>`);
+    win.document.close();
+    setTimeout(() => { win.print(); }, 300);
+  };
+
+  // V1.94 - Imprimer les détails par BL
+  const printDetailed = () => {
+    if (!viewingFacture || !viewingBLs.length) return;
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) return;
+    win.document.write(`<html><head><title>Détails BL - ${viewingFacture.numero}</title>
+    <style>
+      @page{margin:15mm}
+      body{font-family:Arial,sans-serif;font-size:10px;margin:0;padding:20px}
+      h1{font-size:15px;color:#166534;margin:0 0 4px}
+      h2{font-size:11px;color:#666;margin:0 0 10px;font-weight:normal}
+      .bl-section{margin-bottom:16px;page-break-inside:avoid}
+      .bl-header{background:#f3f4f6;padding:6px 10px;border-radius:4px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:11px}
+      .bl-header strong{color:#166534}
+      table{width:100%;border-collapse:collapse}
+      th{background:#f9fafb;border:1px solid #d1d5db;padding:4px 6px;text-align:left;font-size:9px;color:#374151}
+      th.num,td.num{text-align:right}
+      td{border:1px solid #e5e7eb;padding:4px 6px}
+      .total-row{font-weight:bold;background:#ecfdf5}
+      .footer{margin-top:12px;font-size:9px;color:#999;text-align:right}
+    </style></head><body>
+    <h1>Détail des bons de livraison</h1>
+    <h2>Facture ${viewingFacture.numero} — ${viewingFacture.client?.raisonSociale || ''} — ${new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</h2>
+    ${viewingBLs.map((bl: any) => {
+      const blTotal = (bl.lignes || []).reduce((s: number, l: any) => s + (l.totalHT || 0), 0);
+      return `<div class="bl-section">
+        <div class="bl-header"><strong>BL ${bl.numero}</strong><span>${new Date(bl.dateBL).toLocaleDateString('fr-FR')} — Total HT: ${formatCurrency(bl.totalHT || blTotal)}</span></div>
+        <table>
+          <thead><tr><th style="width:80px">Réf</th><th>Désignation</th><th class="num" style="width:50px">Qté</th><th class="num" style="width:70px">P.U.</th><th class="num" style="width:80px">Total HT</th></tr></thead>
+          <tbody>
+            ${(bl.lignes || []).map((l: any) => `<tr>
+              <td style="font-family:monospace">${l.articleCode || '-'}</td>
+              <td>${l.designation}</td>
+              <td class="num">${l.quantite}</td>
+              <td class="num">${formatCurrency(l.prixUnitaire)}</td>
+              <td class="num">${formatCurrency(l.totalHT)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    }).join('')}
+    <div class="footer">Imprimé le ${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR')}</div>
+    </body></html>`);
+    win.document.close();
+    setTimeout(() => { win.print(); }, 300);
+  };
+
   const openEditDialog = async (facture: FactureClient) => {
     // Si la facture est validée, demander le code
     if (facture.statut === 'VALIDEE') {
@@ -632,82 +731,116 @@ export function FacturesClientsView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* V2.93 - Dialog visualisation détaillée: recap par ref + BL liés */}
+      {/* V1.94 - Dialog visualisation détaillée: recap par ref + BL liés, avec impression */}
       <Dialog open={viewDialogOpen && viewDetailed} onOpenChange={(open) => { if (!open) { setViewDialogOpen(false); setViewDetailed(false); } }}>
-        <DialogContent className="max-w-5xl max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[calc(100vh-4rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>Visualisation détaillée - {viewingFacture?.numero}</DialogTitle>
+              <DialogTitle>Visualisation détaillée — {viewingFacture?.numero}</DialogTitle>
               <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NFC01-DETAILED</span>
             </div>
           </DialogHeader>
           {viewingFacture && (
-            <div className="space-y-6 py-2">
-              {/* En-tête facture */}
-              <div className="grid grid-cols-4 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Client :</span> <span className="font-medium">{viewingFacture.client?.raisonSociale}</span></div>
-                <div><span className="text-muted-foreground">Date :</span> <span className="font-medium">{new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</span></div>
-                <div><span className="text-muted-foreground">N° BL :</span> <span className="font-medium">{viewingFacture.numeroBL || '-'}</span></div>
-                <div><span className="text-muted-foreground">TTC :</span> <span className="font-bold">{formatCurrency(viewingFacture.totalTTC)}</span></div>
+            <div className="space-y-5 py-2">
+              {/* En-tête facture harmonisé */}
+              <div className="bg-gray-50 border rounded-lg p-4">
+                <div className="grid grid-cols-5 gap-4 text-sm">
+                  <div><span className="text-muted-foreground text-xs">N° Facture</span><div className="font-bold text-green-700">{viewingFacture.numero}</div></div>
+                  <div><span className="text-muted-foreground text-xs">Client</span><div className="font-medium">{viewingFacture.client?.raisonSociale}</div></div>
+                  <div><span className="text-muted-foreground text-xs">Date</span><div className="font-medium">{new Date(viewingFacture.dateFacture).toLocaleDateString('fr-FR')}</div></div>
+                  <div><span className="text-muted-foreground text-xs">N° BL</span><div className="font-medium font-mono">{viewingFacture.numeroBL || '-'}</div></div>
+                  <div><span className="text-muted-foreground text-xs">Total TTC</span><div className="font-bold text-green-700">{formatCurrency(viewingFacture.totalTTC)}</div></div>
+                </div>
               </div>
               {/* Recap par référence article × BL */}
               {viewingBLs.length > 0 && (
-                <div className="border rounded-lg p-4">
-                  <Label className="mb-2 block font-semibold text-blue-700">Récapitulatif par référence</Label>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Réf</TableHead>
-                        <TableHead>Désignation</TableHead>
-                        <TableHead className="text-right">Qté totale</TableHead>
-                        {viewingBLs.map((bl) => (
-                          <TableHead key={bl.id} className="text-right">{bl.numero}</TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {buildRecapTable().map((r: any, idx: number) => (
-                        <TableRow key={idx}>
-                          <TableCell className="font-medium font-mono">{r.code}</TableCell>
-                          <TableCell>{r.designation}</TableCell>
-                          <TableCell className="text-right font-bold">{r.totalQte}</TableCell>
+                <div className="border rounded-lg">
+                  <div className="bg-blue-50 px-4 py-2 border-b flex items-center justify-between">
+                    <Label className="font-semibold text-blue-700">Récapitulatif par référence ({buildRecapTable().length} article{buildRecapTable().length > 1 ? 's' : ''})</Label>
+                    <span className="text-xs text-blue-600">{viewingBLs.length} BL</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="font-semibold w-[100px]">Réf</TableHead>
+                          <TableHead className="font-semibold">Désignation</TableHead>
+                          <TableHead className="font-semibold text-right w-[80px]">Qté tot.</TableHead>
                           {viewingBLs.map((bl) => (
-                            <TableCell key={bl.id} className="text-right">{r.blDetails[bl.numero] || '-'}</TableCell>
+                            <TableHead key={bl.id} className="font-semibold text-right w-[90px]">{bl.numero}</TableHead>
                           ))}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {buildRecapTable().map((r: any, idx: number) => (
+                          <TableRow key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                            <TableCell className="font-mono font-semibold text-sm">{r.code}</TableCell>
+                            <TableCell>{r.designation}</TableCell>
+                            <TableCell className="text-right font-bold text-green-700">{r.totalQte}</TableCell>
+                            {viewingBLs.map((bl) => (
+                              <TableCell key={bl.id} className="text-right font-mono">{r.blDetails[bl.numero] != null ? r.blDetails[bl.numero] : '-'}</TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               )}
               {/* Détails par BL */}
-              {viewingBLs.map((bl) => (
-                <div key={bl.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="font-semibold">BL {bl.numero}</Label>
-                    <span className="text-sm text-muted-foreground">{new Date(bl.dateBL).toLocaleDateString('fr-FR')} — Total HT: {formatCurrency(bl.totalHT)}</span>
+              {viewingBLs.map((bl, blIdx) => {
+                const blTotal = (bl.lignes || []).reduce((s: number, l: any) => s + (l.totalHT || 0), 0);
+                return (
+                <div key={bl.id} className="border rounded-lg">
+                  <div className="bg-gray-50 px-4 py-2 border-b flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="bg-blue-100 text-blue-700 text-xs font-mono font-bold px-2 py-0.5 rounded">BL {blIdx + 1}/{viewingBLs.length}</span>
+                      <Label className="font-semibold">{bl.numero}</Label>
+                    </div>
+                    <span className="text-sm text-muted-foreground">{new Date(bl.dateBL).toLocaleDateString('fr-FR')} — <span className="font-medium text-green-700">{formatCurrency(bl.totalHT || blTotal)}</span></span>
                   </div>
-                  <Table>
-                    <TableHeader><TableRow><TableHead>Réf</TableHead><TableHead>Désignation</TableHead><TableHead className="text-right">Qté</TableHead><TableHead className="text-right">P.U.</TableHead><TableHead className="text-right">Total HT</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {(bl.lignes || []).map((l: any, idx: number) => (
-                        <TableRow key={l.id || idx}>
-                          <TableCell className="font-mono text-sm">{l.articleCode || '-'}</TableCell>
-                          <TableCell className="whitespace-pre-wrap text-sm">{l.designation}</TableCell>
-                          <TableCell className="text-right">{l.quantite}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(l.prixUnitaire)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(l.totalHT)}</TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="w-[90px]">Réf</TableHead>
+                          <TableHead>Désignation</TableHead>
+                          <TableHead className="text-right w-[60px]">Qté</TableHead>
+                          <TableHead className="text-right w-[80px]">P.U.</TableHead>
+                          <TableHead className="text-right w-[90px]">Total HT</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {(bl.lignes || []).map((l: any, idx: number) => (
+                          <TableRow key={l.id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                            <TableCell className="font-mono text-sm font-medium">{l.articleCode || '-'}</TableCell>
+                            <TableCell className="whitespace-pre-wrap text-sm">{l.designation}</TableCell>
+                            <TableCell className="text-right font-mono">{l.quantite}</TableCell>
+                            <TableCell className="text-right font-mono">{formatCurrency(l.prixUnitaire)}</TableCell>
+                            <TableCell className="text-right font-mono font-medium">{formatCurrency(l.totalHT)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setViewDialogOpen(false); setViewDetailed(false); if (viewingFacture) handlePrint(viewingFacture); }}><Printer className="h-4 w-4 mr-1" />Imprimer</Button>
-            <Button variant="outline" onClick={() => { setViewDialogOpen(false); setViewDetailed(false); }}>Fermer</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setViewDialogOpen(false); setViewDetailed(false); }}>
+              Fermer
+            </Button>
+            <Button variant="outline" className="text-blue-600" onClick={printRecap}>
+              <Printer className="h-4 w-4 mr-1" />Imprimer Récap
+            </Button>
+            <Button variant="outline" className="text-blue-600" onClick={printDetailed}>
+              <Printer className="h-4 w-4 mr-1" />Imprimer Détails BL
+            </Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { setViewDialogOpen(false); setViewDetailed(false); if (viewingFacture) handlePrint(viewingFacture); }}>
+              <Printer className="h-4 w-4 mr-1" />Imprimer Facture
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
