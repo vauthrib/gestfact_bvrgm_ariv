@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Printer, Settings, Trash2, Plus, Check } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import JsBarcode from 'jsbarcode';
 import { LabelTemplateEditor, LabelTemplateData, LabelField } from './label-template-editor';
 
@@ -35,6 +36,14 @@ interface BonLivraison {
   client?: { raisonSociale: string };
   lignes?: LigneBL[];
 }
+
+type VariableInputMode = 'common' | 'perLabel';
+interface VariableInput {
+  mode: VariableInputMode;
+  common: string;
+  perLabel: string[];
+}
+type VariableInputs = Record<string, VariableInput>;
 
 interface LabelPrintProps {
   open: boolean;
@@ -188,7 +197,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
   const [editingTemplate, setEditingTemplate] = useState<LabelTemplateData | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [requiredInputs, setRequiredInputs] = useState<string[]>([]);
-  const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [inputValues, setInputValues] = useState<VariableInputs>({});
   const [inputDialogOpen, setInputDialogOpen] = useState(false);
   const printAfterInputRef = useRef(false);
 
@@ -254,13 +263,34 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
     const keys = getRequiredTemplateInputs(selectedTemplate);
     if (keys.length > 0) {
       setRequiredInputs(keys);
-      setInputValues((previous) => keys.reduce((values, key) => ({ ...values, [key]: previous[key] || '' }), {}));
+      setInputValues((previous) => keys.reduce((values, key) => ({
+        ...values,
+        [key]: {
+          mode: previous[key]?.mode || 'common',
+          common: previous[key]?.common || '',
+          perLabel: Array.from({ length: totalLabels }, (_, index) => previous[key]?.perLabel?.[index] || ''),
+        },
+      }), {} as VariableInputs));
       printAfterInputRef.current = true;
       setInputDialogOpen(true);
       return;
     }
     performPrint();
   };
+
+  const getInputDataForLabel = (labelIndex: number): Record<string, string> =>
+    Object.fromEntries(requiredInputs.map((key) => {
+      const input = inputValues[key];
+      return [key, input?.mode === 'perLabel' ? (input.perLabel[labelIndex] || '') : (input?.common || '')];
+    }));
+
+  const inputsAreComplete = requiredInputs.every((key) => {
+    const input = inputValues[key];
+    if (!input) return false;
+    return input.mode === 'perLabel'
+      ? input.perLabel.length === totalLabels && input.perLabel.every((value) => value.trim())
+      : Boolean(input.common.trim());
+  });
 
   useEffect(() => {
     if (!inputDialogOpen && printAfterInputRef.current) {
@@ -463,7 +493,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                       code: e.code, designation: e.designation,
                       date: new Date().toLocaleDateString('fr-FR'),
                       numero: bl.numero, quantite: qtyLabel,
-                      client: bl.client?.raisonSociale || '', lot: '', contenant: '', ...inputValues,
+                      client: bl.client?.raisonSociale || '', lot: '', contenant: '', ...getInputDataForLabel(labelNum - 1),
                     };
                     const labelWidth = selectedTemplate?.width || 100;
                     const labelHeight = selectedTemplate?.height || 60;
@@ -520,22 +550,53 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">Renseignez les champs signalés par # avant de lancer l’impression.</p>
-            {requiredInputs.map((key) => (
-              <div key={key}>
-                <Label htmlFor={`label-input-${key}`}>{key.charAt(0).toUpperCase() + key.slice(1)}</Label>
-                <Input
-                  id={`label-input-${key}`}
-                  value={inputValues[key] || ''}
-                  onChange={(event) => setInputValues((previous) => ({ ...previous, [key]: event.target.value }))}
-                  placeholder={`Valeur pour #${key}`}
-                  autoFocus={key === requiredInputs[0]}
-                />
-              </div>
-            ))}
+            {requiredInputs.map((key) => {
+              const input = inputValues[key] || { mode: 'common' as VariableInputMode, common: '', perLabel: [] };
+              return (
+                <div key={key} className="border rounded-lg p-3 space-y-2">
+                  <Label>{key.charAt(0).toUpperCase() + key.slice(1)}</Label>
+                  <Select
+                    value={input.mode}
+                    onValueChange={(mode: VariableInputMode) => setInputValues((previous) => ({
+                      ...previous, [key]: { ...input, mode, perLabel: mode === 'perLabel' ? Array.from({ length: totalLabels }, (_, index) => input.perLabel[index] || '') : input.perLabel },
+                    }))}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="common">Même valeur pour toute l’impression</SelectItem>
+                      <SelectItem value="perLabel">Une valeur différente par étiquette</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {input.mode === 'common' ? (
+                    <Input
+                      value={input.common}
+                      onChange={(event) => setInputValues((previous) => ({ ...previous, [key]: { ...input, common: event.target.value } }))}
+                      placeholder={`Valeur commune pour #${key}`}
+                      autoFocus={key === requiredInputs[0]}
+                    />
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {Array.from({ length: totalLabels }, (_, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-24">Étiquette {index + 1}</span>
+                          <Input
+                            value={input.perLabel[index] || ''}
+                            onChange={(event) => setInputValues((previous) => ({
+                              ...previous, [key]: { ...input, perLabel: input.perLabel.map((value, i) => i === index ? event.target.value : value) },
+                            }))}
+                            placeholder={`#${key}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { printAfterInputRef.current = false; setInputDialogOpen(false); }}>Annuler</Button>
-            <Button onClick={() => setInputDialogOpen(false)} disabled={requiredInputs.some((key) => !inputValues[key]?.trim())}>Continuer vers l’impression</Button>
+            <Button onClick={() => setInputDialogOpen(false)} disabled={!inputsAreComplete}>Continuer vers l’impression</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
