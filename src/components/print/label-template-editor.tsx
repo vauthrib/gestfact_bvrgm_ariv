@@ -14,7 +14,7 @@ export interface LabelField {
   label?: string;
   value?: string; // texte fixe ou valeur sélectionnée du contenant
   options?: string[]; // liste des contenants disponibles
-  barcodeValue?: string; // expression Code128, ex. "$code / $quantite / $lot"
+  barcodeValue?: string; // expressions automatiques ($quantite) et saisies utilisateur (#Lot)
   barcodeBarWidth?: number;
   barcodeFontSize?: number;
   barcodeDisplayValue?: boolean;
@@ -199,6 +199,7 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                 <Label>Champs dynamiques</Label>
                 <Button type="button" size="sm" variant="outline" onClick={addField}><Plus className="h-4 w-4 mr-1" />Ajouter</Button>
               </div>
+              <p className="text-xs text-muted-foreground mb-2">Le nom du champ est modifiable. Utilisez <strong>#Nom</strong> pour demander une valeur avant impression.</p>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {fields.map((field) => (
                   <div key={field.id} className={`border rounded p-2 cursor-pointer ${selectedField === field.id ? 'border-blue-500 bg-blue-50' : ''}`} onClick={() => setSelectedField(field.id)}>
@@ -209,9 +210,15 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                           {FIELD_TYPES.map(ft => <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
+                      <Input
+                        value={field.label || ''}
+                        onChange={(e) => updateField(field.id, { label: e.target.value })}
+                        placeholder="Nom / variable (#Lot)"
+                        className="w-36"
+                      />
                       {field.type === 'text' && <Input value={field.value || ''} onChange={(e) => updateField(field.id, { value: e.target.value })} placeholder="Texte" className="flex-1" />}
                       {field.type === 'contenant' && <Input value={(field.options || []).join(', ')} onChange={(e) => updateField(field.id, { options: e.target.value.split(',').map(v => v.trim()).filter(Boolean), value: e.target.value.split(',')[0]?.trim() || '' })} placeholder="Contenants: CNT-001, CNT-002" className="flex-1" />} 
-                      {field.type === 'barcode' && <Input value={field.barcodeValue || '$code'} onChange={(e) => updateField(field.id, { barcodeValue: e.target.value })} placeholder="$code / $quantite / $lot" className="flex-1" />}
+                      {field.type === 'barcode' && <div className="flex-1"><Input value={field.barcodeValue || '$code'} onChange={(e) => updateField(field.id, { barcodeValue: e.target.value })} placeholder="$quantite / #Lot" /><p className="text-[10px] text-muted-foreground mt-1">Automatique : $quantite · Saisie à l’impression : #Lot</p></div>}
                       <Button type="button" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); removeField(field.id); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                     {selectedField === field.id && (

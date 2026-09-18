@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Printer, Settings, Trash2, Plus, Check } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import JsBarcode from 'jsbarcode';
@@ -119,12 +120,29 @@ function TemplateMiniPreview({ template }: { template: LabelTemplateData }) {
 }
 
 /** Rendu d'un champ pour l'impression réelle */
+function normalizeTemplateKey(rawKey: string): string {
+  return rawKey.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 function resolveTemplate(value: string | undefined, data: Record<string, string>): string {
-  return (value || '$code').replace(/\$([a-zA-ZÀ-ÿ]+)/g, (_, rawKey: string) => {
-    const key = rawKey.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return (value || '$code').replace(/[$#]([a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ0-9_-]*)/g, (_, rawKey: string) => {
+    const key = normalizeTemplateKey(rawKey);
     const aliases: Record<string, string> = { ref: 'code', reference: 'code', qte: 'quantite', nbl: 'numero', bl: 'numero' };
     return data[aliases[key] || key] || '';
   });
+}
+
+function getRequiredTemplateInputs(template: LabelTemplateData): string[] {
+  const keys = new Set<string>();
+  for (const field of template.fields || []) {
+    for (const source of [field.label, field.value, field.barcodeValue]) {
+      source?.replace(/#([a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ0-9_-]*)/g, (_, rawKey: string) => {
+        keys.add(normalizeTemplateKey(rawKey));
+        return '';
+      });
+    }
+  }
+  return Array.from(keys);
 }
 
 function renderField(field: LabelField, data: Record<string, string>, scale: number, baseUrl: string) {
@@ -148,8 +166,8 @@ function renderField(field: LabelField, data: Record<string, string>, scale: num
     case 'numero': content = data.numero || '-'; break;
     case 'quantite': content = data.quantite || '-'; break;
     case 'client': content = data.client || '-'; break;
-    case 'contenant': content = field.value || data.contenant || field.options?.[0] || '-'; break;
-    case 'text': content = field.value || ''; break;
+    case 'contenant': content = resolveTemplate(field.value || data.contenant || field.options?.[0] || '-', data); break;
+    case 'text': content = resolveTemplate(field.value || '', data); break;
   }
   return (
     <div key={field.id} style={{
@@ -169,6 +187,10 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<LabelTemplateData | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [requiredInputs, setRequiredInputs] = useState<string[]>([]);
+  const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [inputDialogOpen, setInputDialogOpen] = useState(false);
+  const printAfterInputRef = useRef(false);
 
   const etiquettes = bl ? calculerEtiquettes(bl, articles) : [];
   const totalLabels = etiquettes.reduce((sum, e) => sum + e.nbEtiquettes, 0);
@@ -199,7 +221,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
     return () => clearTimeout(timer);
   }, [open, etiquettes.length, selectedTemplateId]);
 
-  const handlePrint = () => {
+  const performPrint = () => {
     const printContent = document.getElementById('label-print-area');
     if (!printContent || !selectedTemplate) return;
     const printWindow = window.open('', '_blank', 'width=1100,height=800');
@@ -226,6 +248,27 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
     const printImages = Array.from(printWindow.document.images);
     Promise.all(printImages.map((image) => image.complete ? Promise.resolve() : new Promise<void>((resolve) => { image.onload = () => resolve(); image.onerror = () => resolve(); }))).then(() => setTimeout(() => { printWindow.print(); printWindow.close(); }, 300));
   };
+
+  const handlePrint = () => {
+    if (!selectedTemplate) return;
+    const keys = getRequiredTemplateInputs(selectedTemplate);
+    if (keys.length > 0) {
+      setRequiredInputs(keys);
+      setInputValues((previous) => keys.reduce((values, key) => ({ ...values, [key]: previous[key] || '' }), {}));
+      printAfterInputRef.current = true;
+      setInputDialogOpen(true);
+      return;
+    }
+    performPrint();
+  };
+
+  useEffect(() => {
+    if (!inputDialogOpen && printAfterInputRef.current) {
+      printAfterInputRef.current = false;
+      const timer = setTimeout(performPrint, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [inputDialogOpen, inputValues]);
 
   const handleSaveTemplate = async (template: LabelTemplateData) => {
     try {
@@ -420,7 +463,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                       code: e.code, designation: e.designation,
                       date: new Date().toLocaleDateString('fr-FR'),
                       numero: bl.numero, quantite: qtyLabel,
-                      client: bl.client?.raisonSociale || '', lot: '', contenant: '',
+                      client: bl.client?.raisonSociale || '', lot: '', contenant: '', ...inputValues,
                     };
                     const labelWidth = selectedTemplate?.width || 100;
                     const labelHeight = selectedTemplate?.height || 60;
@@ -467,6 +510,32 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={handlePrint} disabled={!selectedTemplate}>
               <Printer className="h-4 w-4 mr-2" />Imprimer {totalLabels} étiquette(s) (A5 × 2)
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={inputDialogOpen} onOpenChange={(open) => { if (!open) printAfterInputRef.current = false; setInputDialogOpen(open); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Informations à inscrire sur les étiquettes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">Renseignez les champs signalés par # avant de lancer l’impression.</p>
+            {requiredInputs.map((key) => (
+              <div key={key}>
+                <Label htmlFor={`label-input-${key}`}>{key.charAt(0).toUpperCase() + key.slice(1)}</Label>
+                <Input
+                  id={`label-input-${key}`}
+                  value={inputValues[key] || ''}
+                  onChange={(event) => setInputValues((previous) => ({ ...previous, [key]: event.target.value }))}
+                  placeholder={`Valeur pour #${key}`}
+                  autoFocus={key === requiredInputs[0]}
+                />
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { printAfterInputRef.current = false; setInputDialogOpen(false); }}>Annuler</Button>
+            <Button onClick={() => setInputDialogOpen(false)} disabled={requiredInputs.some((key) => !inputValues[key]?.trim())}>Continuer vers l’impression</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
