@@ -133,7 +133,7 @@ function renderField(field: LabelField, data: Record<string, string>, scale: num
     const size = Math.min(field.width, field.height) * scale * 0.8;
     return (
       <div key={field.id} style={{
-        position: 'absolute', left: field.x * scale, top: field.y * scale, width: size, height: size,
+        position: 'absolute', left: `calc(${field.x}mm * var(--label-scale, 1))`, top: `calc(${field.y}mm * var(--label-scale, 1))`, width: `calc(${Math.min(field.width, field.height) * 0.8}mm * var(--label-scale, 1))`, height: `calc(${Math.min(field.width, field.height) * 0.8}mm * var(--label-scale, 1))`,
       }}>
         <QRCodeSVG value={qrValue} size={size} level="M" />
       </div>
@@ -153,8 +153,8 @@ function renderField(field: LabelField, data: Record<string, string>, scale: num
   }
   return (
     <div key={field.id} style={{
-      position: 'absolute', left: field.x * scale, top: field.y * scale,
-      width: field.width * scale, height: field.height * scale,
+      position: 'absolute', left: `calc(${field.x}mm * var(--label-scale, 1))`, top: `calc(${field.y}mm * var(--label-scale, 1))`,
+      width: `calc(${field.width}mm * var(--label-scale, 1))`, height: `calc(${field.height}mm * var(--label-scale, 1))`,
       fontSize: field.fontSize * scale * 0.3, fontWeight: field.bold ? 'bold' : 'normal',
       color: field.color || '#000', overflow: 'hidden', display: 'flex', alignItems: 'center', lineHeight: 1.1,
     }}>
@@ -214,8 +214,8 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; background: white; }
         body { font-family: Arial, sans-serif; }
-        .print-grid { width: 297mm; min-height: 210mm; display: grid; grid-template-columns: repeat(2, ${lw}mm); grid-auto-rows: ${lh}mm; gap: 1mm; padding: 1mm; justify-content: center; align-content: start; }
-        .label-card { border: 0 !important; page-break-inside: avoid; break-inside: avoid; position: relative !important; overflow: hidden !important; width: ${lw}mm !important; height: ${lh}mm !important; margin: 0 !important; }
+        .print-grid { width: 297mm; height: 210mm; display: grid; grid-template-columns: repeat(2, ${lw}mm); grid-auto-rows: ${lh}mm; gap: 0; padding: 0; margin: 0; justify-content: center; align-content: start; }
+        .label-card { border: 0 !important; page-break-inside: avoid; break-inside: avoid; position: relative !important; overflow: hidden !important; width: ${lw}mm !important; height: ${lh}mm !important; margin: 0 !important; --label-scale: 1 !important; }
         .label-card img { opacity: 1 !important; filter: none !important; object-fit: fill !important; }        .label-content { position: relative; z-index: 1; width: 100%; height: 100%; }
         .label-footer { display: none !important; }
         svg { max-width: 100%; }
@@ -430,7 +430,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                         key={`${idx}-${j}`}
                         ref={(el) => { labelRefs.current[labelNum - 1] = el; }}
                         className="label-card bg-white"
-                        style={{ width: labelWidth * scale, height: labelHeight * scale, position: 'relative', overflow: 'hidden', border: '1px solid #ddd' }}
+                        style={{ width: `calc(${labelWidth}mm * var(--label-scale, 1))`, height: `calc(${labelHeight}mm * var(--label-scale, 1))`, position: 'relative', overflow: 'hidden', border: '1px solid #ddd', ...({'--label-scale': scale / 3.7795275591} as React.CSSProperties) }}
                         data-filename={fileName}
                       >
                         {selectedTemplate?.backgroundImage && (
@@ -441,8 +441,8 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                             if (field.type === 'barcode') {
                               return (
                                 <div key={field.id} style={{
-                                  position: 'absolute', left: field.x * scale, top: field.y * scale,
-                                  width: field.width * scale, height: field.height * scale,
+                                  position: 'absolute', left: `calc(${field.x}mm * var(--label-scale, 1))`, top: `calc(${field.y}mm * var(--label-scale, 1))`,
+                                  width: `calc(${field.width}mm * var(--label-scale, 1))`, height: `calc(${field.height}mm * var(--label-scale, 1))`,
                                 }}>
                                   <svg data-barcode data-code={resolveTemplate(field.barcodeValue, fieldData)} data-bar-width={field.barcodeBarWidth || 1.5} data-bar-height={Math.max(12, field.height * scale * 0.7)} data-font-size={field.barcodeFontSize || 10} data-display-value={field.barcodeDisplayValue === false ? 'false' : 'true'}></svg>
                                 </div>
