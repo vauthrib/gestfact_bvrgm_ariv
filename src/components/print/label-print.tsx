@@ -119,6 +119,14 @@ function TemplateMiniPreview({ template }: { template: LabelTemplateData }) {
 }
 
 /** Rendu d'un champ pour l'impression réelle */
+function resolveTemplate(value: string | undefined, data: Record<string, string>): string {
+  return (value || '$code').replace(/\$([a-zA-ZÀ-ÿ]+)/g, (_, rawKey: string) => {
+    const key = rawKey.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const aliases: Record<string, string> = { ref: 'code', reference: 'code', qte: 'quantite', nbl: 'numero', bl: 'numero' };
+    return data[aliases[key] || key] || '';
+  });
+}
+
 function renderField(field: LabelField, data: Record<string, string>, scale: number, baseUrl: string) {
   if (field.type === 'qrcode') {
     const qrValue = `${baseUrl}/article/${encodeURIComponent(data.code || '')}`;
@@ -140,6 +148,7 @@ function renderField(field: LabelField, data: Record<string, string>, scale: num
     case 'numero': content = data.numero || '-'; break;
     case 'quantite': content = data.quantite || '-'; break;
     case 'client': content = data.client || '-'; break;
+    case 'contenant': content = field.value || data.contenant || field.options?.[0] || '-'; break;
     case 'text': content = field.value || ''; break;
   }
   return (
@@ -179,9 +188,8 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
         if (ref) {
           const svg = ref.querySelector('svg[data-barcode]');
           if (svg) {
-            try {
-              JsBarcode(svg, svg.getAttribute('data-code') || 'UNKNOWN', {
-                format: 'CODE128', width: 1.5, height: 30, displayValue: true, fontSize: 12, margin: 2
+            try {                JsBarcode(svg, svg.getAttribute('data-code') || 'UNKNOWN', {
+                format: 'CODE128', width: Number(svg.getAttribute('data-bar-width') || 1.5), height: Number(svg.getAttribute('data-bar-height') || 30), displayValue: svg.getAttribute('data-display-value') !== 'false', fontSize: Number(svg.getAttribute('data-font-size') || 12), margin: 2
               });
             } catch (e) { console.warn('Barcode error:', e); }
           }
@@ -208,8 +216,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
         body { font-family: Arial, sans-serif; }
         .print-grid { width: 297mm; min-height: 210mm; display: grid; grid-template-columns: repeat(2, ${lw}mm); grid-auto-rows: ${lh}mm; gap: 1mm; padding: 1mm; justify-content: center; align-content: start; }
         .label-card { border: 0 !important; page-break-inside: avoid; break-inside: avoid; position: relative !important; overflow: hidden !important; width: ${lw}mm !important; height: ${lh}mm !important; margin: 0 !important; }
-        .label-card img { opacity: 1 !important; filter: none !important; object-fit: fill !important; }
-        .label-content { position: relative; z-index: 1; width: 79.375%; height: 79.375%; transform: scale(1.25984); transform-origin: top left; }
+        .label-card img { opacity: 1 !important; filter: none !important; object-fit: fill !important; }        .label-content { position: relative; z-index: 1; width: 100%; height: 100%; }
         .label-footer { display: none !important; }
         svg { max-width: 100%; }
         @media print { .print-grid { page-break-after: always; } }
@@ -413,7 +420,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                       code: e.code, designation: e.designation,
                       date: new Date().toLocaleDateString('fr-FR'),
                       numero: bl.numero, quantite: qtyLabel,
-                      client: bl.client?.raisonSociale || '',
+                      client: bl.client?.raisonSociale || '', lot: '', contenant: '',
                     };
                     const labelWidth = selectedTemplate?.width || 100;
                     const labelHeight = selectedTemplate?.height || 60;
@@ -429,7 +436,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                         {selectedTemplate?.backgroundImage && (
                           <img src={selectedTemplate.backgroundImage} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'fill', opacity: 1, filter: 'none', zIndex: 0 }} />
                         )}
-                        <div className="label-content" style={{ position: 'relative', zIndex: 1 }}>
+                        <div className="label-content" style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}>
                           {(selectedTemplate?.fields || []).map((field) => {
                             if (field.type === 'barcode') {
                               return (
@@ -437,7 +444,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                                   position: 'absolute', left: field.x * scale, top: field.y * scale,
                                   width: field.width * scale, height: field.height * scale,
                                 }}>
-                                  <svg data-barcode data-code={e.code}></svg>
+                                  <svg data-barcode data-code={resolveTemplate(field.barcodeValue, fieldData)} data-bar-width={field.barcodeBarWidth || 1.5} data-bar-height={Math.max(12, field.height * scale * 0.7)} data-font-size={field.barcodeFontSize || 10} data-display-value={field.barcodeDisplayValue === false ? 'false' : 'true'}></svg>
                                 </div>
                               );
                             }

@@ -10,9 +10,14 @@ import { Trash2, Plus, Upload, Eye } from 'lucide-react';
 
 export interface LabelField {
   id: string;
-  type: 'code' | 'designation' | 'date' | 'numero' | 'quantite' | 'barcode' | 'qrcode' | 'client' | 'text';
+  type: 'code' | 'designation' | 'date' | 'numero' | 'quantite' | 'barcode' | 'qrcode' | 'client' | 'contenant' | 'text';
   label?: string;
-  value?: string; // pour type 'text'
+  value?: string; // texte fixe ou valeur sélectionnée du contenant
+  options?: string[]; // liste des contenants disponibles
+  barcodeValue?: string; // expression Code128, ex. "$code / $quantite / $lot"
+  barcodeBarWidth?: number;
+  barcodeFontSize?: number;
+  barcodeDisplayValue?: boolean;
   x: number;      // position X en mm
   y: number;      // position Y en mm
   width: number;   // largeur en mm
@@ -46,8 +51,9 @@ const FIELD_TYPES = [
   { value: 'numero', label: 'N° BL' },
   { value: 'quantite', label: 'Quantité' },
   { value: 'barcode', label: 'Code-barres (Code128)' },
-  { value: 'qrcode', label: 'QR Code (lien article)' },
+  { value: 'qrcode', label: 'QR Code (fiche article)' },
   { value: 'client', label: 'Client' },
+  { value: 'contenant', label: 'N° de contenant' },
   { value: 'text', label: 'Texte fixe' },
 ];
 
@@ -88,6 +94,16 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
       type: 'qrcode',
       label: 'QR Code article',
       x: 74, y: 86, width: 11, height: 11,
+      fontSize: 8, bold: false, color: '#000000'
+    }, {
+      id: generateId(), type: 'designation', label: 'Désignation',
+      x: 5, y: 8, width: 65, height: 8,
+      fontSize: 10, bold: true, color: '#000000'
+    }, {
+      id: generateId(), type: 'barcode', label: 'Code128',
+      barcodeValue: '$code / $quantite', barcodeBarWidth: 1.5,
+      barcodeFontSize: 10, barcodeDisplayValue: true,
+      x: 5, y: 72, width: 62, height: 12,
       fontSize: 8, bold: false, color: '#000000'
     }]);
     setIsDefault(true);
@@ -194,6 +210,8 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                         </SelectContent>
                       </Select>
                       {field.type === 'text' && <Input value={field.value || ''} onChange={(e) => updateField(field.id, { value: e.target.value })} placeholder="Texte" className="flex-1" />}
+                      {field.type === 'contenant' && <Input value={(field.options || []).join(', ')} onChange={(e) => updateField(field.id, { options: e.target.value.split(',').map(v => v.trim()).filter(Boolean), value: e.target.value.split(',')[0]?.trim() || '' })} placeholder="Contenants: CNT-001, CNT-002" className="flex-1" />} 
+                      {field.type === 'barcode' && <Input value={field.barcodeValue || '$code'} onChange={(e) => updateField(field.id, { barcodeValue: e.target.value })} placeholder="$code / $quantite / $lot" className="flex-1" />}
                       <Button type="button" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); removeField(field.id); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                     {selectedField === field.id && (
@@ -203,6 +221,11 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                         <div><Label className="text-xs">Larg. (mm)</Label><Input type="number" value={field.width} onChange={(e) => updateField(field.id, { width: Number(e.target.value) })} /></div>
                         <div><Label className="text-xs">Haut. (mm)</Label><Input type="number" value={field.height} onChange={(e) => updateField(field.id, { height: Number(e.target.value) })} /></div>
                         <div><Label className="text-xs">Taille</Label><Input type="number" value={field.fontSize} onChange={(e) => updateField(field.id, { fontSize: Number(e.target.value) })} /></div>
+                        {field.type === 'barcode' && <>
+                          <div><Label className="text-xs">Barres</Label><Input type="number" step="0.1" value={field.barcodeBarWidth || 1.5} onChange={(e) => updateField(field.id, { barcodeBarWidth: Number(e.target.value) })} /></div>
+                          <div><Label className="text-xs">Texte barre</Label><Input type="number" value={field.barcodeFontSize || 10} onChange={(e) => updateField(field.id, { barcodeFontSize: Number(e.target.value) })} /></div>
+                          <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={field.barcodeDisplayValue !== false} onChange={(e) => updateField(field.id, { barcodeDisplayValue: e.target.checked })} />Afficher valeur</label>
+                        </>}
                         <div><Label className="text-xs">Couleur</Label><Input type="color" value={field.color} onChange={(e) => updateField(field.id, { color: e.target.value })} /></div>
                         <div className="flex items-end"><label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={field.bold} onChange={(e) => updateField(field.id, { bold: e.target.checked })} />Gras</label></div>
                       </div>
@@ -216,7 +239,7 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
           <div>
             <Label className="mb-2 block">Aperçu ({width}mm × {height}mm)</Label>
             <div className="max-w-full overflow-auto border-2 border-dashed rounded-lg bg-gray-50 p-2"><div style={{ width: width * scale, height: height * scale, position: 'relative' }}>
-              {backgroundImage && <img src={backgroundImage} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />}
+              {backgroundImage && <img src={backgroundImage} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'fill' }} />}
               {fields.map((field) => (
                 <div key={field.id} style={{
                   position: 'absolute',
@@ -239,6 +262,8 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                     <div className="w-full h-full flex items-center justify-center text-xs bg-gray-100"> QR </div>
                   ) : field.type === 'text' ? (
                     field.value || 'Texte'
+                  ) : field.type === 'contenant' ? (
+                    field.value || field.options?.[0] || 'N° contenant'
                   ) : (
                     <span className="truncate">{`{${field.type}}`}</span>
                   )}

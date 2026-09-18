@@ -206,6 +206,19 @@ export function BonsLivraisonView() {
     try { await fetch(`/api/bons-livraison?id=${id}`, { method: 'DELETE' }); fetchBons(); } catch (e) { }
   };
 
+  const handlePrintDraftLabels = () => {
+    const client = clients.find(c => c.id === formData.clientId);
+    const draft: BonLivraison = {
+      id: 'draft-label', numero: formData.numero || getProchainNumero(), dateBL: formData.dateBL,
+      clientId: formData.clientId, bonCommande: formData.bonCommande || null, statut: 'BROUILLON',
+      infoLibre: formData.infoLibre || null, notesLivraison: formData.notesLivraison || null,
+      totalHT: calcTotal(), client: { raisonSociale: client?.raisonSociale || '' },
+      lignes: lignes.filter(l => l.designation.trim() && l.quantite > 0)
+    };
+    setSelectedBLForLabels(draft);
+    setLabelPrintOpen(true);
+  };
+
   const handlePrint = async (bl: BonLivraison) => {
     try {
       const res = await fetch('/api/bons-livraison');
@@ -617,8 +630,8 @@ export function BonsLivraisonView() {
                   )}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(b)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
                   {/* V2.93 - Imprimer étiquettes si articles avec conditionnement */}
-                  {b.statut === 'VALIDEE' && articles.some(a => (a as any).conditionnement > 0) && (
-                    <Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setSelectedBLForLabels(b); setLabelPrintOpen(true); }} title="Imprimer étiquettes"><Tag className="h-4 w-4" /></Button>
+                  {articles.some(a => (a as any).conditionnement > 0) && (
+                    <Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setSelectedBLForLabels(b); setLabelPrintOpen(true); }} title="Imprimer étiquettes (brouillon ou validé)"><Tag className="h-4 w-4" /></Button>
                   )}
                   <PermissionGate permission="bl.edit">
                     <Button size="sm" variant="outline" onClick={() => openEditDialog(b)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
@@ -680,7 +693,11 @@ export function BonsLivraisonView() {
               <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
               <div><Label>Notes</Label><Textarea value={formData.notesLivraison} onChange={(e) => setFormData({ ...formData, notesLivraison: e.target.value })} /></div>
             </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button><Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editing ? 'Modifier' : 'Créer'}</Button></DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handlePrintDraftLabels} disabled={!lignes.some(l => l.articleId && l.quantite > 0 && (articles.find(a => a.id === l.articleId)?.conditionnement || 0) > 0)}><Tag className="w-4 h-4 mr-1" />Étiquettes</Button>
+              <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Annuler</Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">{editing ? 'Modifier' : 'Créer'}</Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
