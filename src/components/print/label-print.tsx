@@ -76,11 +76,9 @@ function calculerEtiquettes(bl: BonLivraison, articles: Article[]) {
   return result;
 }
 
-function generateLabelFileName(blNumero: string, articleCode: string, labelNum: number): string {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const blHash = blNumero.replace(/[^A-Za-z0-9]/g, '').slice(-4);
-  const artHash = articleCode.replace(/[^A-Za-z0-9]/g, '').slice(-4);
-  return `LBL-${date}-${blHash}-${artHash}-${String(labelNum).padStart(3, '0')}`;
+function createOpaqueLabelToken(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID().replace(/-/g, '');
+  return `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
 }
 
 /** Mini preview d'un template (rendu statique à petite échelle) */
@@ -154,9 +152,10 @@ function getRequiredTemplateInputs(template: LabelTemplateData): string[] {
   return Array.from(keys);
 }
 
-function renderField(field: LabelField, data: Record<string, string>, scale: number, baseUrl: string) {
+function renderField(field: LabelField, data: Record<string, string>, scale: number, baseUrl: string, qrToken: string) {
   if (field.type === 'qrcode') {
-    const qrValue = `${baseUrl}/article/${encodeURIComponent(data.code || '')}`;
+    const qrValue = `${baseUrl}/label/${encodeURIComponent(qrToken)}`;
+
     const size = Math.min(field.width, field.height) * scale * 0.8;
     return (
       <div key={field.id} style={{
@@ -192,6 +191,11 @@ function renderField(field: LabelField, data: Record<string, string>, scale: num
 
 export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], onRefreshTemplates }: LabelPrintProps) {
   const labelRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const labelTokensRef = useRef<string[]>([]);
+  const getLabelToken = (labelNumber: number) => {
+    while (labelTokensRef.current.length < labelNumber) labelTokensRef.current.push(createOpaqueLabelToken());
+    return labelTokensRef.current[labelNumber - 1];
+  };
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('default');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<LabelTemplateData | null>(null);
@@ -229,6 +233,20 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
     }, 100);
     return () => clearTimeout(timer);
   }, [open, etiquettes.length, selectedTemplateId]);
+
+  useEffect(() => {
+    if (!open || !selectedTemplate || totalLabels === 0) return;
+    const timer = setTimeout(() => {
+      labelRefs.current.slice(0, totalLabels).forEach((ref, index) => {
+        if (!ref) return;
+        fetch('/api/label-images', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: getLabelToken(index + 1), html: ref.outerHTML, width: selectedTemplate.width, height: selectedTemplate.height }),
+        }).catch(() => undefined);
+      });
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [open, selectedTemplate, selectedTemplateId, totalLabels, inputValues]);
 
   const performPrint = () => {
     const printContent = document.getElementById('label-print-area');
@@ -472,7 +490,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                     <td className="p-2 text-right">{e.qteBL}</td>
                     <td className="p-2 text-right">{e.qteParEtiquette}</td>
                     <td className="p-2 text-right font-bold">{e.nbEtiquettes}</td>
-                    <td className="p-2 font-mono text-xs text-muted-foreground">{generateLabelFileName(bl.numero, e.code, 1)}</td>
+                    <td className="p-2 font-mono text-xs text-muted-foreground">{getLabelToken(1)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -497,7 +515,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                     };
                     const labelWidth = selectedTemplate?.width || 100;
                     const labelHeight = selectedTemplate?.height || 60;
-                    const fileName = generateLabelFileName(bl.numero, e.code, labelNum);
+                    const fileName = getLabelToken(labelNum);
                     return (
                       <div
                         key={`${idx}-${j}`}
@@ -522,9 +540,9 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                               );
                             }
                             if (field.type === 'qrcode') {
-                              return <div key={field.id}>{renderField(field, fieldData, scale, baseUrl)}</div>;
+                              return <div key={field.id}>{renderField(field, fieldData, scale, baseUrl, getLabelToken(labelNum))}</div>;
                             }
-                            return <div key={field.id}>{renderField(field, fieldData, scale, baseUrl)}</div>;
+                            return <div key={field.id}>{renderField(field, fieldData, scale, baseUrl, getLabelToken(labelNum))}</div>;
                           })}
                         </div>
                         <div className="label-footer">{fileName}</div>

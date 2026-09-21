@@ -1,0 +1,8 @@
+CREATE TABLE "LabelImage" (
+    "token" TEXT NOT NULL,
+    "html" TEXT NOT NULL,
+    "width" DOUBLE PRECISION NOT NULL DEFAULT 100,
+    "height" DOUBLE PRECISION NOT NULL DEFAULT 60,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "LabelImage_pkey" PRIMARY KEY ("token")
+);
