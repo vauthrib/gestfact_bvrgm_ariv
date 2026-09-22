@@ -35,6 +35,7 @@ export interface LabelTemplateData {
   backgroundImage: string | null;
   fields: LabelField[];
   isDefault: boolean;
+  pageLayout?: 'A4_PORTRAIT_4' | 'A4_PORTRAIT_9' | 'A4_PORTRAIT_20';
 }
 
 interface LabelTemplateEditorProps {
@@ -105,6 +106,16 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
       barcodeFontSize: 10, barcodeDisplayValue: true,
       x: 5, y: 72, width: 62, height: 12,
       fontSize: 8, bold: false, color: '#000000'
+    }, {
+      id: generateId(), type: 'barcode', label: 'Code article seul',
+      barcodeValue: '$code', barcodeBarWidth: 1.2,
+      barcodeFontSize: 8, barcodeDisplayValue: true,
+      x: 5, y: 58, width: 62, height: 12,
+      fontSize: 8, bold: false, color: '#000000'
+    }, {
+      id: generateId(), type: 'client', label: 'Client',
+      x: 5, y: 20, width: 65, height: 8,
+      fontSize: 9, bold: true, color: '#000000'
     }]);
     setIsDefault(true);
     setSelectedField(null);

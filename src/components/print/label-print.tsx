@@ -14,6 +14,23 @@ import { LabelTemplateEditor, LabelTemplateData, LabelField } from './label-temp
 const QRCodeSVG = dynamic(() => import('qrcode.react').then(mod => mod.QRCodeSVG), { ssr: false });
 const PUBLIC_APP_URL = 'https://gestfact-bvrgm-ariv.vercel.app';
 
+function presetFields(prefix: string, qrSize: number): LabelField[] {
+  return [
+    { id: `${prefix}-client`, type: 'client', label: 'Client', x: 5, y: 5, width: 60, height: 8, fontSize: 9, bold: true, color: '#000000' },
+    { id: `${prefix}-code`, type: 'code', label: 'Code article', x: 5, y: 14, width: 60, height: 8, fontSize: 9, bold: true, color: '#000000' },
+    { id: `${prefix}-designation`, type: 'designation', label: 'Désignation', x: 5, y: 23, width: 60, height: 8, fontSize: 8, bold: false, color: '#000000' },
+    { id: `${prefix}-barcode-1`, type: 'barcode', label: 'Code-barres 1', barcodeValue: '$code / $quantite', barcodeBarWidth: 1.2, barcodeFontSize: 8, barcodeDisplayValue: true, x: 5, y: 34, width: 60, height: 10, fontSize: 8, bold: false, color: '#000000' },
+    { id: `${prefix}-barcode-2`, type: 'barcode', label: 'Code-barres 2', barcodeValue: '$code', barcodeBarWidth: 1.1, barcodeFontSize: 7, barcodeDisplayValue: true, x: 5, y: 46, width: 60, height: 10, fontSize: 7, bold: false, color: '#000000' },
+    { id: `${prefix}-qrcode`, type: 'qrcode', label: 'QR étiquette complète', x: 70 - qrSize - 5, y: 5, width: qrSize, height: qrSize, fontSize: 8, bold: false, color: '#000000' },
+  ];
+}
+
+const PAGE_PRESETS: LabelTemplateData[] = [
+  { id: 'preset-a4-4', name: 'A4 portrait — 4 étiquettes', width: 105, height: 148.5, backgroundImage: null, fields: presetFields('a4-4', 22), isDefault: false, pageLayout: 'A4_PORTRAIT_4' },
+  { id: 'preset-a4-9', name: 'A4 portrait — 9 étiquettes', width: 70, height: 99, backgroundImage: null, fields: presetFields('a4-9', 18), isDefault: false, pageLayout: 'A4_PORTRAIT_9' },
+  { id: 'preset-a4-20', name: 'A4 portrait — 20 étiquettes', width: 52.5, height: 59.4, backgroundImage: null, fields: presetFields('a4-20', 14), isDefault: false, pageLayout: 'A4_PORTRAIT_20' },
+];
+
 interface LigneBL {
   id?: string;
   articleId?: string;
@@ -211,10 +228,11 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
   const etiquettes = bl ? calculerEtiquettes(bl, articles) : [];
   const totalLabels = etiquettes.reduce((sum, e) => sum + e.nbEtiquettes, 0);
 
+  const availableTemplates = [...templates, ...PAGE_PRESETS.filter(preset => !templates.some(template => template.name === preset.name))];
   const selectedTemplate: LabelTemplateData | null =
     selectedTemplateId === 'default'
-      ? (templates.find(t => t.isDefault) || templates[0] || null)
-      : templates.find(t => t.id === selectedTemplateId) || null;
+      ? (availableTemplates.find(t => t.isDefault) || availableTemplates[0] || null)
+      : availableTemplates.find(t => t.id === selectedTemplateId) || null;
 
   const scale = 3;
   const baseUrl = PUBLIC_APP_URL;
@@ -263,15 +281,17 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
     if (!printWindow) return;
     const lw = selectedTemplate.width || 100;
     const lh = selectedTemplate.height || 60;
+    const pageLayout = selectedTemplate.pageLayout || (selectedTemplate.name.includes('4 étiquettes') ? 'A4_PORTRAIT_4' : selectedTemplate.name.includes('9 étiquettes') ? 'A4_PORTRAIT_9' : selectedTemplate.name.includes('20 étiquettes') ? 'A4_PORTRAIT_20' : null);
+    const page = pageLayout === 'A4_PORTRAIT_4' ? { columns: 2, rows: 2, width: 210, height: 297, orientation: 'portrait' } : pageLayout === 'A4_PORTRAIT_9' ? { columns: 3, rows: 3, width: 210, height: 297, orientation: 'portrait' } : pageLayout === 'A4_PORTRAIT_20' ? { columns: 4, rows: 5, width: 210, height: 297, orientation: 'portrait' } : { columns: 2, rows: 1, width: 297, height: 210, orientation: 'landscape' };
     const labels = Array.from(printContent.querySelectorAll<HTMLElement>('.label-card')).map((label) => label.outerHTML).join('');
     printWindow.document.write(`
       <html><head><title>Étiquettes - ${bl?.numero || ''}</title>
       <style>
-        @page { size: A4 landscape; margin: 0; }
+        @page { size: A4 ${page.orientation}; margin: 0; }
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; background: white; }
         body { font-family: Arial, sans-serif; }
-        .print-grid { width: 297mm; height: 210mm; display: grid; grid-template-columns: repeat(2, ${lw}mm); grid-auto-rows: ${lh}mm; gap: 0; padding: 0; margin: 0; justify-content: center; align-content: start; }
+        .print-grid { width: ${page.width}mm; height: ${page.height}mm; display: grid; grid-template-columns: repeat(${page.columns}, ${lw}mm); grid-template-rows: repeat(${page.rows}, ${lh}mm); gap: 0; padding: 0; margin: 0; justify-content: center; align-content: start; }
         .label-card { border: 0 !important; page-break-inside: avoid; break-inside: avoid; position: relative !important; overflow: hidden !important; width: ${lw}mm !important; height: ${lh}mm !important; margin: 0 !important; --label-scale: 1 !important; }
         .label-card img { opacity: 1 !important; filter: none !important; object-fit: fill !important; }        .label-content { position: relative; z-index: 1; width: 100%; height: 100%; }
         .label-footer { display: none !important; }
@@ -392,7 +412,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                   <Plus className="h-4 w-4 mr-1" />Nouveau modèle
                 </Button>
               </div>
-              {templates.length === 0 ? (
+              {availableTemplates.length === 0 ? (
                 <div className="border-2 border-dashed rounded-lg p-6 text-center text-muted-foreground">
                   <p className="mb-2">Aucun modèle d'étiquette enregistré.</p>
                   <Button variant="outline" size="sm" onClick={() => { setEditingTemplate(null); setEditorOpen(true); }}>
@@ -401,7 +421,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {templates.map((t) => {
+                  {availableTemplates.map((t) => {
                     const isSelected = selectedTemplateId === t.id;
                     return (
                       <div
@@ -477,7 +497,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
 
             {/* ===== RÉCAPITULATIF ===== */}
             <div className="text-sm text-muted-foreground border-t pt-3">
-              {etiquettes.length} article(s) avec conditionnement — <strong>{totalLabels} étiquette(s)</strong> — Format A5 (2 par feuille A4)
+              {etiquettes.length} article(s) avec conditionnement — <strong>{totalLabels} étiquette(s)</strong> — mise en page selon le modèle sélectionné
             </div>
 
             {/* ===== TABLEAU RÉCAP ===== */}
