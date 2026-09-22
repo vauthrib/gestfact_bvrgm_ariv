@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 const APP_PREFIX = 'ARI';
-const SUPABASE_URL = process.env.SUPABASE_URL?.replace(/\/$/, '');
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)?.replace(/\/$/, '');
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_KEY;
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'label-images';
 
 function isNewOpaqueToken(token: string) {
@@ -26,11 +26,26 @@ function toSvg(html: string, width: number, height: number) {
 }
 
 async function uploadToSupabase(token: string, svg: string) {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return false;
-  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodeURIComponent(`${token}.svg`)}`, {
-    method: 'POST', headers: { Authorization: `Bearer ${SUPABASE_KEY}`, apikey: SUPABASE_KEY, 'Content-Type': 'image/svg+xml', 'x-upsert': 'true' }, body: svg, cache: 'no-store'
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    throw new Error('SUPABASE_URL et une clé de service Supabase sont nécessaires');
+  }
+  const path = `${token}.svg`;
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodeURIComponent(path)}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      apikey: SUPABASE_KEY,
+      'Content-Type': 'image/svg+xml',
+      'x-upsert': 'true',
+      'cache-control': 'public, max-age=31536000, immutable',
+    },
+    body: svg,
+    cache: 'no-store',
   });
-  if (!response.ok) throw new Error(`Supabase Storage ${response.status}`);
+  if (!response.ok) {
+    const details = await response.text().catch(() => '');
+    throw new Error(`Supabase Storage ${response.status}: ${details.slice(0, 300)}`);
+  }
   return true;
 }
 
@@ -42,7 +57,13 @@ export async function POST(request: NextRequest) {
     const labelHeight = dimension(height, 60);
     const svg = toSvg(html, labelWidth, labelHeight);
     let storage = 'postgresql';
-    try { if (await uploadToSupabase(token, svg)) storage = 'supabase'; } catch (error) { console.warn('Supabase Storage indisponible, conservation PostgreSQL:', error); }
+    try {
+      await uploadToSupabase(token, svg);
+      storage = 'supabase';
+    } catch (error) {
+      console.error('Échec upload Supabase Storage:', error);
+      return NextResponse.json({ error: 'Impossible d’enregistrer le fichier dans Supabase Storage' }, { status: 502 });
+    }
     await prisma.$executeRaw`
       INSERT INTO "LabelImage" ("token", "html", "width", "height", "createdAt")
       VALUES (${token}, ${html}, ${labelWidth}, ${labelHeight}, CURRENT_TIMESTAMP)

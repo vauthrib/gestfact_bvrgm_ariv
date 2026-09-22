@@ -244,7 +244,12 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
         fetch('/api/label-images', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: getLabelToken(index + 1), html: ref.outerHTML, width: selectedTemplate.width, height: selectedTemplate.height }),
-        }).catch(() => undefined);
+        }).then(async (response) => {
+          if (!response.ok) {
+            const details = await response.json().catch(() => ({}));
+            console.error('Enregistrement de l’étiquette impossible:', details.error || response.status);
+          }
+        }).catch((error) => console.error('Enregistrement de l’étiquette impossible:', error));
       });
     }, 700);
     return () => clearTimeout(timer);
