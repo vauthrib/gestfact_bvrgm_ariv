@@ -243,6 +243,61 @@ model LigneBonLivraison {
   @@index([bonLivraisonId])
 }
 
+model ExpeditionArchive {
+  id              String   @id @default(cuid())
+  blId            String?  @unique
+  client          String
+  blNumero        String
+  dateExpedition  DateTime
+  qteTotalBL      Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lignes          ExpeditionArchiveLigne[]
+  contenants      ExpeditionContenant[]
+
+  @@index([blNumero])
+  @@index([dateExpedition])
+}
+
+model ExpeditionArchiveLigne {
+  id              String   @id @default(cuid())
+  expeditionId    String
+  client          String
+  refProduit      String
+  designation     String
+  blNumero        String
+  dateExpedition  DateTime
+  qteEtiquette    Float    @default(0)
+  numeroContenant String
+  numeroLot       String?
+  qteTotalBL      Float    @default(0)
+  createdAt       DateTime @default(now())
+
+  expedition      ExpeditionArchive @relation(fields: [expeditionId], references: [id], onDelete: Cascade)
+
+  @@index([expeditionId])
+  @@index([refProduit])
+  @@index([numeroContenant])
+  @@index([numeroLot])
+}
+
+model ExpeditionContenant {
+  id              String   @id @default(cuid())
+  expeditionId    String
+  reference       String
+  numero          Int
+  qrToken         String   @unique
+  qteEtiquette    Float    @default(0)
+  numeroLot       String?
+  createdAt       DateTime @default(now())
+
+  expedition      ExpeditionArchive @relation(fields: [expeditionId], references: [id], onDelete: Cascade)
+
+  @@unique([reference, numero])
+  @@index([expeditionId])
+}
+
 model Parametres {
   id                    String   @id @default(cuid())
   nomEntreprise         String   @default("")

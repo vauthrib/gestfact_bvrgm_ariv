@@ -3,6 +3,8 @@
 import { useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import dynamic from 'next/dynamic';
+const QRCodeSVG = dynamic(() => import('qrcode.react').then((mod) => mod.QRCodeSVG), { ssr: false });
 import { Printer, Settings, EyeOff, Eye, FileText, Copy } from 'lucide-react';
 
 interface LayoutElement {
@@ -31,6 +33,7 @@ interface PrintDocumentProps {
   code: string;
   printLayout?: PrintLayout | null;
   letterheadImage?: string | null;
+  containerQrTokens?: string[];
 }
 
 const formatCurrency = (a: number) => `${a.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH`;
@@ -122,7 +125,8 @@ export function PrintDocument({
   entreprise,
   code,
   printLayout,
-  letterheadImage
+  letterheadImage,
+  containerQrTokens = []
 }: PrintDocumentProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const [useCustomLayout, setUseCustomLayout] = useState(true);
@@ -705,7 +709,9 @@ export function PrintDocument({
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(generatePrintHTML());
+      const qrMarkup = Array.from(document.querySelectorAll<HTMLElement>('[data-container-qr="true"]')).map((node) => node.outerHTML).join('');
+      const html = generatePrintHTML().replace('<body>', `<body>${qrMarkup}`);
+      printWindow.document.write(html);
       printWindow.document.close();
       setTimeout(() => {
         printWindow.print();
@@ -781,6 +787,16 @@ export function PrintDocument({
             marginRight: doubleA5 ? '-148.5mm' : '-105mm'
           }}
         >
+          {containerQrTokens.length > 0 && (
+            <div data-container-qr="true" className="absolute right-4 bottom-4 z-20 flex gap-2 bg-white p-1 border rounded" style={{ position: 'absolute', right: '4mm', bottom: '4mm', zIndex: 20, display: 'flex', gap: '2mm', background: '#fff', padding: '1mm', border: '0.2mm solid #999' }}>
+              {containerQrTokens.slice(0, 3).map((token) => (
+                <div key={token} className="text-center text-[8px]">
+                  <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/contenant/${encodeURIComponent(token)}`} size={72} level="M" />
+                  <div>{token.split('-').slice(-2, -1)[0]}</div>
+                </div>
+              ))}
+            </div>
+          )}
           {/* Background image if letterhead */}
           {letterheadImage && ((useCustomLayout && !doubleA5) || (isBL && doubleA5)) && (
             <div

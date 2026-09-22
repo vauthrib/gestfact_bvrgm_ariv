@@ -1,0 +1,2 @@
+export const dynamic = 'force-dynamic';
+export default async function ContenantPage({ params }: { params: Promise<{ token: string }> }) { const { token } = await params; return <main style={{ maxWidth: 560, margin: '0 auto', padding: 24, fontFamily: 'Arial, sans-serif' }}><h1 style={{ color: '#1d4ed8' }}>Contenant {token.split('-').slice(-2, -1)[0] || ''}</h1><iframe src={`/api/contenants/${encodeURIComponent(token)}`} title="Contenant" style={{ width: '100%', minHeight: 260, border: 0 }} /></main>; }

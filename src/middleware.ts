@@ -42,6 +42,7 @@ export async function middleware(request: NextRequest) {
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
   // Les QR codes doivent fonctionner sans session : seule la lecture est publique.
   const isPublicLabelRead = request.method === 'GET' && (
+    pathname.startsWith('/contenant/') || /^\/api\/contenants\/CNT-[A-Za-z0-9_-]+-\d{3}-[A-Za-z0-9]+$/.test(pathname) ||
     pathname.startsWith('/label/') || /^\/api\/label-images\/[A-Za-z0-9]{25,128}$/.test(pathname)
   );
 

@@ -20,6 +20,11 @@ export const PERMISSION_DEFINITIONS = {
   'bl.create': { label: 'Créer', group: 'Bons de Livraison', type: 'create' },
   'bl.validate': { label: 'Valider', group: 'Bons de Livraison', type: 'validate' },
   
+  // Archives d'expéditions
+  'expeditions.view': { label: 'Voir', group: 'Archives d’expéditions', type: 'view' },
+  'expeditions.edit': { label: 'Modifier', group: 'Archives d’expéditions', type: 'edit' },
+  'expeditions.create': { label: 'Créer', group: 'Archives d’expéditions', type: 'create' },
+
   // Factures Clients
   'factures.view': { label: 'Visu', group: 'Factures Clients', type: 'view' },
   'factures.edit': { label: 'Modif', group: 'Factures Clients', type: 'edit' },
@@ -64,6 +69,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'tiers.view', 'tiers.edit', 'tiers.create',
     'articles.view', 'articles.edit', 'articles.create',
     'bl.view', 'bl.edit', 'bl.create', 'bl.validate',
+    'expeditions.view', 'expeditions.edit', 'expeditions.create',
     'factures.view', 'factures.edit', 'factures.create', 'factures.validate',
     'avoirs.view', 'avoirs.edit', 'avoirs.create',
     'reglements.view', 'reglements.edit', 'reglements.create',
@@ -94,6 +100,7 @@ export const PERMISSION_GROUPS = [
   { name: 'Tiers', permissions: ['tiers.view', 'tiers.edit', 'tiers.create'] },
   { name: 'Articles', permissions: ['articles.view', 'articles.edit', 'articles.create'] },
   { name: 'Bons de Livraison', permissions: ['bl.view', 'bl.edit', 'bl.create', 'bl.validate'] },
+  { name: 'Archives d’expéditions', permissions: ['expeditions.view', 'expeditions.edit', 'expeditions.create'] },
   { name: 'Factures Clients', permissions: ['factures.view', 'factures.edit', 'factures.create', 'factures.validate'] },
   { name: 'Avoirs', permissions: ['avoirs.view', 'avoirs.edit', 'avoirs.create'] },
   { name: 'Règlements Clients', permissions: ['reglements.view', 'reglements.edit', 'reglements.create'] },
@@ -127,6 +134,7 @@ export const PAGE_PERMISSIONS: Record<string, Permission> = {
   'tiers': 'tiers.view',
   'articles': 'articles.view',
   'bons-livraison': 'bl.view',
+  'expeditions': 'expeditions.view',
   'factures-clients': 'factures.view',
   'avoirs-clients': 'avoirs.view',
   'reglements-clients': 'reglements.view',

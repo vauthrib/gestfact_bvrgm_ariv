@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+export const dynamic = 'force-dynamic';
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ token: string }> }) { const { token } = await params; if (!/^CNT-[A-Za-z0-9_-]+-\d{3}-[A-Za-z0-9]+$/.test(token)) return NextResponse.json({ error: 'Contenant introuvable' }, { status: 404 }); const contenant = await prisma.expeditionContenant.findUnique({ where: { qrToken: token }, include: { expedition: true } }); if (!contenant) return NextResponse.json({ error: 'Contenant introuvable' }, { status: 404 }); return NextResponse.json({ reference: contenant.reference, numero: String(contenant.numero).padStart(3, '0'), qteEtiquette: contenant.qteEtiquette, numeroLot: contenant.numeroLot, expedition: { client: contenant.expedition.client, blNumero: contenant.expedition.blNumero, dateExpedition: contenant.expedition.dateExpedition.toISOString() } }); }
