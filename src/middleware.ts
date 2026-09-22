@@ -40,8 +40,12 @@ export async function middleware(request: NextRequest) {
   // Public paths that don't require authentication
   const publicPaths = ['/login', '/init', '/api/auth', '/api/users/init', '/api/users/create-root', '/api/setup', '/access-denied'];
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
+  // Les QR codes doivent fonctionner sans session : seule la lecture est publique.
+  const isPublicLabelRead = request.method === 'GET' && (
+    pathname.startsWith('/label/') || /^\/api\/label-images\/[A-Za-z0-9]{25,128}$/.test(pathname)
+  );
 
-  if (isPublicPath) {
+  if (isPublicPath || isPublicLabelRead) {
     return NextResponse.next();
   }
 
