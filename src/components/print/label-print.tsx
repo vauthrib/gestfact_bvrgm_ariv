@@ -12,6 +12,7 @@ import JsBarcode from 'jsbarcode';
 import { LabelTemplateEditor, LabelTemplateData, LabelField } from './label-template-editor';
 
 const QRCodeSVG = dynamic(() => import('qrcode.react').then(mod => mod.QRCodeSVG), { ssr: false });
+const PUBLIC_APP_URL = 'https://gestfact-bvrgm-ariv.vercel.app';
 
 interface LigneBL {
   id?: string;
@@ -216,7 +217,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
       : templates.find(t => t.id === selectedTemplateId) || null;
 
   const scale = 3;
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = PUBLIC_APP_URL;
 
   useEffect(() => {
     if (!open) return;
