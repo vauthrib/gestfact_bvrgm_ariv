@@ -348,8 +348,9 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
 
   const handleSaveTemplate = async (template: LabelTemplateData) => {
     try {
-      const method = template.id ? 'PUT' : 'POST';
-      const body = template.id ? template : { ...template, id: undefined };
+      const isPreset = template.id?.startsWith('preset-');
+      const method = template.id && !isPreset ? 'PUT' : 'POST';
+      const body = method === 'PUT' ? template : { ...template, id: undefined };
       const res = await fetch('/api/label-templates', {
         method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
