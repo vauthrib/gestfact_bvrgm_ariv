@@ -24,6 +24,7 @@ export interface LabelField {
   height: number;  // hauteur en mm
   fontSize: number;
   bold: boolean;
+  multiLine?: boolean;
   color: string;
 }
 
@@ -246,6 +247,7 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                         </>}
                         <div><Label className="text-xs">Couleur</Label><Input type="color" value={field.color} onChange={(e) => updateField(field.id, { color: e.target.value })} /></div>
                         <div className="flex items-end"><label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={field.bold} onChange={(e) => updateField(field.id, { bold: e.target.checked })} />Gras</label></div>
+                        <div className="flex items-end"><label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={field.multiLine === true} onChange={(e) => updateField(field.id, { multiLine: e.target.checked })} />Multi-ligne</label></div>
                       </div>
                     )}
                   </div>
@@ -271,7 +273,9 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                   overflow: 'hidden',
                   border: selectedField === field.id ? '1px dashed blue' : '1px dashed gray',
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: field.multiLine ? 'flex-start' : 'center',
+                  whiteSpace: field.multiLine ? 'pre-wrap' : 'nowrap',
+                  wordBreak: field.multiLine ? 'break-word' : 'normal',
                   padding: 2,
                 }}>
                   {field.type === 'barcode' ? (
@@ -283,7 +287,7 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                   ) : field.type === 'contenant' ? (
                     field.value || field.options?.[0] || 'N° contenant'
                   ) : (
-                    <span className="truncate">{`{${field.type}}`}</span>
+                    <span className={field.multiLine ? 'whitespace-pre-wrap break-words' : 'truncate'}>{`{${field.type}}`}</span>
                   )}
                 </div>
               ))}

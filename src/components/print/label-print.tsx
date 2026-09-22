@@ -202,9 +202,9 @@ function renderField(field: LabelField, data: Record<string, string>, scale: num
       position: 'absolute', left: `calc(${field.x}mm * var(--label-scale, 1))`, top: `calc(${field.y}mm * var(--label-scale, 1))`,
       width: `calc(${field.width}mm * var(--label-scale, 1))`, height: `calc(${field.height}mm * var(--label-scale, 1))`,
       fontSize: field.fontSize * scale * 0.3, fontWeight: field.bold ? 'bold' : 'normal',
-      color: field.color || '#000', overflow: 'hidden', display: 'flex', alignItems: 'center', lineHeight: 1.1,
+      color: field.color || '#000', overflow: 'hidden', display: 'flex', alignItems: field.multiLine ? 'flex-start' : 'center', lineHeight: 1.1, whiteSpace: field.multiLine ? 'pre-wrap' : 'nowrap', wordBreak: field.multiLine ? 'break-word' : 'normal',
     }}>
-      <span className="truncate w-full">{content}</span>
+      <span className={`${field.multiLine ? 'whitespace-pre-wrap break-words' : 'truncate'} w-full`}>{content}</span>
     </div>
   );
 }
