@@ -573,7 +573,7 @@ export function BonsLivraisonView() {
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>{filtered.map((b) => (<TableRow key={b.id} className={selectedBLs.includes(b.id) ? 'bg-green-50' : ''}>
+              <TableBody>{filtered.map((b) => (<TableRow key={b.id} className={selectedBLs.includes(b.id) ? 'bg-blue-50' : ''}>
                 <TableCell>
                   {isBLSelectable(b) && (
                     <Checkbox 

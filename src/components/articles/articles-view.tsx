@@ -186,11 +186,11 @@ export function ArticlesView() {
         <CardContent>
           <div className="mb-4"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" /><Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" /></div></div>
           {filteredArticles.length === 0 ? <div className="text-center text-muted-foreground py-8">Aucun article</div> : (
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('code')}>Code <SortIcon field="code" /></TableHead>
-                  <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('designation')}>Désignation <SortIcon field="designation" /></TableHead>
+                  <TableHead className="w-[240px] max-w-[240px] cursor-pointer hover:bg-gray-100" onClick={() => handleSort('designation')}>Désignation <SortIcon field="designation" /></TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('prixUnitaire')}>P.U. HT <SortIcon field="prixUnitaire" /></TableHead>
                   <TableHead>Unité</TableHead>
                   <TableHead className="cursor-pointer hover:bg-gray-100" onClick={() => handleSort('tauxTVA')}>TVA <SortIcon field="tauxTVA" /></TableHead>
@@ -200,7 +200,7 @@ export function ArticlesView() {
               </TableHeader>
               <TableBody>{filteredArticles.map((a) => (<TableRow key={a.id}>
                 <TableCell className="font-medium">{a.code}</TableCell>
-                <TableCell>{a.designation}</TableCell>
+                <TableCell className="w-[240px] max-w-[240px] truncate" title={a.designation}>{a.designation}</TableCell>
                 <TableCell>{formatCurrency(a.prixUnitaire)}</TableCell>
                 <TableCell>{a.unite}</TableCell>
                 <TableCell>{a.tauxTVA}%</TableCell>

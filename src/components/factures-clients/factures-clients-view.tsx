@@ -759,15 +759,15 @@ export function FacturesClientsView() {
                     <Label className="font-semibold text-blue-700">Récapitulatif par référence ({buildRecapTable().length} article{buildRecapTable().length > 1 ? 's' : ''})</Label>
                     <span className="text-xs text-blue-600">{viewingBLs.length} BL</span>
                   </div>
-                  <div className="overflow-x-auto">
-                    <Table>
+                  <div className={viewingBLs.length > 6 ? 'hidden' : 'hidden md:block overflow-x-auto'}>
+                    <Table className="table-fixed">
                       <TableHeader>
                         <TableRow className="bg-gray-50">
                           <TableHead className="font-semibold w-[100px]">Réf</TableHead>
                           <TableHead className="font-semibold">Désignation</TableHead>
                           <TableHead className="font-semibold text-right w-[80px]">Qté tot.</TableHead>
                           {viewingBLs.map((bl) => (
-                            <TableHead key={bl.id} className="font-semibold text-right w-[90px]">{bl.numero}</TableHead>
+                            <TableHead key={bl.id} className="font-semibold text-right w-[72px] whitespace-normal break-words text-xs leading-tight">{bl.numero}</TableHead>
                           ))}
                         </TableRow>
                       </TableHeader>
@@ -785,17 +785,34 @@ export function FacturesClientsView() {
                       </TableBody>
                     </Table>
                   </div>
+                  <div className={viewingBLs.length > 6 ? 'divide-y' : 'md:hidden divide-y'}>
+                    {buildRecapTable().map((r: any, idx: number) => (
+                      <div key={idx} className="p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0"><div className="font-mono font-semibold text-sm break-words">{r.code}</div><div className="text-sm break-words">{r.designation}</div></div>
+                          <div className="shrink-0 text-right"><div className="text-[10px] text-muted-foreground">Qté totale</div><div className="font-bold text-blue-700">{r.totalQte}</div></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {viewingBLs.map((bl) => (
+                            <div key={bl.id} className="rounded border bg-gray-50 px-2 py-1 min-w-0">
+                              <div className="text-muted-foreground font-mono break-words leading-tight">BL {bl.numero}</div>
+                              <div className="font-mono font-semibold">{r.blDetails[bl.numero] != null ? r.blDetails[bl.numero] : '-'}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               {/* Détails par BL */}
               {viewingBLs.map((bl, blIdx) => {
                 const blTotal = (bl.lignes || []).reduce((s: number, l: any) => s + (l.totalHT || 0), 0);
                 return (
-                <div key={bl.id} className="border rounded-lg">
-                  <div className="bg-gray-50 px-4 py-2 border-b flex items-center justify-between">
+                <div key={bl.id} className="border rounded-lg">                    <div className="bg-blue-50 px-4 py-2 border-b border-blue-200 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <span className="bg-blue-100 text-blue-700 text-xs font-mono font-bold px-2 py-0.5 rounded">BL {blIdx + 1}/{viewingBLs.length}</span>
-                      <Label className="font-semibold">{bl.numero}</Label>
+                      <Label className="font-semibold break-words whitespace-normal">{bl.numero}</Label>
                     </div>
                     <span className="text-sm text-muted-foreground">{new Date(bl.dateBL).toLocaleDateString('fr-FR')} — <span className="font-medium text-blue-700">{formatCurrency(bl.totalHT || blTotal)}</span></span>
                   </div>
