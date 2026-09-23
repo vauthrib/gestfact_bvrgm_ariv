@@ -1,18 +1,18 @@
 'use client';
 
-// V3.23 - Résumé des expéditions : un seul bouton, un tableau de tous les BL
-// Filtres : date début / date fin, client, article, recherche libre.
-// Remplace l'ancien bouton « Archiver l'expédition » par BL et la page NEXP01.
+// V3.24 - NEXP01 : tableau croisé expéditions
+// Lignes = BL, colonnes = articles (texte vertical), cellules = quantités.
+// Somme des cellules sélectionnées (clic / glisser) + somme par colonne.
+// Filtres : date début / date fin, client, article (par articleId).
 
 import { useEffect, useMemo, useState } from 'react';
-import { Truck, X } from 'lucide-react';
+import { Truck, X, Sigma } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { QRCodeSVG } from 'qrcode.react';
 
 interface LigneBL { articleId?: string; designation: string; quantite: number; }
 interface BonLivraison {
@@ -20,56 +20,61 @@ interface BonLivraison {
   client?: { raisonSociale: string } | null;
   lignes?: LigneBL[];
 }
+interface Article { id: string; code: string; designation: string; }
 
 export function ExpeditionSummaryDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [bons, setBons] = useState<BonLivraison[]>([]);
-  const [archives, setArchives] = useState<any[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [clientId, setClientId] = useState('ALL');
-  const [articleCode, setArticleCode] = useState('ALL');
+  const [articleId, setArticleId] = useState('ALL');
   const [search, setSearch] = useState('');
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     Promise.all([
       fetch('/api/bons-livraison').then((r) => r.json()).catch(() => []),
-      fetch('/api/expeditions').then((r) => r.json()).catch(() => []),
-    ]).then(([bl, arch]) => {
+      fetch('/api/articles').then((r) => r.json()).catch(() => []),
+    ]).then(([bl, arts]) => {
       setBons(Array.isArray(bl) ? bl : []);
-      setArchives(Array.isArray(arch) ? arch : []);
+      setArticles(Array.isArray(arts) ? arts : []);
     }).finally(() => setLoading(false));
   }, [open]);
 
+  // Clients triés
   const clients = useMemo(() => {
     const map = new Map<string, string>();
     bons.forEach((b) => { if (b.client?.raisonSociale) map.set(b.client.raisonSociale, b.client.raisonSociale); });
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
   }, [bons]);
 
-  const articles = useMemo(() => {
-    const set = new Set<string>();
-    bons.forEach((b) => (b.lignes || []).forEach((l) => {
-      if (l.designation) {
-        const code = l.designation.split('\n')[0].split(' - ')[0].trim();
-        if (code) set.add(code);
-      }
-    }));
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [bons]);
-
-  const tokensByBL = useMemo(() => {
-    const map = new Map<string, string[]>();
-    archives.forEach((a) => {
-      if (a.blId && Array.isArray(a.contenants)) {
-        map.set(a.blId, a.contenants.map((c: any) => c.qrToken).filter(Boolean));
-      }
+  // Articles utilisés dans les BL filtrés par date/client/recherche (avant filtre article)
+  const usedArticles = useMemo(() => {
+    const ids = new Set<string>();
+    bons.forEach((b) => {
+      const d = new Date(b.dateBL);
+      if (dateFrom && d < new Date(dateFrom)) return;
+      if (dateTo && d > new Date(dateTo + 'T23:59:59')) return;
+      if (clientId !== 'ALL' && b.client?.raisonSociale !== clientId) return;
+      const q = search.trim().toLowerCase();
+      if (q && !`${b.numero} ${b.client?.raisonSociale || ''} ${(b.lignes || []).map((l) => l.designation || '').join(' ')}`.toLowerCase().includes(q)) return;
+      (b.lignes || []).forEach((l) => { if (l.articleId) ids.add(l.articleId); });
     });
-    return map;
-  }, [archives]);
+    return articles.filter((a) => ids.has(a.id));
+  }, [bons, articles, dateFrom, dateTo, clientId, search]);
 
+  // Colonnes : tous les articles si "Tous", sinon l'article choisi
+  const columns = useMemo(() => {
+    if (articleId === 'ALL') return usedArticles;
+    return usedArticles.filter((a) => a.id === articleId);
+  }, [usedArticles, articleId]);
+
+  // BL filtrés (y compris par article : le BL doit contenir l'article choisi)
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return bons
@@ -79,7 +84,7 @@ export function ExpeditionSummaryDialog({ open, onOpenChange }: { open: boolean;
         if (dateTo && d > new Date(dateTo + 'T23:59:59')) return false;
         if (clientId !== 'ALL' && b.client?.raisonSociale !== clientId) return false;
         const lignes = b.lignes || [];
-        if (articleCode !== 'ALL' && !lignes.some((l) => (l.designation || '').split('\n')[0].split(' - ')[0].trim() === articleCode)) return false;
+        if (articleId !== 'ALL' && !lignes.some((l) => l.articleId === articleId)) return false;
         if (q) {
           const lignesTxt = lignes.map((l) => l.designation || '').join(' ').toLowerCase();
           if (!`${b.numero} ${b.client?.raisonSociale || ''} ${lignesTxt}`.includes(q)) return false;
@@ -87,18 +92,57 @@ export function ExpeditionSummaryDialog({ open, onOpenChange }: { open: boolean;
         return true;
       })
       .sort((a, b) => new Date(b.dateBL).getTime() - new Date(a.dateBL).getTime());
-  }, [bons, dateFrom, dateTo, clientId, articleCode, search]);
+  }, [bons, dateFrom, dateTo, clientId, articleId, search]);
 
-  const totalLignes = rows.reduce((s, b) => s + (b.lignes || []).length, 0);
+  // Quantité d'un article dans un BL
+  const qteOf = (b: BonLivraison, artId: string) =>
+    (b.lignes || []).filter((l) => l.articleId === artId).reduce((s, l) => s + Number(l.quantite || 0), 0);
 
-  const resetFilters = () => { setDateFrom(''); setDateTo(''); setClientId('ALL'); setArticleCode('ALL'); setSearch(''); };
+  // Sommes par colonne
+  const colTotals = useMemo(() => {
+    const map = new Map<string, number>();
+    columns.forEach((a) => {
+      map.set(a.id, rows.reduce((s, b) => s + qteOf(b, a.id), 0));
+    });
+    return map;
+  }, [columns, rows]);
+
+  // Somme des cellules sélectionnées
+  const selectionTotal = useMemo(() => {
+    let total = 0;
+    const artById = new Map(articles.map((a) => [a.id, a]));
+    selectedCells.forEach((key) => {
+      const [blId, artId] = key.split('|');
+      const bl = rows.find((b) => b.id === blId);
+      if (bl && artById.has(artId)) total += qteOf(bl, artId);
+    });
+    return total;
+  }, [selectedCells, rows, articles]);
+
+  const toggleCell = (blId: string, artId: string) => {
+    const key = `${blId}|${artId}`;
+    setSelectedCells((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const cellProps = (blId: string, artId: string, value: number) => ({
+    onMouseDown: () => { setDragging(true); toggleCell(blId, artId); },
+    onMouseEnter: () => { if (dragging && value > 0) { const key = `${blId}|${artId}`; if (!selectedCells.has(key)) toggleCell(blId, artId); } },
+    className: `cursor-pointer text-center select-none ${selectedCells.has(`${blId}|${artId}`) ? 'bg-blue-200 font-bold' : 'hover:bg-muted'}`,
+  });
+
+  const clearSelection = () => setSelectedCells(new Set());
+  const resetFilters = () => { setDateFrom(''); setDateTo(''); setClientId('ALL'); setArticleId('ALL'); setSearch(''); clearSelection(); };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[1400px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) clearSelection(); }}>
+      <DialogContent className="max-w-[1500px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto" onMouseUp={() => setDragging(false)} onMouseLeave={() => setDragging(false)}>
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2 text-blue-700"><Truck className="h-5 w-5" />Résumé des expéditions — Tous les BL</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-blue-700"><Truck className="h-5 w-5" />Résumé des expéditions — Tableau croisé</DialogTitle>
             <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NEXP01</span>
           </div>
         </DialogHeader>
@@ -114,9 +158,9 @@ export function ExpeditionSummaryDialog({ open, onOpenChange }: { open: boolean;
           </div>
           <div>
             <Label>Client</Label>
-            <Select value={clientId} onValueChange={setClientId}>
+            <Select value={clientId} onValueChange={(v) => { setClientId(v); clearSelection(); }}>
               <SelectTrigger><SelectValue placeholder="Tous" /></SelectTrigger>
-            <SelectContent className="max-h-[300px]">
+              <SelectContent className="max-h-[300px]">
                 <SelectItem value="ALL">Tous les clients</SelectItem>
                 {clients.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
               </SelectContent>
@@ -124,11 +168,11 @@ export function ExpeditionSummaryDialog({ open, onOpenChange }: { open: boolean;
           </div>
           <div>
             <Label>Article</Label>
-            <Select value={articleCode} onValueChange={setArticleCode}>
+            <Select value={articleId} onValueChange={(v) => { setArticleId(v); clearSelection(); }}>
               <SelectTrigger><SelectValue placeholder="Tous" /></SelectTrigger>
               <SelectContent className="max-h-[300px]">
                 <SelectItem value="ALL">Tous les articles</SelectItem>
-                {articles.map((a) => (<SelectItem key={a} value={a} className="whitespace-normal">{a}</SelectItem>))}
+                {usedArticles.map((a) => (<SelectItem key={a.id} value={a.id} className="whitespace-normal">{a.code} - {a.designation}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
@@ -139,57 +183,69 @@ export function ExpeditionSummaryDialog({ open, onOpenChange }: { open: boolean;
           <Button variant="outline" onClick={resetFilters}><X className="h-4 w-4 mr-1" />Effacer</Button>
         </div>
 
+        {selectedCells.size > 0 && (
+          <div className="flex items-center justify-between rounded border bg-blue-50 px-3 py-2">
+            <span className="flex items-center gap-2 text-sm font-medium text-blue-700">
+              <Sigma className="h-4 w-4" />Somme sélection : {selectedCells.size} cellule(s) = <b>{selectionTotal}</b>
+            </span>
+            <Button variant="ghost" size="sm" onClick={clearSelection}>Vider la sélection</Button>
+          </div>
+        )}
+
         {loading ? (
           <p className="py-6 text-center text-muted-foreground">Chargement...</p>
-        ) : rows.length === 0 ? (
-          <p className="py-6 text-center text-muted-foreground">Aucun BL pour ces filtres</p>
+        ) : rows.length === 0 || columns.length === 0 ? (
+          <p className="py-6 text-center text-muted-foreground">Aucun BL / article pour ces filtres</p>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">{rows.length} BL · {totalLignes} ligne(s) article</p>
+            <p className="text-sm text-muted-foreground">{rows.length} BL · {columns.length} article(s) · Cliquez ou glissez sur les cellules pour additionner</p>
             <div className="overflow-x-auto">
-              <Table className="table-fixed min-w-[1050px]">
+              <Table className="table-auto border-collapse">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[110px]">N° BL</TableHead>
+                    <TableHead className="w-[130px] sticky left-0 bg-white z-10">N° BL</TableHead>
                     <TableHead className="w-[95px]">Date</TableHead>
                     <TableHead className="w-[160px]">Client</TableHead>
-                    <TableHead className="w-[300px]">Article / Désignation</TableHead>
-                    <TableHead className="w-[80px]">Qté</TableHead>
-                    <TableHead className="w-[80px]">Total BL</TableHead>
-                    <TableHead className="w-[120px]">N° contenant</TableHead>
-                    <TableHead className="w-[70px]">QR</TableHead>
+                    {columns.map((a) => (
+                      <TableHead key={a.id} className="w-[44px] p-0 align-bottom border-l">
+                        <div className="flex items-end justify-center" style={{ height: 180 }}>
+                          <span className="whitespace-nowrap" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                            {a.code}{a.designation ? ` · ${a.designation}` : ''}
+                          </span>
+                        </div>
+                      </TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.flatMap((b) => {
-                    const tokens = tokensByBL.get(b.id) || [];
-                    const lignes = (b.lignes || []).length > 0 ? b.lignes! : [{ designation: '-', quantite: 0 }];
-                    return lignes.map((l, li) => {
-                      const token = tokens[li] || tokens[0];
-                      const qrUrl = token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/contenant/${encodeURIComponent(token)}` : '';
-                      return (
-                        <TableRow key={`${b.id}-${li}`}>
-                          {li === 0 && (
-                            <>
-                              <TableCell className="font-mono align-top" rowSpan={lignes.length}>{b.numero}</TableCell>
-                              <TableCell className="align-top" rowSpan={lignes.length}>{new Date(b.dateBL).toLocaleDateString('fr-FR')}</TableCell>
-                              <TableCell className="whitespace-normal break-words align-top" rowSpan={lignes.length}>{b.client?.raisonSociale || '-'}</TableCell>
-                            </>
-                          )}
-                          <TableCell className="whitespace-normal break-words">{l.designation || '-'}</TableCell>
-                          <TableCell>{l.quantite}</TableCell>
-                          {li === 0 && (
-                            <TableCell className="align-top" rowSpan={lignes.length}>
-                              {lignes.reduce((s, x) => s + Number(x.quantite || 0), 0)}
-                            </TableCell>
-                          )}
-                          <TableCell className="font-mono">{token ? String((li % Math.max(tokens.length, 1))).padStart(3, '0') : '-'}</TableCell>
-                          <TableCell>{qrUrl && <QRCodeSVG value={qrUrl} size={40} level="M" />}</TableCell>
-                        </TableRow>
-                      );
-                    });
-                  })}
+                  {rows.map((b) => (
+                    <TableRow key={b.id}>
+                      <TableCell className="font-mono sticky left-0 bg-white z-10">{b.numero}</TableCell>
+                      <TableCell>{new Date(b.dateBL).toLocaleDateString('fr-FR')}</TableCell>
+                      <TableCell className="whitespace-normal break-words">{b.client?.raisonSociale || '-'}</TableCell>
+                      {columns.map((a) => {
+                        const qte = qteOf(b, a.id);
+                        return (
+                          <TableCell key={a.id} {...cellProps(b.id, a.id, qte)}>
+                            {qte > 0 ? qte : ''}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
                 </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell className="sticky left-0 bg-white z-10 font-bold">Somme</TableCell>
+                    <TableCell />
+                    <TableCell />
+                    {columns.map((a) => (
+                      <TableCell key={a.id} className="text-center font-bold border-l">
+                        {colTotals.get(a.id) || ''}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableFooter>
               </Table>
             </div>
           </>
