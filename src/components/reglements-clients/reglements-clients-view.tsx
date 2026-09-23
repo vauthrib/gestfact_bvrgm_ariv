@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Pencil, Trash2, Search, Download, AlertTriangle, CheckCircle, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight } from 'lucide-react';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PermissionGate } from '@/components/auth/permission-gate';
+import { FactureViewDialog } from '@/components/factures-clients/facture-view-dialog';
 
 interface ReglementClient {
   id: string; numero: string; factureId: string; dateReglement: string;
@@ -72,6 +73,8 @@ export function ReglementsClientsView() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  // V3.25 - Visu facture depuis la facture réglée
+  const [factureVisuId, setFactureVisuId] = useState<string | null>(null);
   const [editingReglement, setEditingReglement] = useState<ReglementClient | null>(null);
   const [selectedFacture, setSelectedFacture] = useState<FactureClient | null>(null);
   const [resteAPayer, setResteAPayer] = useState<number | null>(null);
@@ -656,7 +659,7 @@ export function ReglementsClientsView() {
                                 <TableCell className="pl-8 text-sm text-muted-foreground">{r.numero}</TableCell>
                                 <TableCell className="text-sm">{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
                                 <TableCell className="text-sm">{r.facture?.client?.raisonSociale}</TableCell>
-                                <TableCell className="text-sm">{r.facture?.numero}</TableCell>
+                                <TableCell className="text-sm">{r.facture && <button type="button" onClick={() => setFactureVisuId(r.factureId)} className="underline-offset-2 hover:underline" title="Cliquer pour visualiser la facture (NFC01-VISU)">{r.facture.numero}</button>}</TableCell>
                                 <TableCell className="text-sm">{formatCurrency(r.montant)}</TableCell>
                                 <TableCell className="text-sm">{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
                                 <TableCell className="text-sm">
@@ -730,7 +733,7 @@ export function ReglementsClientsView() {
                         <TableCell className="font-medium">{r.numero}</TableCell>
                         <TableCell>{new Date(r.dateReglement).toLocaleDateString('fr-FR')}</TableCell>
                         <TableCell>{r.facture?.client?.raisonSociale}</TableCell>
-                        <TableCell>{r.facture?.numero}</TableCell>
+                        <TableCell>{r.facture && <button type="button" onClick={() => setFactureVisuId(r.factureId)} className="underline-offset-2 hover:underline" title="Cliquer pour visualiser la facture (NFC01-VISU)">{r.facture.numero}</button>}</TableCell>
                         <TableCell>{formatCurrency(r.montant)}</TableCell>
                         <TableCell>{getModePaiementDisplay(r.modePaiement, r.infoLibre)}</TableCell>
                         <TableCell>
@@ -1007,6 +1010,8 @@ export function ReglementsClientsView() {
         </DialogContent>
       </Dialog>
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="reglements-clients" code="MFC01" />
+      {/* V3.25 - Visu facture NFC01-VISU */}
+      <FactureViewDialog factureId={factureVisuId} onOpenChange={(open) => { if (!open) setFactureVisuId(null); }} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, ArrowUp, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
+import { FactureViewDialog } from '@/components/factures-clients/facture-view-dialog';
 import { PermissionGate } from '@/components/auth/permission-gate';
 
 interface LigneAvoir { id?: string; articleId?: string; designation: string; quantite: string; prixUnitaire: string; tauxTVA: string; totalHT: number; }
@@ -55,6 +56,8 @@ export function AvoirsClientsView() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  // V3.25 - Visu facture depuis la facture d'origine
+  const [factureVisuId, setFactureVisuId] = useState<string | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
   const [selectedAvoir, setSelectedAvoir] = useState<AvoirClient | null>(null);
   const [editing, setEditing] = useState<AvoirClient | null>(null);
@@ -307,7 +310,15 @@ export function AvoirsClientsView() {
                 <TableCell className="font-medium">{a.numero}</TableCell>
                 <TableCell>{new Date(a.dateAvoir).toLocaleDateString('fr-FR')}</TableCell>
                 <TableCell>{a.client?.raisonSociale}</TableCell>
-                <TableCell>{a.facture?.numero || '-'}</TableCell>
+                <TableCell>
+                  {a.facture && a.factureId ? (
+                    <button type="button" onClick={() => setFactureVisuId(a.factureId)} className="px-2 py-1 rounded text-xs font-medium underline-offset-2 hover:underline" title="Cliquer pour visualiser la facture (NFC01-VISU)">
+                      {a.facture.numero}
+                    </button>
+                  ) : (
+                    <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-500">-</span>
+                  )}
+                </TableCell>
                 <TableCell>{formatCurrency(a.totalHT)}</TableCell>
                 <TableCell>{formatCurrency(a.totalTTC)}</TableCell>
                 <TableCell><span className={`px-2 py-1 rounded text-xs ${a.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{a.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
@@ -425,6 +436,8 @@ export function AvoirsClientsView() {
 
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="avoirs-clients" code="NAC01" />
       <PrintDocument open={printOpen} onOpenChange={setPrintOpen} documentType="AV" documentData={selectedAvoir} entreprise={parametres} code="NAC01" printLayout={parametres?.printLayout ? (() => { try { return JSON.parse(parametres.printLayout); } catch { return null; } })() : null} letterheadImage={parametres?.letterheadImage} />
+      {/* V3.25 - Visu facture NFC01-VISU */}
+      <FactureViewDialog factureId={factureVisuId} onOpenChange={(open) => { if (!open) setFactureVisuId(null); }} />
     </div>
   );
 }

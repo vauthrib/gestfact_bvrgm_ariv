@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface LigneBL { articleId?: string; designation: string; quantite: number; }
@@ -207,11 +207,12 @@ export function ExpeditionSummaryDialog({ open, onOpenChange }: { open: boolean;
                     <TableHead className="w-[95px]">Date</TableHead>
                     <TableHead className="w-[160px]">Client</TableHead>
                     {columns.map((a) => (
-                      <TableHead key={a.id} className="w-[44px] p-0 align-bottom border-l">
-                        <div className="flex items-end justify-center" style={{ height: 180 }}>
-                          <span className="whitespace-nowrap" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                            {a.code}{a.designation ? ` · ${a.designation}` : ''}
-                          </span>
+                      <TableHead key={a.id} className="w-[130px] p-1 align-bottom border-l">
+                        <div className="whitespace-normal break-words text-[11px] leading-tight">{a.code}</div>
+                        <div className="whitespace-normal break-words text-[11px] leading-tight font-normal text-muted-foreground">{a.designation}</div>
+                        {/* V3.25 - Somme de la colonne juste sous la désignation */}
+                        <div className="mt-1 rounded bg-blue-100 px-1 py-0.5 text-center font-mono font-bold text-blue-700">
+                          {colTotals.get(a.id) || 0}
                         </div>
                       </TableHead>
                     ))}
@@ -234,18 +235,6 @@ export function ExpeditionSummaryDialog({ open, onOpenChange }: { open: boolean;
                     </TableRow>
                   ))}
                 </TableBody>
-                <TableFooter>
-                  <TableRow>
-                    <TableCell className="sticky left-0 bg-white z-10 font-bold">Somme</TableCell>
-                    <TableCell />
-                    <TableCell />
-                    {columns.map((a) => (
-                      <TableCell key={a.id} className="text-center font-bold border-l">
-                        {colTotals.get(a.id) || ''}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableFooter>
               </Table>
             </div>
           </>

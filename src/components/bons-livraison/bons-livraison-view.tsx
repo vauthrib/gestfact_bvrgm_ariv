@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
+import { FactureViewDialog } from '@/components/factures-clients/facture-view-dialog';
 import { LabelPrint } from '@/components/print/label-print';
 import { PermissionGate } from '@/components/auth/permission-gate';
 import { ExpeditionSummaryDialog } from '@/components/expeditions/expedition-archives-view';
@@ -87,6 +88,8 @@ export function BonsLivraisonView() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingBL, setViewingBL] = useState<BonLivraison | null>(null);
 
+  // V3.25 - Visu facture (NFC01-VISU) depuis la colonne Facturé
+  const [factureVisuId, setFactureVisuId] = useState<string | null>(null);
   // V2.92 - Mise à jour d'une facture groupée après modification d'un BL (super code 5555)
   const [superCodeDialogOpen, setSuperCodeDialogOpen] = useState(false);
   const [superCodeInput, setSuperCodeInput] = useState('');
@@ -598,9 +601,9 @@ export function BonsLivraisonView() {
                 <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
                 <TableCell>
                   {b.facture ? (
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getBlsModifies(b.facture.id).length > 0 ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`} title={getBlsModifies(b.facture.id).length > 0 ? 'BL modifié(s) après facturation - mise à jour de la facture requise' : ''}>
+                    <button type="button" onClick={() => setFactureVisuId(b.facture!.id)} className={`px-2 py-1 rounded text-xs font-medium underline-offset-2 hover:underline ${getBlsModifies(b.facture.id).length > 0 ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`} title="Cliquer pour visualiser la facture (NFC01-VISU)">
                       ✓ {b.facture.numero}{getBlsModifies(b.facture.id).length > 0 ? ' ⚠' : ''}
-                    </span>
+                    </button>
                   ) : (
                     <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-500">-</span>
                   )}
@@ -769,7 +772,11 @@ export function BonsLivraisonView() {
               </div>
               <div className="flex items-center justify-between border-t pt-3">
                 <span className={`px-2 py-1 rounded text-xs ${viewingBL.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{viewingBL.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span>
-                {viewingBL.facture && <span className="text-sm text-muted-foreground">Facturé : <strong>{viewingBL.facture.numero}</strong></span>}
+                {viewingBL.facture && (
+                  <button type="button" onClick={() => setFactureVisuId(viewingBL.facture!.id)} className="text-sm text-muted-foreground underline-offset-2 hover:underline" title="Cliquer pour visualiser la facture (NFC01-VISU)">
+                    Facturé : <strong>{viewingBL.facture.numero}</strong>
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -1038,6 +1045,8 @@ export function BonsLivraisonView() {
         </DialogContent>
       </Dialog>
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="bons-livraison" code="NBL01" />
+      {/* V3.25 - Visu facture NFC01-VISU */}
+      <FactureViewDialog factureId={factureVisuId} onOpenChange={(open) => { if (!open) setFactureVisuId(null); }} />
       {/* V3.23 - Résumé des expéditions : tous les BL avec filtres */}
       <ExpeditionSummaryDialog open={summaryOpen} onOpenChange={setSummaryOpen} />
       {/* V2.98 - Impression étiquettes produits avec templates */}
