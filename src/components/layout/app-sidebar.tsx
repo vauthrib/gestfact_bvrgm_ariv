@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, Package, FileText, CreditCard,
-  Truck, Settings, ChevronLeft, ChevronRight, Receipt, Undo2, LogOut, User, Archive
+  Truck, Settings, ChevronLeft, ChevronRight, Receipt, Undo2, LogOut, User
 } from 'lucide-react';
 import { hasPermission, Permission } from '@/lib/permissions';
 
@@ -13,7 +13,6 @@ export type PageView =
   | 'tiers'
   | 'articles'
   | 'bons-livraison'
-  | 'expeditions'
   | 'factures-clients'
   | 'avoirs-clients'
   | 'reglements-clients'
@@ -43,7 +42,6 @@ const allMenuItems: { id: PageView; label: string; icon: React.ReactNode; separa
   { id: 'tiers', label: 'Tiers', icon: <Users className="w-5 h-5" />, permission: 'tiers.view' },
   { id: 'articles', label: 'Articles', icon: <Package className="w-5 h-5" />, permission: 'articles.view' },
   { id: 'bons-livraison', label: 'Bons de Livraison', icon: <Truck className="w-5 h-5" />, permission: 'bl.view' },
-  { id: 'expeditions', label: 'Archives expéditions', icon: <Archive className="w-5 h-5" />, permission: 'expeditions.view' },
   { id: 'factures-clients', label: 'Factures Clients', icon: <FileText className="w-5 h-5" />, permission: 'factures.view' },
   { id: 'avoirs-clients', label: 'Avoirs Clients', icon: <Undo2 className="w-5 h-5" />, permission: 'avoirs.view' },
   { id: 'reglements-clients', label: 'Règlements Clients', icon: <CreditCard className="w-5 h-5" />, permission: 'reglements.view', separatorAfter: true },
@@ -77,7 +75,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle, use
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
           <span className="font-bold text-lg">
-            ARIV <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">V3.22</span>
+            ARIV <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">V3.23</span>
           </span>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle}>

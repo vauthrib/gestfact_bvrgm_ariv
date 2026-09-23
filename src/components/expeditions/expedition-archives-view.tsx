@@ -1,4 +1,200 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react'; import { Archive, Plus, X } from 'lucide-react'; import { Button } from '@/components/ui/button'; import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'; import { Input } from '@/components/ui/input'; import { Label } from '@/components/ui/label'; import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; import { QRCodeSVG } from 'qrcode.react';
-export function ExpeditionArchiveDialog({open,onOpenChange,bl,articles,onSaved}:{open:boolean;onOpenChange:(open:boolean)=>void;bl:any;articles:any[];onSaved?:()=>void}){const[lines,setLines]=useState<any[]>([]),[containers,setContainers]=useState<any[]>([]),[saving,setSaving]=useState(false);useEffect(()=>{if(!open||!bl)return;const total=(bl.lignes||[]).reduce((s:number,l:any)=>s+Number(l.quantite||0),0);const ls=(bl.lignes||[]).map((l:any)=>({refProduit:articles.find((a:any)=>a.id===l.articleId)?.code||'-',designation:l.designation,qteEtiquette:String(l.quantite||0),numeroContenant:'000',numeroLot:'',qteTotalBL:String(total)}));setLines(ls);setContainers(ls.map((l:any)=>({reference:l.refProduit==='-'?'':l.refProduit,numero:'000',qteEtiquette:l.qteEtiquette,numeroLot:''})))},[open,bl,articles]);const save=async()=>{setSaving(true);try{const r=await fetch('/api/expeditions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({blId:bl.id,client:bl.client?.raisonSociale||'',blNumero:bl.numero,dateExpedition:bl.dateBL,qteTotalBL:lines.reduce((s,l)=>s+Number(l.qteTotalBL||0),0),lignes:lines.map(l=>({...l,qteEtiquette:Number(l.qteEtiquette),qteTotalBL:Number(l.qteTotalBL)})),contenants:containers.map(c=>({...c,numero:Number(c.numero),qteEtiquette:Number(c.qteEtiquette)}))})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Erreur');onSaved?.();onOpenChange(false)}catch(e:any){alert(e.message)}finally{setSaving(false)}};return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto"><DialogHeader><DialogTitle>Archiver l’expédition — BL {bl?.numero}</DialogTitle></DialogHeader><div className="space-y-5"><div className="rounded border bg-muted/30 p-3 text-sm"><b>Client :</b> {bl?.client?.raisonSociale||'-'} · <b>Date :</b> {bl?.dateBL?new Date(bl.dateBL).toLocaleDateString('fr-FR'):'-'}</div><div className="overflow-x-auto"><Label className="mb-2 block">Résumé des lignes</Label><Table><TableHeader><TableRow>{['Réf','Désignation','Qté étiquette','Contenant','Lot','Qté totale BL'].map(h=><TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader><TableBody>{lines.map((l,i)=><TableRow key={i}>{['refProduit','designation','qteEtiquette','numeroContenant','numeroLot','qteTotalBL'].map(k=><TableCell key={k}><Input type={k.includes('qte')?'number':'text'} value={l[k]} onChange={e=>setLines(xs=>xs.map((x,j)=>j===i?{...x,[k]:e.target.value}:x))}/></TableCell>)}</TableRow>)}</TableBody></Table></div><div className="overflow-x-auto"><div className="flex justify-between mb-2"><Label>Contenants et QR nominatifs</Label><Button type="button" size="sm" variant="outline" onClick={()=>setContainers([...containers,{reference:'',numero:'000',qteEtiquette:'0',numeroLot:''}])}><Plus className="h-4 w-4 mr-1"/>Ajouter</Button></div><Table><TableHeader><TableRow>{['Référence','N° (000–299)','Qté','Lot',''].map(h=><TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader><TableBody>{containers.map((c,i)=><TableRow key={i}>{['reference','numero','qteEtiquette','numeroLot'].map(k=><TableCell key={k}><Input value={c[k]} onChange={e=>setContainers(xs=>xs.map((x,j)=>j===i?{...x,[k]:e.target.value}:x))}/></TableCell>)}<TableCell><Button variant="ghost" size="sm" onClick={()=>setContainers(xs=>xs.filter((_,j)=>j!==i))}><X className="h-4 w-4"/></Button></TableCell></TableRow>)}</TableBody></Table></div></div><DialogFooter><Button variant="outline" onClick={()=>onOpenChange(false)}>Annuler</Button><Button onClick={save} disabled={saving||!lines.length||!containers.length}>{saving?'Enregistrement...':'Archiver'}</Button></DialogFooter></DialogContent></Dialog>}
-export function ExpeditionArchivesView(){const[archives,setArchives]=useState<any[]>([]),[search,setSearch]=useState(''),[loading,setLoading]=useState(true);const fetchA=async()=>{try{const r=await fetch('/api/expeditions');const d=await r.json();setArchives(Array.isArray(d)?d:[])}finally{setLoading(false)}};useEffect(()=>{fetchA()},[]);const rows=useMemo(()=>archives.flatMap(a=>a.lignes.map((l:any)=>({...l,archive:a}))).filter((r:any)=>`${r.client} ${r.refProduit} ${r.designation} ${r.blNumero} ${r.numeroContenant} ${r.numeroLot||''}`.toLowerCase().includes(search.toLowerCase())),[archives,search]);return <div className="p-6 space-y-6"><div className="flex justify-between"><div><h1 className="text-3xl font-bold text-blue-700">Archives d’expéditions</h1><p className="text-muted-foreground">Traçabilité des emballages et contenants</p></div><span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NEXP01</span></div><Card><CardHeader><CardTitle className="flex gap-2"><Archive className="h-5 w-5"/>Résumé des expéditions</CardTitle></CardHeader><CardContent><Input className="mb-4" placeholder="Client, référence, BL, contenant, lot..." value={search} onChange={e=>setSearch(e.target.value)}/>{loading?<p>Chargement...</p>:<div className="overflow-x-auto"><Table className="table-fixed min-w-[1050px]"><TableHeader><TableRow>{['Client','Réf produit','Désignation','BL','Date','Qté étiquette','N° contenant','N° lot','Qté totale BL','QR'].map(h=><TableHead key={h}>{h}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.map((r:any,i:number)=>{const c=r.archive.contenants.find((x:any)=>x.reference===r.refProduit&&String(x.numero).padStart(3,'0')===String(r.numeroContenant).padStart(3,'0'))||r.archive.contenants[0];const url=c?`${window.location.origin}/contenant/${encodeURIComponent(c.qrToken)}`:'';return <TableRow key={i}><TableCell>{r.client}</TableCell><TableCell className="font-mono">{r.refProduit}</TableCell><TableCell className="whitespace-normal">{r.designation}</TableCell><TableCell>{r.blNumero}</TableCell><TableCell>{new Date(r.dateExpedition).toLocaleDateString('fr-FR')}</TableCell><TableCell>{r.qteEtiquette}</TableCell><TableCell className="font-mono">{String(r.numeroContenant).padStart(3,'0')}</TableCell><TableCell>{r.numeroLot||'-'}</TableCell><TableCell>{r.qteTotalBL}</TableCell><TableCell>{url&&<QRCodeSVG value={url} size={42}/>}</TableCell></TableRow>})}</TableBody></Table></div>}</CardContent></Card></div>}
+
+// V3.23 - Résumé des expéditions : un seul bouton, un tableau de tous les BL
+// Filtres : date début / date fin, client, article, recherche libre.
+// Remplace l'ancien bouton « Archiver l'expédition » par BL et la page NEXP01.
+
+import { useEffect, useMemo, useState } from 'react';
+import { Truck, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { QRCodeSVG } from 'qrcode.react';
+
+interface LigneBL { articleId?: string; designation: string; quantite: number; }
+interface BonLivraison {
+  id: string; numero: string; dateBL: string; statut: string;
+  client?: { raisonSociale: string } | null;
+  lignes?: LigneBL[];
+}
+
+export function ExpeditionSummaryDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [bons, setBons] = useState<BonLivraison[]>([]);
+  const [archives, setArchives] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [clientId, setClientId] = useState('ALL');
+  const [articleCode, setArticleCode] = useState('ALL');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    Promise.all([
+      fetch('/api/bons-livraison').then((r) => r.json()).catch(() => []),
+      fetch('/api/expeditions').then((r) => r.json()).catch(() => []),
+    ]).then(([bl, arch]) => {
+      setBons(Array.isArray(bl) ? bl : []);
+      setArchives(Array.isArray(arch) ? arch : []);
+    }).finally(() => setLoading(false));
+  }, [open]);
+
+  const clients = useMemo(() => {
+    const map = new Map<string, string>();
+    bons.forEach((b) => { if (b.client?.raisonSociale) map.set(b.client.raisonSociale, b.client.raisonSociale); });
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
+  }, [bons]);
+
+  const articles = useMemo(() => {
+    const set = new Set<string>();
+    bons.forEach((b) => (b.lignes || []).forEach((l) => {
+      if (l.designation) {
+        const code = l.designation.split('\n')[0].split(' - ')[0].trim();
+        if (code) set.add(code);
+      }
+    }));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [bons]);
+
+  const tokensByBL = useMemo(() => {
+    const map = new Map<string, string[]>();
+    archives.forEach((a) => {
+      if (a.blId && Array.isArray(a.contenants)) {
+        map.set(a.blId, a.contenants.map((c: any) => c.qrToken).filter(Boolean));
+      }
+    });
+    return map;
+  }, [archives]);
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return bons
+      .filter((b) => {
+        const d = new Date(b.dateBL);
+        if (dateFrom && d < new Date(dateFrom)) return false;
+        if (dateTo && d > new Date(dateTo + 'T23:59:59')) return false;
+        if (clientId !== 'ALL' && b.client?.raisonSociale !== clientId) return false;
+        const lignes = b.lignes || [];
+        if (articleCode !== 'ALL' && !lignes.some((l) => (l.designation || '').split('\n')[0].split(' - ')[0].trim() === articleCode)) return false;
+        if (q) {
+          const lignesTxt = lignes.map((l) => l.designation || '').join(' ').toLowerCase();
+          if (!`${b.numero} ${b.client?.raisonSociale || ''} ${lignesTxt}`.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.dateBL).getTime() - new Date(a.dateBL).getTime());
+  }, [bons, dateFrom, dateTo, clientId, articleCode, search]);
+
+  const totalLignes = rows.reduce((s, b) => s + (b.lignes || []).length, 0);
+
+  const resetFilters = () => { setDateFrom(''); setDateTo(''); setClientId('ALL'); setArticleCode('ALL'); setSearch(''); };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[1400px] w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-blue-700"><Truck className="h-5 w-5" />Résumé des expéditions — Tous les BL</DialogTitle>
+            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NEXP01</span>
+          </div>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+          <div>
+            <Label>Date début</Label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <Label>Date fin</Label>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </div>
+          <div>
+            <Label>Client</Label>
+            <Select value={clientId} onValueChange={setClientId}>
+              <SelectTrigger><SelectValue placeholder="Tous" /></SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+                <SelectItem value="ALL">Tous les clients</SelectItem>
+                {clients.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Article</Label>
+            <Select value={articleCode} onValueChange={setArticleCode}>
+              <SelectTrigger><SelectValue placeholder="Tous" /></SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                <SelectItem value="ALL">Tous les articles</SelectItem>
+                {articles.map((a) => (<SelectItem key={a} value={a} className="whitespace-normal">{a}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Recherche</Label>
+            <Input placeholder="BL, client, désignation..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <Button variant="outline" onClick={resetFilters}><X className="h-4 w-4 mr-1" />Effacer</Button>
+        </div>
+
+        {loading ? (
+          <p className="py-6 text-center text-muted-foreground">Chargement...</p>
+        ) : rows.length === 0 ? (
+          <p className="py-6 text-center text-muted-foreground">Aucun BL pour ces filtres</p>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">{rows.length} BL · {totalLignes} ligne(s) article</p>
+            <div className="overflow-x-auto">
+              <Table className="table-fixed min-w-[1050px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[110px]">N° BL</TableHead>
+                    <TableHead className="w-[95px]">Date</TableHead>
+                    <TableHead className="w-[160px]">Client</TableHead>
+                    <TableHead className="w-[300px]">Article / Désignation</TableHead>
+                    <TableHead className="w-[80px]">Qté</TableHead>
+                    <TableHead className="w-[80px]">Total BL</TableHead>
+                    <TableHead className="w-[120px]">N° contenant</TableHead>
+                    <TableHead className="w-[70px]">QR</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.flatMap((b) => {
+                    const tokens = tokensByBL.get(b.id) || [];
+                    const lignes = (b.lignes || []).length > 0 ? b.lignes! : [{ designation: '-', quantite: 0 }];
+                    return lignes.map((l, li) => {
+                      const token = tokens[li] || tokens[0];
+                      const qrUrl = token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/contenant/${encodeURIComponent(token)}` : '';
+                      return (
+                        <TableRow key={`${b.id}-${li}`}>
+                          {li === 0 && (
+                            <>
+                              <TableCell className="font-mono align-top" rowSpan={lignes.length}>{b.numero}</TableCell>
+                              <TableCell className="align-top" rowSpan={lignes.length}>{new Date(b.dateBL).toLocaleDateString('fr-FR')}</TableCell>
+                              <TableCell className="whitespace-normal break-words align-top" rowSpan={lignes.length}>{b.client?.raisonSociale || '-'}</TableCell>
+                            </>
+                          )}
+                          <TableCell className="whitespace-normal break-words">{l.designation || '-'}</TableCell>
+                          <TableCell>{l.quantite}</TableCell>
+                          {li === 0 && (
+                            <TableCell className="align-top" rowSpan={lignes.length}>
+                              {lignes.reduce((s, x) => s + Number(x.quantite || 0), 0)}
+                            </TableCell>
+                          )}
+                          <TableCell className="font-mono">{token ? String((li % Math.max(tokens.length, 1))).padStart(3, '0') : '-'}</TableCell>
+                          <TableCell>{qrUrl && <QRCodeSVG value={qrUrl} size={40} level="M" />}</TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

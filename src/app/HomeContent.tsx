@@ -13,7 +13,6 @@ import { ReglementsFournisseursView } from '@/components/reglements-fournisseurs
 import { BonsLivraisonView } from '@/components/bons-livraison/bons-livraison-view';
 import { ParametresView } from '@/components/parametres/parametres-view';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
-import { ExpeditionArchivesView } from '@/components/expeditions/expedition-archives-view';
 import { Permission, hasPermission, getAccessiblePages } from '@/lib/permissions';
 import { UserProvider } from '@/lib/user-context';
 
@@ -59,7 +58,6 @@ export default function HomeContent({ user }: HomeContentProps) {
       case 'factures-fournisseurs': return <FacturesFournisseursView />;
       case 'reglements-fournisseurs': return <ReglementsFournisseursView />;
       case 'bons-livraison': return <BonsLivraisonView />;
-      case 'expeditions': return <ExpeditionArchivesView />;
       case 'parametres': return <ParametresView userRole={user.role} />;
       default: return <DashboardView />;
     }

@@ -8,14 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, RefreshCw, Tag, Archive } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, RefreshCw, Tag, CalendarRange } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
 import { LabelPrint } from '@/components/print/label-print';
 import { PermissionGate } from '@/components/auth/permission-gate';
-import { ExpeditionArchiveDialog } from '@/components/expeditions/expedition-archives-view';
+import { ExpeditionSummaryDialog } from '@/components/expeditions/expedition-archives-view';
 
 interface LigneBL { id?: string; articleId?: string; designation: string; quantite: number; prixUnitaire: number; totalHT: number; }
 interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; bonCommande: string | null; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; updatedAt?: string; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; facture?: { id: string; numero: string; updatedAt?: string } | null; }
@@ -68,7 +68,8 @@ export function BonsLivraisonView() {
   // V2.93 - Impression étiquettes produits
   const [labelPrintOpen, setLabelPrintOpen] = useState(false);
   const [selectedBLForLabels, setSelectedBLForLabels] = useState<BonLivraison | null>(null);
-  const [archiveBL, setArchiveBL] = useState<BonLivraison | null>(null);
+  // V3.23 - Résumé unique des expéditions (tous les BL)
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [containerQrTokens, setContainerQrTokens] = useState<string[]>([]);
   // V2.98 - Templates d'étiquettes
   const [labelTemplates, setLabelTemplates] = useState<any[]>([]);
@@ -527,6 +528,9 @@ export function BonsLivraisonView() {
           <PermissionGate permission="bl.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
+          <PermissionGate permission="bl.view">
+            <Button variant="outline" className="text-blue-700" onClick={() => setSummaryOpen(true)}><CalendarRange className="w-4 h-4 mr-2" />Résumé expéditions</Button>
+          </PermissionGate>
           <PermissionGate permission="facture.create">
             {selectedBLs.length > 0 && (
               <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleConvertMultipleToFacture}>
@@ -634,7 +638,6 @@ export function BonsLivraisonView() {
                     </PermissionGate>
                   )}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(b)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="outline" className="text-blue-700" onClick={() => setArchiveBL(b)} title="Archiver l’expédition"><Archive className="h-4 w-4" /></Button>
                   {/* V2.93 - Imprimer étiquettes si articles avec conditionnement */}
                   {articles.some(a => (a as any).conditionnement > 0) && (
                     <Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setSelectedBLForLabels(b); setLabelPrintOpen(true); }} title="Imprimer étiquettes (brouillon ou validé)"><Tag className="h-4 w-4" /></Button>
@@ -1035,7 +1038,8 @@ export function BonsLivraisonView() {
         </DialogContent>
       </Dialog>
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="bons-livraison" code="NBL01" />
-      <ExpeditionArchiveDialog open={Boolean(archiveBL)} onOpenChange={(open) => { if (!open) setArchiveBL(null); }} bl={archiveBL} articles={articles} onSaved={() => setArchiveBL(null)} />
+      {/* V3.23 - Résumé des expéditions : tous les BL avec filtres */}
+      <ExpeditionSummaryDialog open={summaryOpen} onOpenChange={setSummaryOpen} />
       {/* V2.98 - Impression étiquettes produits avec templates */}
       <LabelPrint
         open={labelPrintOpen}
