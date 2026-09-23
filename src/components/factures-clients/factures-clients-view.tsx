@@ -8,12 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, EyeOff, Paperclip } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
 import { PermissionGate } from '@/components/auth/permission-gate';
+import { DocumentScansDialog } from '@/components/documents/document-scans-dialog';
 
 interface LigneFacture { id?: string; articleId?: string; designation: string; quantite: string; prixUnitaire: string; tauxTVA: string; totalHT: number; }
 interface FactureClient { id: string; numero: string; dateFacture: string; clientId: string; bonCommande: string | null; numeroBL: string | null; dateEcheance: string; statut: string; infoLibre: string | null; notes: string | null; totalHT: number; totalTVA: number; totalTTC: number; client: { raisonSociale: string; adresse?: string; ville?: string; ice?: string }; lignes?: LigneFacture[]; }
@@ -58,6 +59,10 @@ export function FacturesClientsView() {
   const [codeInput, setCodeInput] = useState('');
   const [codeError, setCodeError] = useState(false);
   const [pendingEdit, setPendingEdit] = useState<FactureClient | null>(null);
+
+  // Scans AR dialog
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [scanDocNumero, setScanDocNumero] = useState<string>('');
 
   // Multi-article dialog
   const [multiArticleDialogOpen, setMultiArticleDialogOpen] = useState(false);
@@ -527,6 +532,7 @@ export function FacturesClientsView() {
                   )}
                   </PermissionGate>
                   <Button size="sm" variant="outline" onClick={() => handlePrint(f)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="outline" className="text-blue-600 hover:text-blue-800" onClick={() => { setScanDocNumero(f.numero); setScanDialogOpen(true); }} title="Scans & Accusé Réception (AR)"><Paperclip className="h-4 w-4" /></Button>
                   <PermissionGate permission="factures.edit">
                     <Button size="sm" variant="outline" onClick={() => openEditDialog(f)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
                   </PermissionGate>
@@ -862,6 +868,13 @@ export function FacturesClientsView() {
         </DialogContent>
       </Dialog>
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="factures-clients" code="NFC01" />
+      <DocumentScansDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        typeDoc="FACTURE_CLIENT"
+        numeroDoc={scanDocNumero}
+        accent="blue"
+      />
       <PrintDocument 
         open={printOpen} 
         onOpenChange={setPrintOpen} 

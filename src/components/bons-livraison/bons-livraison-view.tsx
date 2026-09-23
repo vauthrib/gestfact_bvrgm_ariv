@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, RefreshCw, Tag, CalendarRange } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, RefreshCw, Tag, CalendarRange, Paperclip } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
@@ -17,6 +17,7 @@ import { FactureViewDialog } from '@/components/factures-clients/facture-view-di
 import { LabelPrint } from '@/components/print/label-print';
 import { PermissionGate } from '@/components/auth/permission-gate';
 import { ExpeditionSummaryDialog } from '@/components/expeditions/expedition-archives-view';
+import { DocumentScansDialog } from '@/components/documents/document-scans-dialog';
 
 interface LigneBL { id?: string; articleId?: string; designation: string; quantite: number; prixUnitaire: number; totalHT: number; }
 interface BonLivraison { id: string; numero: string; dateBL: string; clientId: string; bonCommande: string | null; statut: string; infoLibre: string | null; notesLivraison: string | null; totalHT: number; updatedAt?: string; client: { raisonSociale: string; adresse?: string; ville?: string }; lignes?: LigneBL[]; facture?: { id: string; numero: string; updatedAt?: string } | null; }
@@ -90,6 +91,10 @@ export function BonsLivraisonView() {
 
   // V3.25 - Visu facture (NFC01-VISU) depuis la colonne Facturé
   const [factureVisuId, setFactureVisuId] = useState<string | null>(null);
+
+  // V3.27 - Scans AR dialog
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [scanDocNumero, setScanDocNumero] = useState<string>('');
   // V2.92 - Mise à jour d'une facture groupée après modification d'un BL (super code 5555)
   const [superCodeDialogOpen, setSuperCodeDialogOpen] = useState(false);
   const [superCodeInput, setSuperCodeInput] = useState('');
@@ -641,6 +646,7 @@ export function BonsLivraisonView() {
                     </PermissionGate>
                   )}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(b)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="outline" className="text-blue-600 hover:text-blue-800" onClick={() => { setScanDocNumero(b.numero); setScanDialogOpen(true); }} title="Scans & Accusé Réception (AR)"><Paperclip className="h-4 w-4" /></Button>
                   {/* V2.93 - Imprimer étiquettes si articles avec conditionnement */}
                   {articles.some(a => (a as any).conditionnement > 0) && (
                     <Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setSelectedBLForLabels(b); setLabelPrintOpen(true); }} title="Imprimer étiquettes (brouillon ou validé)"><Tag className="h-4 w-4" /></Button>
@@ -1047,6 +1053,14 @@ export function BonsLivraisonView() {
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="bons-livraison" code="NBL01" />
       {/* V3.25 - Visu facture NFC01-VISU */}
       <FactureViewDialog factureId={factureVisuId} onOpenChange={(open) => { if (!open) setFactureVisuId(null); }} />
+      {/* V3.27 - Scans AR dialog */}
+      <DocumentScansDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        typeDoc="BON_LIVRAISON"
+        numeroDoc={scanDocNumero}
+        accent="blue"
+      />
       {/* V3.23 - Résumé des expéditions : tous les BL avec filtres */}
       <ExpeditionSummaryDialog open={summaryOpen} onOpenChange={setSummaryOpen} />
       {/* V2.98 - Impression étiquettes produits avec templates */}

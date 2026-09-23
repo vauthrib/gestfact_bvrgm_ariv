@@ -298,6 +298,23 @@ model ExpeditionContenant {
   @@index([expeditionId])
 }
 
+model DocumentScan {
+  id          String   @id @default(cuid())
+  typeDoc     String   // FACTURE_CLIENT, BON_LIVRAISON, AVOIR_CLIENT, FACTURE_FOURNISSEUR
+  numeroDoc   String   // ex: FC00042, BL00010
+  nature      String   @default("AR_CLIENT") // AR_CLIENT, ORIGINAL, AUTRE
+  nomFichier  String
+  storagePath String
+  mimeType    String
+  taille      Int      @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([typeDoc, numeroDoc])
+  @@index([nature])
+}
+
 model Parametres {
   id                    String   @id @default(cuid())
   nomEntreprise         String   @default("")
