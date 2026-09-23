@@ -7,9 +7,40 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABA
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_KEY;
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'label-images';
 
+// Auto-création de la table DocumentScan si elle n'existe pas encore dans Neon
+let tableEnsured = false;
+async function ensureDocumentScanTable() {
+  if (tableEnsured) return;
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "DocumentScan" (
+        "id" TEXT NOT NULL,
+        "typeDoc" TEXT NOT NULL,
+        "numeroDoc" TEXT NOT NULL,
+        "nature" TEXT NOT NULL DEFAULT 'AR_CLIENT',
+        "nomFichier" TEXT NOT NULL,
+        "storagePath" TEXT NOT NULL,
+        "mimeType" TEXT NOT NULL,
+        "taille" INTEGER NOT NULL DEFAULT 0,
+        "notes" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "DocumentScan_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "DocumentScan_typeDoc_numeroDoc_idx" ON "DocumentScan"("typeDoc", "numeroDoc");
+      CREATE INDEX IF NOT EXISTS "DocumentScan_nature_idx" ON "DocumentScan"("nature");
+    `);
+    tableEnsured = true;
+  } catch (e) {
+    console.error('Erreur ensureDocumentScanTable:', e);
+  }
+}
+
 // GET : Liste les scans pour un document donné (typeDoc & numeroDoc)
 export async function GET(request: NextRequest) {
   try {
+    await ensureDocumentScanTable();
+
     const { searchParams } = new URL(request.url);
     const typeDoc = searchParams.get('typeDoc');
     const numeroDoc = searchParams.get('numeroDoc');
@@ -32,6 +63,8 @@ export async function GET(request: NextRequest) {
 // POST : Upload d'un fichier scan pour un document
 export async function POST(request: NextRequest) {
   try {
+    await ensureDocumentScanTable();
+
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       return NextResponse.json({ error: 'Configuration Supabase manquante' }, { status: 500 });
     }
@@ -93,6 +126,8 @@ export async function POST(request: NextRequest) {
 // DELETE : Supprime un scan par son id
 export async function DELETE(request: NextRequest) {
   try {
+    await ensureDocumentScanTable();
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {
