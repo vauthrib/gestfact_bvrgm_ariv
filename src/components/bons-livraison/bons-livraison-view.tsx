@@ -536,10 +536,10 @@ export function BonsLivraisonView() {
           <PermissionGate permission="bl.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
-          <PermissionGate permission="bl.view">
+          <PermissionGate permission="expeditions.view">
             <Button variant="outline" className="text-blue-700" onClick={() => setSummaryOpen(true)}><CalendarRange className="w-4 h-4 mr-2" />Résumé expéditions</Button>
           </PermissionGate>
-          <PermissionGate permission="facture.create">
+          <PermissionGate permission="factures.create">
             {selectedBLs.length > 0 && (
               <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleConvertMultipleToFacture}>
                 <FileText className="w-4 h-4 mr-2" />Créer facture groupée ({selectedBLs.length} BL)
@@ -606,9 +606,11 @@ export function BonsLivraisonView() {
                 <TableCell><span className={`px-2 py-1 rounded text-xs ${b.statut === 'VALIDEE' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{b.statut === 'VALIDEE' ? 'Validé' : 'Brouillon'}</span></TableCell>
                 <TableCell>
                   {b.facture ? (
+                    <PermissionGate permission="factures.view">
                     <button type="button" onClick={() => setFactureVisuId(b.facture!.id)} className={`px-2 py-1 rounded text-xs font-medium underline-offset-2 hover:underline ${getBlsModifies(b.facture.id).length > 0 ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`} title="Cliquer pour visualiser la facture (NFC01-VISU)">
                       ✓ {b.facture.numero}{getBlsModifies(b.facture.id).length > 0 ? ' ⚠' : ''}
                     </button>
+                    </PermissionGate>
                   ) : (
                     <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-500">-</span>
                   )}
@@ -618,7 +620,7 @@ export function BonsLivraisonView() {
                     {b.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(b.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
                   </PermissionGate>
                   {b.statut === 'VALIDEE' && (
-                    <PermissionGate permission="facture.create">
+                    <PermissionGate permission="factures.create">
                       <Button 
                         size="sm" 
                         variant="outline" 
@@ -639,17 +641,17 @@ export function BonsLivraisonView() {
                   )}
                   {/* V2.92 - Mettre à jour la facture groupée si un BL lié a été modifié (super code 5555) */}
                   {b.statut === 'VALIDEE' && b.facture && getBlsModifies(b.facture.id).length > 0 && (
-                    <PermissionGate permission="facture.create">
+                    <PermissionGate permission="factures.create">
                       <Button size="sm" variant="outline" className="text-orange-600 border-orange-300" onClick={() => openSuperCodeDialog(b)} title={`Mettre à jour la facture ${b.facture.numero} (BL modifié : ${getBlsModifies(b.facture.id).map(x => x.numero).join(', ')})`}>
                         <RefreshCw className="h-4 w-4" />
                       </Button>
                     </PermissionGate>
                   )}
                   <Button size="sm" variant="outline" onClick={() => handlePrint(b)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="outline" className="text-blue-600 hover:text-blue-800" onClick={() => { setScanDocNumero(b.numero); setScanDialogOpen(true); }} title="Scans & Accusé Réception (AR)"><Paperclip className="h-4 w-4" /></Button>
+                  <PermissionGate permission="scans.view"><Button size="sm" variant="outline" className="text-blue-600 hover:text-blue-800" onClick={() => { setScanDocNumero(b.numero); setScanDialogOpen(true); }} title="Scans & Accusé Réception (AR)"><Paperclip className="h-4 w-4" /></Button></PermissionGate>
                   {/* V2.93 - Imprimer étiquettes si articles avec conditionnement */}
                   {articles.some(a => (a as any).conditionnement > 0) && (
-                    <Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setSelectedBLForLabels(b); setLabelPrintOpen(true); }} title="Imprimer étiquettes (brouillon ou validé)"><Tag className="h-4 w-4" /></Button>
+                    <PermissionGate permission="etiquettes.view"><Button size="sm" variant="outline" className="text-blue-600" onClick={() => { setSelectedBLForLabels(b); setLabelPrintOpen(true); }} title="Imprimer étiquettes (brouillon ou validé)"><Tag className="h-4 w-4" /></Button></PermissionGate>
                   )}
                   <PermissionGate permission="bl.edit">
                     <Button size="sm" variant="outline" onClick={() => openEditDialog(b)} title="Modifier"><Pencil className="h-4 w-4" /></Button>

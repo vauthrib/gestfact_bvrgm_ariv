@@ -30,26 +30,40 @@ export const PERMISSION_DEFINITIONS = {
   'factures.edit': { label: 'Modif', group: 'Factures Clients', type: 'edit' },
   'factures.create': { label: 'Créer', group: 'Factures Clients', type: 'create' },
   'factures.validate': { label: 'Valider', group: 'Factures Clients', type: 'validate' },
+
+  // Scans & Accusés Réception
+  'scans.view': { label: 'Visu', group: 'Scans & Accusés Réception', type: 'view' },
+  'scans.create': { label: 'Déposer', group: 'Scans & Accusés Réception', type: 'create' },
+  'scans.delete': { label: 'Supprimer', group: 'Scans & Accusés Réception', type: 'delete' },
+
+  // Étiquettes
+  'etiquettes.view': { label: 'Visu', group: 'Étiquettes', type: 'view' },
+  'etiquettes.print': { label: 'Imprimer', group: 'Étiquettes', type: 'print' },
+  'etiquettes.manage': { label: 'Modèles', group: 'Étiquettes', type: 'manage' },
   
   // Avoirs
   'avoirs.view': { label: 'Visu', group: 'Avoirs', type: 'view' },
   'avoirs.edit': { label: 'Modif', group: 'Avoirs', type: 'edit' },
   'avoirs.create': { label: 'Créer', group: 'Avoirs', type: 'create' },
+  'avoirs.validate': { label: 'Valider', group: 'Avoirs', type: 'validate' },
   
   // Règlements Clients
   'reglements.view': { label: 'Visu', group: 'Règlements Clients', type: 'view' },
   'reglements.edit': { label: 'Modif', group: 'Règlements Clients', type: 'edit' },
   'reglements.create': { label: 'Créer', group: 'Règlements Clients', type: 'create' },
+  'reglements.validate': { label: 'Valider', group: 'Règlements Clients', type: 'validate' },
   
   // Factures Fournisseurs
   'fournisseurs.view': { label: 'Visu', group: 'Fournisseurs', type: 'view' },
   'fournisseurs.edit': { label: 'Modif', group: 'Fournisseurs', type: 'edit' },
   'fournisseurs.create': { label: 'Créer', group: 'Fournisseurs', type: 'create' },
+  'fournisseurs.validate': { label: 'Valider', group: 'Fournisseurs', type: 'validate' },
   
   // Règlements Fournisseurs
   'reglements-fourn.view': { label: 'Visu', group: 'Règlements Fournisseurs', type: 'view' },
   'reglements-fourn.edit': { label: 'Modif', group: 'Règlements Fournisseurs', type: 'edit' },
   'reglements-fourn.create': { label: 'Créer', group: 'Règlements Fournisseurs', type: 'create' },
+  'reglements-fourn.validate': { label: 'Valider', group: 'Règlements Fournisseurs', type: 'validate' },
   
   // Paramètres
   'parametres.view': { label: 'Voir', group: 'Administration', type: 'view' },
@@ -70,11 +84,13 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'articles.view', 'articles.edit', 'articles.create',
     'bl.view', 'bl.edit', 'bl.create', 'bl.validate',
     'expeditions.view', 'expeditions.edit', 'expeditions.create',
+    'scans.view', 'scans.create', 'scans.delete',
+    'etiquettes.view', 'etiquettes.print', 'etiquettes.manage',
     'factures.view', 'factures.edit', 'factures.create', 'factures.validate',
-    'avoirs.view', 'avoirs.edit', 'avoirs.create',
-    'reglements.view', 'reglements.edit', 'reglements.create',
-    'fournisseurs.view', 'fournisseurs.edit', 'fournisseurs.create',
-    'reglements-fourn.view', 'reglements-fourn.edit', 'reglements-fourn.create',
+    'avoirs.view', 'avoirs.edit', 'avoirs.create', 'avoirs.validate',
+    'reglements.view', 'reglements.edit', 'reglements.create', 'reglements.validate',
+    'fournisseurs.view', 'fournisseurs.edit', 'fournisseurs.create', 'fournisseurs.validate',
+    'reglements-fourn.view', 'reglements-fourn.edit', 'reglements-fourn.create', 'reglements-fourn.validate',
     'parametres.view', 'parametres.edit',
     'users.manage',
   ],
@@ -84,6 +100,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'tiers.view',
     'articles.view',
     'bl.view', 'bl.create',
+    'scans.view', 'scans.create',
+    'etiquettes.view', 'etiquettes.print',
   ],
   BL_ONLY: [
     // Profil "Créateur BL uniquement"
@@ -91,6 +109,8 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'tiers.view',
     'articles.view',
     'bl.view', 'bl.create',
+    'scans.view', 'scans.create',
+    'etiquettes.view', 'etiquettes.print',
   ],
 };
 
@@ -101,11 +121,13 @@ export const PERMISSION_GROUPS = [
   { name: 'Articles', permissions: ['articles.view', 'articles.edit', 'articles.create'] },
   { name: 'Bons de Livraison', permissions: ['bl.view', 'bl.edit', 'bl.create', 'bl.validate'] },
   { name: 'Archives d’expéditions', permissions: ['expeditions.view', 'expeditions.edit', 'expeditions.create'] },
+  { name: 'Scans & Accusés Réception', permissions: ['scans.view', 'scans.create', 'scans.delete'] },
+  { name: 'Étiquettes', permissions: ['etiquettes.view', 'etiquettes.print', 'etiquettes.manage'] },
   { name: 'Factures Clients', permissions: ['factures.view', 'factures.edit', 'factures.create', 'factures.validate'] },
-  { name: 'Avoirs', permissions: ['avoirs.view', 'avoirs.edit', 'avoirs.create'] },
-  { name: 'Règlements Clients', permissions: ['reglements.view', 'reglements.edit', 'reglements.create'] },
-  { name: 'Fournisseurs', permissions: ['fournisseurs.view', 'fournisseurs.edit', 'fournisseurs.create'] },
-  { name: 'Règlements Fournisseurs', permissions: ['reglements-fourn.view', 'reglements-fourn.edit', 'reglements-fourn.create'] },
+  { name: 'Avoirs', permissions: ['avoirs.view', 'avoirs.edit', 'avoirs.create', 'avoirs.validate'] },
+  { name: 'Règlements Clients', permissions: ['reglements.view', 'reglements.edit', 'reglements.create', 'reglements.validate'] },
+  { name: 'Fournisseurs', permissions: ['fournisseurs.view', 'fournisseurs.edit', 'fournisseurs.create', 'fournisseurs.validate'] },
+  { name: 'Règlements Fournisseurs', permissions: ['reglements-fourn.view', 'reglements-fourn.edit', 'reglements-fourn.create', 'reglements-fourn.validate'] },
   { name: 'Administration', permissions: ['parametres.view', 'parametres.edit', 'users.manage'] },
 ];
 

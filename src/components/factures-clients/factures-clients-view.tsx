@@ -523,7 +523,9 @@ export function FacturesClientsView() {
                 <TableCell><div className="flex gap-1 flex-wrap">
                   <PermissionGate permission="factures.validate">
                     {f.statut === 'BROUILLON' && <Button size="sm" variant="outline" className="text-blue-600" onClick={() => handleValidate(f.id)} title="Valider"><CheckCircle className="h-4 w-4" /></Button>}
+                  </PermissionGate>
                   {/* V2.93 - Visualiser facture si validée */}
+                  <PermissionGate permission="factures.view">
                   {f.statut === 'VALIDEE' && (
                     <Button size="sm" variant="outline" className="text-blue-700" onClick={() => handleView(f)} title="Visualiser la facture"><Eye className="h-4 w-4" /></Button>
                   )}
@@ -533,7 +535,7 @@ export function FacturesClientsView() {
                   )}
                   </PermissionGate>
                   <Button size="sm" variant="outline" onClick={() => handlePrint(f)} title="Imprimer"><Printer className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="outline" className="text-blue-600 hover:text-blue-800" onClick={() => { setScanDocNumero(f.numero); setScanDialogOpen(true); }} title="Scans & Accusé Réception (AR)"><Paperclip className="h-4 w-4" /></Button>
+                  <PermissionGate permission="scans.view"><Button size="sm" variant="outline" className="text-blue-600 hover:text-blue-800" onClick={() => { setScanDocNumero(f.numero); setScanDialogOpen(true); }} title="Scans & Accusé Réception (AR)"><Paperclip className="h-4 w-4" /></Button></PermissionGate>
                   <PermissionGate permission="factures.edit">
                     <Button size="sm" variant="outline" onClick={() => openEditDialog(f)} title="Modifier"><Pencil className="h-4 w-4" /></Button>
                   </PermissionGate>

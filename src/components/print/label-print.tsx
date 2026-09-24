@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import JsBarcode from 'jsbarcode';
 import { LabelTemplateEditor, LabelTemplateData, LabelField } from './label-template-editor';
+import { PermissionGate } from '@/components/auth/permission-gate';
 
 const QRCodeSVG = dynamic(() => import('qrcode.react').then(mod => mod.QRCodeSVG), { ssr: false });
 const PUBLIC_APP_URL = 'https://gestfact-bvrgm-ariv.vercel.app';
@@ -409,16 +410,20 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label className="text-base font-semibold">Modèle d'étiquette</Label>
+                <PermissionGate permission="etiquettes.manage">
                 <Button variant="outline" size="sm" onClick={() => { setEditingTemplate(null); setEditorOpen(true); }}>
                   <Plus className="h-4 w-4 mr-1" />Nouveau modèle
                 </Button>
+                </PermissionGate>
               </div>
               {availableTemplates.length === 0 ? (
                 <div className="border-2 border-dashed rounded-lg p-6 text-center text-muted-foreground">
                   <p className="mb-2">Aucun modèle d'étiquette enregistré.</p>
+                  <PermissionGate permission="etiquettes.manage">
                   <Button variant="outline" size="sm" onClick={() => { setEditingTemplate(null); setEditorOpen(true); }}>
                     <Plus className="h-4 w-4 mr-1" />Créer le premier modèle
                   </Button>
+                  </PermissionGate>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -454,6 +459,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                           <div className="text-xs text-muted-foreground">{t.width}×{t.height}mm · {t.fields.length} champ{(t.fields.length) > 1 ? 's' : ''}</div>
                         </div>
                         {/* Actions */}
+                        <PermissionGate permission="etiquettes.manage">
                         <div className="flex justify-center gap-1 mt-2">
                           <Button
                             variant="ghost" size="sm" className="h-6 px-2 text-xs"
@@ -489,6 +495,7 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
                             </Button>
                           )}
                         </div>
+                        </PermissionGate>
                       </div>
                     );
                   })}
@@ -584,9 +591,11 @@ export function LabelPrint({ open, onOpenChange, bl, articles, templates = [], o
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
+            <PermissionGate permission="etiquettes.print">
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={handlePrint} disabled={!selectedTemplate}>
               <Printer className="h-4 w-4 mr-2" />Imprimer {totalLabels} étiquette(s) (A5 × 2)
             </Button>
+            </PermissionGate>
           </DialogFooter>
         </DialogContent>
       </Dialog>

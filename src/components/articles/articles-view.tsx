@@ -175,7 +175,7 @@ export function ArticlesView() {
           <PermissionGate permission="articles.create">
             <Button variant="outline" onClick={() => setExportOpen(true)}><Download className="w-4 h-4 mr-2" />Export</Button>
           </PermissionGate>
-          <Button variant="outline" onClick={() => setLabelEditorOpen(true)}><Tag className="w-4 h-4 mr-2" />Étiquettes</Button>
+          <PermissionGate permission="etiquettes.manage"><Button variant="outline" onClick={() => setLabelEditorOpen(true)}><Tag className="w-4 h-4 mr-2" />Étiquettes</Button></PermissionGate>
           <PermissionGate permission="articles.create">
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); generateCode(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
           </PermissionGate>

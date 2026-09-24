@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FileText, Upload, Trash2, ExternalLink, Loader2, Paperclip, CheckCircle } from 'lucide-react';
+import { PermissionGate } from '@/components/auth/permission-gate';
 
 export interface DocumentScan {
   id: string;
@@ -151,12 +152,13 @@ export function DocumentScansDialog({
               Scans & Accusés Réception — {numeroDoc}
             </DialogTitle>
             <span className={`${colors.badge} px-3 py-1 rounded-full text-xs font-mono font-bold`}>
-              V3.31
+              V3.32
             </span>
           </div>
         </DialogHeader>
 
         {/* Section Upload */}
+        <PermissionGate permission="scans.create">
         <form onSubmit={handleUpload} className="p-4 border rounded-lg bg-gray-50/70 space-y-3">
           <Label className="text-sm font-semibold text-gray-700 block">
             Déposer un scan (PDF, Image JPG/PNG)
@@ -214,6 +216,7 @@ export function DocumentScansDialog({
             </Button>
           </div>
         </form>
+        </PermissionGate>
 
         {/* Liste des scans déjà enregistrés */}
         <div className="mt-2">
@@ -277,15 +280,17 @@ export function DocumentScansDialog({
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="h-8 px-2"
-                            onClick={() => handleDelete(s.id)}
-                            title="Supprimer"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <PermissionGate permission="scans.delete">
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-8 px-2"
+                              onClick={() => handleDelete(s.id)}
+                              title="Supprimer"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </PermissionGate>
                         </div>
                       </TableCell>
                     </TableRow>
