@@ -15,6 +15,7 @@ import { ExportDialog } from '@/components/import-export/export-dialog';
 import { PrintDocument } from '@/components/print/print-document';
 import { PermissionGate } from '@/components/auth/permission-gate';
 import { DocumentScansDialog } from '@/components/documents/document-scans-dialog';
+import { montantEnLettres } from '@/lib/number-to-words';
 
 interface LigneFacture { id?: string; articleId?: string; designation: string; quantite: string; prixUnitaire: string; tauxTVA: string; totalHT: number; }
 interface FactureClient { id: string; numero: string; dateFacture: string; clientId: string; bonCommande: string | null; numeroBL: string | null; dateEcheance: string; statut: string; infoLibre: string | null; notes: string | null; totalHT: number; totalTVA: number; totalTTC: number; client: { raisonSociale: string; adresse?: string; ville?: string; ice?: string }; lignes?: LigneFacture[]; }
@@ -599,6 +600,10 @@ export function FacturesClientsView() {
                 <span>TVA: {formatCurrency(calcTotalTVA())}</span>
                 <span>Total TTC: {formatCurrency(calcTotalTTC())}</span>
               </div>
+              {/* V3.30 - Montant total TTC en lettres */}
+              <div className="text-right text-xs italic text-gray-600 mt-1">
+                Montant total TTC dû est de : <strong className="not-italic">{montantEnLettres(calcTotalTTC())}</strong>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Info libre</Label><Textarea value={formData.infoLibre} onChange={(e) => setFormData({ ...formData, infoLibre: e.target.value })} /></div>
@@ -721,6 +726,10 @@ export function FacturesClientsView() {
                   <span>HT: {formatCurrency(viewingFacture.totalHT)}</span>
                   <span>TVA: {formatCurrency(viewingFacture.totalTVA)}</span>
                   <span>TTC: {formatCurrency(viewingFacture.totalTTC)}</span>
+                </div>
+                {/* V3.30 - Montant total TTC en lettres */}
+                <div className="text-right text-xs italic text-gray-600 mt-1">
+                  Montant total TTC dû est de : <strong className="not-italic">{montantEnLettres(viewingFacture.totalTTC)}</strong>
                 </div>
               </div>
               {(viewingFacture.infoLibre || viewingFacture.notes) && (

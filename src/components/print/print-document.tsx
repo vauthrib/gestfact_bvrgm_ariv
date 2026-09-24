@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import dynamic from 'next/dynamic';
 const QRCodeSVG = dynamic(() => import('qrcode.react').then((mod) => mod.QRCodeSVG), { ssr: false });
 import { Printer, Settings, EyeOff, Eye, FileText, Copy } from 'lucide-react';
+import { montantEnLettres } from '@/lib/number-to-words';
 
 interface LayoutElement {
   x: number;
@@ -159,6 +160,29 @@ export function PrintDocument({
   const getNumero = () => documentData.numero || documentData.numeroFacture || '';
   const getTiers = () => documentData.client || documentData.fournisseur || {};
   const lignes = documentData.lignes || [];
+
+  // V3.30 - Montant total TTC en lettres (factures client / fournisseur uniquement)
+  const isFacture = documentType === 'FC' || documentType === 'FF';
+  const ttcValue = documentData.totalTTC ?? documentData.montantTTC;
+  const ttcEnLettres = isFacture && ttcValue !== undefined && ttcValue !== null && ttcValue !== ''
+    ? montantEnLettres(ttcValue)
+    : '';
+
+  // V3.30 - Position de la mention en lettres : dans l'espace libre situé à gauche des totaux
+  // (sous le tableau), pour ne recouvrir ni les totaux ni le pied de page.
+  // Si les totaux commencent trop près de la marge gauche, la mention est placée juste au-dessus d'eux.
+  const lettresPos = (() => {
+    const totalsTop = Math.max(layout.totals.y, layout.tableStart.y + 130);
+    const gap = layout.totals.x - layout.margins.left - 5;
+    if (gap >= 45) {
+      return { left: layout.margins.left, top: totalsTop, width: gap };
+    }
+    return {
+      left: layout.margins.left,
+      top: Math.max(layout.tableStart.y + 5, totalsTop - 12),
+      width: Math.max(60, layout.totals.x + layout.totals.width - layout.margins.left)
+    };
+  })();
 
   // Generate HTML for print window
   const generatePrintHTML = () => {
@@ -480,6 +504,17 @@ export function PrintDocument({
             }
             .totals-section p { font-size: 10pt; margin: 3px 0; white-space: nowrap; }
             .totals-section .total-ttc { font-size: 15pt; font-weight: 900; color: #000; white-space: nowrap; }
+            /* V3.30 - Montant total TTC en lettres : bloc indépendant à gauche des totaux */
+            .montant-lettres {
+              position: absolute;
+              left: ${mmToPxStr(lettresPos.left)};
+              top: ${mmToPxStr(lettresPos.top)};
+              width: ${mmToPxStr(lettresPos.width)};
+              font-size: 8pt;
+              font-style: italic;
+              line-height: 1.3;
+              text-align: left;
+            }
             .footer-section {
               position: absolute;
               left: ${mmToPxStr(adjustedLayout.footer.x)};
@@ -562,6 +597,9 @@ export function PrintDocument({
               </div>
             ` : ''}
             
+${ttcEnLettres ? `
+              <div class="montant-lettres">Montant total TTC dû est de : <strong>${ttcEnLettres}</strong></div>
+            ` : ''}
             ${adjustedLayout.footer.visible ? `
               <div class="footer-section">
                 <p>${entreprise?.nomEntreprise || ''} ${entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
@@ -619,6 +657,8 @@ export function PrintDocument({
             .totals { text-align: right; margin-top: 20px; margin-bottom: 30px; }
             .totals p { font-size: 10pt; margin: 5px 0; white-space: nowrap; }
             .totals .total-ttc { font-size: 16pt; font-weight: 900; color: #000; white-space: nowrap; }
+            /* V3.30 - Montant total TTC en lettres */
+            .montant-lettres { margin-top: 10px; font-size: 9pt; font-style: italic; text-align: right; white-space: normal; }
             .footer { border-top: 1px solid #ddd; padding-top: 15px; font-size: 8pt; color: #666; }
             .footer p { margin: 2px 0; }
             @media print {
@@ -695,6 +735,7 @@ export function PrintDocument({
             </div>
           ` : ''}
           
+${ttcEnLettres ? `<div class="montant-lettres">Montant total TTC dû est de : <strong>${ttcEnLettres}</strong></div>` : ''}
           <div class="footer">
             <p>${entreprise?.nomEntreprise || ''} ${entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
             ${entreprise?.ice ? `<p>ICE: ${entreprise.ice}</p>` : ''}
@@ -1033,6 +1074,16 @@ export function PrintDocument({
                 </div>
               )}
 
+              {showPrices && ttcEnLettres && (
+                <div className="absolute text-[8px] italic leading-snug" style={{
+                  left: mmToPxStr(lettresPos.left),
+                  top: mmToPxStr(lettresPos.top),
+                  width: mmToPxStr(lettresPos.width)
+                }}>
+                  Montant total TTC dû est de : <strong>{ttcEnLettres}</strong>
+                </div>
+              )}
+
               {layout.footer.visible && (
                 <div className="absolute text-xs text-gray-500" style={{
                   left: mmToPxStr(layout.footer.x),
@@ -1100,6 +1151,12 @@ export function PrintDocument({
                 </div>
               )}
               
+              {showPrices && ttcEnLettres && (
+                <div className="text-right mb-4 text-sm italic">
+                  Montant total TTC dû est de : <strong>{ttcEnLettres}</strong>
+                </div>
+              )}
+
               <div className="border-t pt-3 text-xs text-gray-500">
                 <p>{entreprise?.nomEntreprise} {entreprise?.villeEntreprise ? '- ' + entreprise.villeEntreprise : ''}</p>
                 {entreprise?.ice && <p>ICE: {entreprise.ice}</p>}

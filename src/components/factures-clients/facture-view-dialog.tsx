@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { PrintDocument } from '@/components/print/print-document';
+import { montantEnLettres } from '@/lib/number-to-words';
 
 const parseNumber = (v: string | number) => { if (!v) return 0; if (typeof v === 'number') return v; return parseFloat(v.replace(',', '.').replace(/\s/g, '')) || 0; };
 
@@ -111,6 +112,10 @@ export function FactureViewDialog({ factureId, onOpenChange, accent = 'blue' }: 
                   <span>HT: {Number(facture.totalHT).toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH</span>
                   <span>TVA: {Number(facture.totalTVA || 0).toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH</span>
                   <span>TTC: {Number(facture.totalTTC).toLocaleString('fr-MA', { minimumFractionDigits: 2 })} DH</span>
+                </div>
+                {/* V3.30 - Montant total TTC en lettres */}
+                <div className="text-right text-xs italic text-gray-600 mt-1">
+                  Montant total TTC dû est de : <strong className="not-italic">{montantEnLettres(facture.totalTTC)}</strong>
                 </div>
               </div>
               {(facture.infoLibre || facture.notes) && (
