@@ -600,7 +600,7 @@ export function FacturesClientsView() {
                 <span>TVA: {formatCurrency(calcTotalTVA())}</span>
                 <span>Total TTC: {formatCurrency(calcTotalTTC())}</span>
               </div>
-              {/* V3.30 - Montant total TTC en lettres */}
+              {/* V3.31 - Montant total TTC en lettres */}
               <div className="text-right text-xs italic text-gray-600 mt-1">
                 Montant total TTC dû est de : <strong className="not-italic">{montantEnLettres(calcTotalTTC())}</strong>
               </div>
@@ -727,7 +727,7 @@ export function FacturesClientsView() {
                   <span>TVA: {formatCurrency(viewingFacture.totalTVA)}</span>
                   <span>TTC: {formatCurrency(viewingFacture.totalTTC)}</span>
                 </div>
-                {/* V3.30 - Montant total TTC en lettres */}
+                {/* V3.31 - Montant total TTC en lettres */}
                 <div className="text-right text-xs italic text-gray-600 mt-1">
                   Montant total TTC dû est de : <strong className="not-italic">{montantEnLettres(viewingFacture.totalTTC)}</strong>
                 </div>

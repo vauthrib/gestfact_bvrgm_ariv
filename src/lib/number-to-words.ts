@@ -1,4 +1,4 @@
-// V3.30 - Montant en lettres (français) pour les factures et documents imprimés.
+// V3.31 - Montant en lettres (français) pour les factures et documents imprimés.
 // Utilisé pour la mention légale "Montant total TTC dû est de : ...".
 
 const UNITS = [

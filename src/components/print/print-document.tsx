@@ -161,14 +161,14 @@ export function PrintDocument({
   const getTiers = () => documentData.client || documentData.fournisseur || {};
   const lignes = documentData.lignes || [];
 
-  // V3.30 - Montant total TTC en lettres (factures client / fournisseur uniquement)
+  // V3.31 - Montant total TTC en lettres (factures client / fournisseur uniquement)
   const isFacture = documentType === 'FC' || documentType === 'FF';
   const ttcValue = documentData.totalTTC ?? documentData.montantTTC;
   const ttcEnLettres = isFacture && ttcValue !== undefined && ttcValue !== null && ttcValue !== ''
     ? montantEnLettres(ttcValue)
     : '';
 
-  // V3.30 - Position de la mention en lettres : dans l'espace libre situé à gauche des totaux
+  // V3.31 - Position de la mention en lettres : dans l'espace libre situé à gauche des totaux
   // (sous le tableau), pour ne recouvrir ni les totaux ni le pied de page.
   // Si les totaux commencent trop près de la marge gauche, la mention est placée juste au-dessus d'eux.
   const lettresPos = (() => {
@@ -504,7 +504,7 @@ export function PrintDocument({
             }
             .totals-section p { font-size: 10pt; margin: 3px 0; white-space: nowrap; }
             .totals-section .total-ttc { font-size: 15pt; font-weight: 900; color: #000; white-space: nowrap; }
-            /* V3.30 - Montant total TTC en lettres : bloc indépendant à gauche des totaux */
+            /* V3.31 - Montant total TTC en lettres : bloc indépendant à gauche des totaux */
             .montant-lettres {
               position: absolute;
               left: ${mmToPxStr(lettresPos.left)};
@@ -657,7 +657,7 @@ ${ttcEnLettres ? `
             .totals { text-align: right; margin-top: 20px; margin-bottom: 30px; }
             .totals p { font-size: 10pt; margin: 5px 0; white-space: nowrap; }
             .totals .total-ttc { font-size: 16pt; font-weight: 900; color: #000; white-space: nowrap; }
-            /* V3.30 - Montant total TTC en lettres */
+            /* V3.31 - Montant total TTC en lettres */
             .montant-lettres { margin-top: 10px; font-size: 9pt; font-style: italic; text-align: right; white-space: normal; }
             .footer { border-top: 1px solid #ddd; padding-top: 15px; font-size: 8pt; color: #666; }
             .footer p { margin: 2px 0; }
