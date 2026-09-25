@@ -125,7 +125,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
 };
 
 // Grouper les permissions pour l'affichage en tableau avec 3 colonnes
-export const PERMISSION_GROUPS = [
+export const PERMISSION_GROUPS: { name: string; permissions: Permission[] }[] = [
   { name: 'Tableau de bord', permissions: ['dashboard.view'] },
   { name: 'Tiers', permissions: ['tiers.view', 'tiers.edit', 'tiers.create'] },
   { name: 'Articles', permissions: ['articles.view', 'articles.edit', 'articles.create'] },

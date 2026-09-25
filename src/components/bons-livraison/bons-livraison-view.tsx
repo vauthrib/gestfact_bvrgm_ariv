@@ -161,7 +161,7 @@ export function BonsLivraisonView() {
 
   // Add multiple articles
   const handleAddMultipleArticles = () => {
-    const newLignes = selectedArticles.map(articleId => {
+    const newLignes = selectedArticles.map((articleId): LigneBL | null => {
       const art = articles.find(a => a.id === articleId);
       if (art) {
         return {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 
 export async function GET() {
   try {
@@ -36,7 +37,8 @@ export async function POST(request: NextRequest) {
       
       // Create each regulation with suffix (a, b, c, ...)
       const suffixes = 'abcdefghijklmnopqrstuvwxyz'.split('');
-      const createdReglements = [];
+      type ReglementFournisseurAvecFacture = Prisma.ReglementFournisseurGetPayload<{ include: { facture: { include: { fournisseur: true } } } }>;
+      const createdReglements: ReglementFournisseurAvecFacture[] = [];
       
       for (let i = 0; i < payments.length; i++) {
         const p = payments[i];

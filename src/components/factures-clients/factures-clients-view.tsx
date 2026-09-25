@@ -135,7 +135,7 @@ export function FacturesClientsView() {
 
   // Add multiple articles
   const handleAddMultipleArticles = () => {
-    const newLignes = selectedArticles.map(articleId => {
+    const newLignes = selectedArticles.map((articleId): LigneFacture | null => {
       const art = articles.find(a => a.id === articleId);
       if (art) {
         return {
