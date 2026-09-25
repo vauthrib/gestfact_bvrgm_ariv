@@ -61,6 +61,32 @@ const FIELD_TYPES = [
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
+// Échelle de l'aperçu : 1mm = 3px (V3.37 : partagée par le glisser-déposer)
+const PREVIEW_SCALE = 3;
+
+// V3.37 - Champ numérique avec boutons - / + (pas en mm ou pt)
+function StepperInput({ value, onChange, step = 1, min, max }: {
+  value: number;
+  onChange: (v: number) => void;
+  step?: number;
+  min?: number;
+  max?: number;
+}) {
+  const clamp = (v: number) => {
+    let out = Math.round(v * 10) / 10;
+    if (min !== undefined) out = Math.max(min, out);
+    if (max !== undefined) out = Math.min(max, out);
+    return out;
+  };
+  return (
+    <div className="flex items-center gap-1">
+      <Button type="button" variant="outline" size="icon" className="h-8 w-7 shrink-0" onClick={() => onChange(clamp(value - step))} aria-label="Diminuer">−</Button>
+      <Input type="number" value={value} step={step} onChange={(e) => onChange(Number(e.target.value))} className="text-center px-1" />
+      <Button type="button" variant="outline" size="icon" className="h-8 w-7 shrink-0" onClick={() => onChange(clamp(value + step))} aria-label="Augmenter">+</Button>
+    </div>
+  );
+}
+
 export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: LabelTemplateEditorProps) {
   const [name, setName] = useState('');
   const [width, setWidth] = useState(100);
@@ -70,6 +96,38 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
   const [isDefault, setIsDefault] = useState(false);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // V3.37 - Glisser-déposer des champs dans l'aperçu (position en mm)
+  const dragRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      e.preventDefault();
+      const nx = Math.max(0, Math.round((d.origX + (e.clientX - d.startX) / PREVIEW_SCALE) * 10) / 10);
+      const ny = Math.max(0, Math.round((d.origY + (e.clientY - d.startY) / PREVIEW_SCALE) * 10) / 10);
+      setFields(prev => prev.map(f => f.id === d.id ? { ...f, x: nx, y: ny } : f));
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      setIsDragging(false);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
+  const startDrag = (e: React.MouseEvent, field: LabelField) => {
+    e.preventDefault();
+    setSelectedField(field.id);
+    dragRef.current = { id: field.id, startX: e.clientX, startY: e.clientY, origX: field.x, origY: field.y };
+    setIsDragging(true);
+  };
 
   useEffect(() => {
     if (template) {
@@ -166,7 +224,7 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
   };
 
   // Preview scale: 1mm = 3px
-  const scale = 3;
+  const scale = PREVIEW_SCALE;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -234,15 +292,14 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
                       <Button type="button" size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); removeField(field.id); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                     {selectedField === field.id && (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
-                        <div><Label className="text-xs">X (mm)</Label><Input type="number" value={field.x} onChange={(e) => updateField(field.id, { x: Number(e.target.value) })} /></div>
-                        <div><Label className="text-xs">Y (mm)</Label><Input type="number" value={field.y} onChange={(e) => updateField(field.id, { y: Number(e.target.value) })} /></div>
-                        <div><Label className="text-xs">Larg. (mm)</Label><Input type="number" value={field.width} onChange={(e) => updateField(field.id, { width: Number(e.target.value) })} /></div>
-                        <div><Label className="text-xs">Haut. (mm)</Label><Input type="number" value={field.height} onChange={(e) => updateField(field.id, { height: Number(e.target.value) })} /></div>
-                        <div><Label className="text-xs">Taille</Label><Input type="number" value={field.fontSize} onChange={(e) => updateField(field.id, { fontSize: Number(e.target.value) })} /></div>
-                        {field.type === 'barcode' && <>
-                          <div><Label className="text-xs">Barres</Label><Input type="number" step="0.1" value={field.barcodeBarWidth || 1.5} onChange={(e) => updateField(field.id, { barcodeBarWidth: Number(e.target.value) })} /></div>
-                          <div><Label className="text-xs">Texte barre</Label><Input type="number" value={field.barcodeFontSize || 10} onChange={(e) => updateField(field.id, { barcodeFontSize: Number(e.target.value) })} /></div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                        <div><Label className="text-xs">X (mm)</Label><StepperInput value={field.x} min={0} onChange={(v) => updateField(field.id, { x: v })} /></div>
+                        <div><Label className="text-xs">Y (mm)</Label><StepperInput value={field.y} min={0} onChange={(v) => updateField(field.id, { y: v })} /></div>
+                        <div><Label className="text-xs">Larg. (mm)</Label><StepperInput value={field.width} min={1} onChange={(v) => updateField(field.id, { width: v })} /></div>
+                        <div><Label className="text-xs">Haut. (mm)</Label><StepperInput value={field.height} min={1} onChange={(v) => updateField(field.id, { height: v })} /></div>
+                        <div><Label className="text-xs">Taille</Label><StepperInput value={field.fontSize} min={4} max={96} onChange={(v) => updateField(field.id, { fontSize: v })} /></div>                      {field.type === 'barcode' && <>
+                      <div><Label className="text-xs">Barres</Label><StepperInput value={field.barcodeBarWidth || 1.5} step={0.1} min={0.5} max={5} onChange={(v) => updateField(field.id, { barcodeBarWidth: v })} /></div>
+                      <div><Label className="text-xs">Texte barre</Label><StepperInput value={field.barcodeFontSize || 10} min={4} max={48} onChange={(v) => updateField(field.id, { barcodeFontSize: v })} /></div>
                           <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={field.barcodeDisplayValue !== false} onChange={(e) => updateField(field.id, { barcodeDisplayValue: e.target.checked })} />Afficher valeur</label>
                         </>}
                         <div><Label className="text-xs">Couleur</Label><Input type="color" value={field.color} onChange={(e) => updateField(field.id, { color: e.target.value })} /></div>
@@ -257,14 +314,19 @@ export function LabelTemplateEditor({ open, onOpenChange, template, onSave }: La
           </div>
           {/* Colonne droite: preview */}
           <div>
-            <Label className="mb-2 block">Aperçu ({width}mm × {height}mm)</Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label>Aperçu ({width}mm × {height}mm)</Label>
+              <span className="text-[10px] text-muted-foreground">Glissez un champ pour le déplacer</span>
+            </div>
             <div className="max-w-full overflow-auto border-2 border-dashed rounded-lg bg-gray-50 p-2"><div style={{ width: width * scale, height: height * scale, position: 'relative' }}>
               {backgroundImage && <img src={backgroundImage} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'fill' }} />}
               {fields.map((field) => (
-                <div key={field.id} style={{
+                <div key={field.id} onMouseDown={(e) => startDrag(e, field)} style={{
                   position: 'absolute',
                   left: field.x * scale,
                   top: field.y * scale,
+                  cursor: isDragging && selectedField === field.id ? 'grabbing' : 'move',
+                  userSelect: 'none',
                   width: field.width * scale,
                   height: field.height * scale,
                   fontSize: field.fontSize * scale * 0.3,

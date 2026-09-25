@@ -152,7 +152,7 @@ export function DocumentScansDialog({
               Scans & Accusés Réception — {numeroDoc}
             </DialogTitle>
             <span className={`${colors.badge} px-3 py-1 rounded-full text-xs font-mono font-bold`}>
-              V3.36
+              V3.37
             </span>
           </div>
         </DialogHeader>
