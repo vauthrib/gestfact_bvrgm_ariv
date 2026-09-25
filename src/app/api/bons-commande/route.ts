@@ -30,11 +30,22 @@ async function prochainNumero(): Promise<string> {
   return `BC${(max + 1).toString().padStart(5, '0')}`;
 }
 
+// Les saisies de formulaire arrivent parfois en chaîne : on force les types avant Prisma
+const normaliseLignes = (lignes: any[] = []) =>
+  (Array.isArray(lignes) ? lignes : []).map((l) => ({
+    articleId: l.articleId || null,
+    designation: String(l.designation ?? ''),
+    quantite: Number(l.quantite) || 0,
+    prixUnitaire: Number(l.prixUnitaire) || 0,
+    totalHT: Number(l.totalHT) || 0,
+  }));
+
 export async function POST(request: NextRequest) {
   try {
     await ensureCommandesTables();
     const { lignes = [], ...data } = await request.json();
     const numero = await prochainNumero();
+    const ls = normaliseLignes(lignes);
 
     const commande = await prisma.bonCommande.create({
       data: {
@@ -42,8 +53,8 @@ export async function POST(request: NextRequest) {
         numero,
         dateCommande: new Date(data.dateCommande),
         dateReception: data.dateReception ? new Date(data.dateReception) : null,
-        totalHT: (lignes || []).reduce((s: number, l: any) => s + (l.totalHT || 0), 0),
-        lignes: { create: lignes },
+        totalHT: ls.reduce((s, l) => s + l.totalHT, 0),
+        lignes: { create: ls },
       },
       include: { lignes: true },
     });
@@ -62,6 +73,7 @@ export async function PUT(request: NextRequest) {
     // Mise à jour partielle autorisée (ex: date de réception seule) :
     // les lignes ne sont remplacées que si elles sont fournies.
     const avecLignes = Array.isArray(lignes);
+    const ls = avecLignes ? normaliseLignes(lignes) : [];
     const commande = await prisma.bonCommande.update({
       where: { id },
       data: {
@@ -72,8 +84,8 @@ export async function PUT(request: NextRequest) {
           : {}),
         ...(avecLignes
           ? {
-              totalHT: lignes.reduce((s: number, l: any) => s + (l.totalHT || 0), 0),
-              lignes: { deleteMany: {}, create: lignes },
+              totalHT: ls.reduce((s, l) => s + l.totalHT, 0),
+              lignes: { deleteMany: {}, create: ls },
             }
           : {}),
       },

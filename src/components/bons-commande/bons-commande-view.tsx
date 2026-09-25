@@ -187,6 +187,9 @@ export function CommandesView() {
     setLignes((prev) => prev.map((l, i) => {
       if (i !== idx) return l;
       const next = { ...l, [field]: val } as LigneCommande;
+      if (field === 'quantite' || field === 'prixUnitaire') {
+        (next as any)[field] = typeof val === 'string' ? parseNumber(val) : val;
+      }
       if (field === 'articleId') {
         const a = articles.find((x) => x.id === val);
         if (a) { next.designation = a.designation; if (!next.prixUnitaire) next.prixUnitaire = a.prixUnitaire; }
