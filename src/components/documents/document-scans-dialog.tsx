@@ -32,7 +32,7 @@ export function DocumentScansDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  typeDoc: 'FACTURE_CLIENT' | 'BON_LIVRAISON' | 'AVOIR_CLIENT' | 'FACTURE_FOURNISSEUR';
+  typeDoc: 'FACTURE_CLIENT' | 'BON_LIVRAISON' | 'AVOIR_CLIENT' | 'FACTURE_FOURNISSEUR' | 'BON_COMMANDE';
   numeroDoc: string;
   accent?: 'green' | 'pink' | 'blue';
   onScanCountChange?: (count: number) => void;
@@ -152,7 +152,7 @@ export function DocumentScansDialog({
               Scans & Accusés Réception — {numeroDoc}
             </DialogTitle>
             <span className={`${colors.badge} px-3 py-1 rounded-full text-xs font-mono font-bold`}>
-              V3.32
+              V3.33
             </span>
           </div>
         </DialogHeader>

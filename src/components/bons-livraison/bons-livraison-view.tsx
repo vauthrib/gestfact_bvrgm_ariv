@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, RefreshCw, Tag, CalendarRange, Paperclip } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, CheckCircle, Download, Printer, FileText, ArrowUp, ArrowDown, ArrowUpDown, ListPlus, Eye, RefreshCw, Tag, CalendarRange, Paperclip, ClipboardList } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ExportDialog } from '@/components/import-export/export-dialog';
@@ -95,6 +95,11 @@ export function BonsLivraisonView() {
   // V3.27 - Scans AR dialog
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [scanDocNumero, setScanDocNumero] = useState<string>('');
+  // V3.33 - Créer un BL depuis une commande
+  const [fromCommandeOpen, setFromCommandeOpen] = useState(false);
+  const [commandesDispo, setCommandesDispo] = useState<any[]>([]);
+  const [blCommandeId, setBlCommandeId] = useState<string | null>(null);
+  const fetchCommandesDispo = async () => { try { const res = await fetch('/api/bons-commande'); const d = await res.json(); setCommandesDispo(Array.isArray(d) ? d : []); } catch (e) { console.error(e); } };
   // V2.92 - Mise à jour d'une facture groupée après modification d'un BL (super code 5555)
   const [superCodeDialogOpen, setSuperCodeDialogOpen] = useState(false);
   const [superCodeInput, setSuperCodeInput] = useState('');
@@ -194,7 +199,9 @@ export function BonsLivraisonView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           ...(editing ? { id: editing.id } : {}),
-          ...formData, 
+          ...formData,
+          // V3.33 - rattache le BL à sa commande de provenance
+          ...(blCommandeId && !editing ? { commandeId: blCommandeId } : {}),
           lignes: validLignes.map(l => ({ ...l, quantite: l.quantite, prixUnitaire: l.prixUnitaire, totalHT: l.totalHT })), 
           totalHT: calcTotal() 
         })
@@ -439,6 +446,31 @@ export function BonsLivraisonView() {
     setFormData({ numero: '', dateBL: new Date().toISOString().split('T')[0], clientId: '', bonCommande: '', infoLibre: '', notesLivraison: '' });
     setLignes([{ designation: '', quantite: 1, prixUnitaire: 0, totalHT: 0 }]);
     setEditing(null);
+    setBlCommandeId(null);
+  };
+
+  // V3.33 - Pré-remplir le BL à partir d'une commande choisie
+  const choisirCommande = (c: any) => {
+    resetForm();
+    setBlCommandeId(c.id);
+    setFormData({
+      numero: '',
+      dateBL: new Date().toISOString().split('T')[0],
+      clientId: c.clientId,
+      bonCommande: c.referenceClient || c.numero,
+      infoLibre: '',
+      notesLivraison: ''
+    });
+    const ls = (c.lignes || []).map((x: any) => ({
+      articleId: x.articleId,
+      designation: x.designation,
+      quantite: x.quantite,
+      prixUnitaire: x.prixUnitaire,
+      totalHT: x.totalHT
+    }));
+    setLignes(ls.length ? ls : [{ designation: '', quantite: 1, prixUnitaire: 0, totalHT: 0 }]);
+    setFromCommandeOpen(false);
+    setDialogOpen(true);
   };
 
   const openEditDialog = async (bl: BonLivraison) => {
@@ -548,6 +580,9 @@ export function BonsLivraisonView() {
           </PermissionGate>
           <PermissionGate permission="bl.create">
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
+          </PermissionGate>
+          <PermissionGate permission="bl.create">
+            <Button variant="outline" onClick={() => { fetchCommandesDispo(); setFromCommandeOpen(true); }}><ClipboardList className="w-4 h-4 mr-2" />Depuis une commande</Button>
           </PermissionGate>
         </div>
       </div>
@@ -670,6 +705,11 @@ export function BonsLivraisonView() {
               <DialogTitle>{editing ? 'Modifier' : 'Nouveau'} BL</DialogTitle>
               <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01-DLG</span>
             </div>
+            {blCommandeId && (
+              <p className="text-sm font-medium text-blue-700">
+                Depuis la commande {commandesDispo.find(c => c.id === blCommandeId)?.numero}
+              </p>
+            )}
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1055,6 +1095,52 @@ export function BonsLivraisonView() {
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} type="bons-livraison" code="NBL01" />
       {/* V3.25 - Visu facture NFC01-VISU */}
       <FactureViewDialog factureId={factureVisuId} onOpenChange={(open) => { if (!open) setFactureVisuId(null); }} />
+      {/* V3.33 - Choisir une commande existante pour pré-remplir le BL */}
+      <Dialog open={fromCommandeOpen} onOpenChange={setFromCommandeOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Créer un BL depuis une commande</DialogTitle>
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-mono font-bold">NBL01-CMD</span>
+            </div>
+          </DialogHeader>
+          <div className="py-2">
+            {commandesDispo.filter(c => c.statut !== 'ANNULEE').length === 0 ? (
+              <p className="text-muted-foreground text-center py-6">Aucune commande disponible.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>N°</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Réf. client</TableHead>
+                    <TableHead>Lignes</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {commandesDispo.filter(c => c.statut !== 'ANNULEE').map(c => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">{c.numero}</TableCell>
+                      <TableCell>{new Date(c.dateCommande).toLocaleDateString('fr-FR')}</TableCell>
+                      <TableCell>{clients.find(x => x.id === c.clientId)?.raisonSociale || '-'}</TableCell>
+                      <TableCell className="font-mono text-xs">{c.referenceClient || '-'}</TableCell>
+                      <TableCell className="text-xs">{(c.lignes || []).length} ligne(s)</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" onClick={() => choisirCommande(c)}>Choisir</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFromCommandeOpen(false)}>Annuler</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* V3.27 - Scans AR dialog */}
       <DocumentScansDialog
         open={scanDialogOpen}

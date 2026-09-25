@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ensureCommandesTables } from '@/lib/commandes-db';
 
 export async function GET() {
   try {
@@ -16,7 +17,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
-    const { lignes, ...blData } = data;
+    const { lignes, commandeId, ...blData } = data;
 
     // Récupérer les paramètres pour la numérotation
     const parametres = await prisma.parametres.findFirst();
@@ -37,6 +38,19 @@ export async function POST(request: NextRequest) {
       },
       include: { lignes: true, client: true }
     });
+
+    // V3.33 - Attacher le BL à sa commande de provenance (table d'attelage, sans toucher à BonLivraison)
+    if (commandeId) {
+      try {
+        await ensureCommandesTables();
+        await prisma.commandeBonLivraison.upsert({
+          where: { commandeId_blId: { commandeId, blId: bl.id } },
+          create: { commandeId, blId: bl.id },
+          update: {},
+        });
+      } catch (e) { console.error('Lien commande/BL impossible:', e); }
+    }
+
     return NextResponse.json(bl);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -77,6 +91,7 @@ export async function DELETE(request: NextRequest) {
     if (!id) return NextResponse.json({ error: 'ID requis' }, { status: 400 });
     await prisma.ligneBonLivraison.deleteMany({ where: { bonLivraisonId: id } });
     await prisma.bonLivraison.delete({ where: { id } });
+    try { await ensureCommandesTables(); await prisma.commandeBonLivraison.deleteMany({ where: { blId: id } }); } catch (e) { console.error(e); }
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

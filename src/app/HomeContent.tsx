@@ -11,6 +11,7 @@ import { ReglementsClientsView } from '@/components/reglements-clients/reglement
 import { FacturesFournisseursView } from '@/components/factures-fournisseurs/factures-fournisseurs-view';
 import { ReglementsFournisseursView } from '@/components/reglements-fournisseurs/reglements-fournisseurs-view';
 import { BonsLivraisonView } from '@/components/bons-livraison/bons-livraison-view';
+import { CommandesView } from '@/components/bons-commande/bons-commande-view';
 import { ParametresView } from '@/components/parametres/parametres-view';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import { Permission, hasPermission, getAccessiblePages } from '@/lib/permissions';
@@ -58,6 +59,7 @@ export default function HomeContent({ user }: HomeContentProps) {
       case 'factures-fournisseurs': return <FacturesFournisseursView />;
       case 'reglements-fournisseurs': return <ReglementsFournisseursView />;
       case 'bons-livraison': return <BonsLivraisonView />;
+      case 'commandes': return <CommandesView />;
       case 'parametres': return <ParametresView userRole={user.role} />;
       default: return <DashboardView />;
     }

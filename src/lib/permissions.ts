@@ -40,6 +40,13 @@ export const PERMISSION_DEFINITIONS = {
   'etiquettes.view': { label: 'Visu', group: 'Étiquettes', type: 'view' },
   'etiquettes.print': { label: 'Imprimer', group: 'Étiquettes', type: 'print' },
   'etiquettes.manage': { label: 'Modèles', group: 'Étiquettes', type: 'manage' },
+
+  // Bons de commande
+  'commandes.view': { label: 'Visu', group: 'Bons de commande', type: 'view' },
+  'commandes.edit': { label: 'Modif', group: 'Bons de commande', type: 'edit' },
+  'commandes.create': { label: 'Créer', group: 'Bons de commande', type: 'create' },
+  'commandes.validate': { label: 'Valider', group: 'Bons de commande', type: 'validate' },
+  'commandes.print': { label: 'Imprimer OF', group: 'Bons de commande', type: 'print' },
   
   // Avoirs
   'avoirs.view': { label: 'Visu', group: 'Avoirs', type: 'view' },
@@ -86,6 +93,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'expeditions.view', 'expeditions.edit', 'expeditions.create',
     'scans.view', 'scans.create', 'scans.delete',
     'etiquettes.view', 'etiquettes.print', 'etiquettes.manage',
+    'commandes.view', 'commandes.edit', 'commandes.create', 'commandes.validate', 'commandes.print',
     'factures.view', 'factures.edit', 'factures.create', 'factures.validate',
     'avoirs.view', 'avoirs.edit', 'avoirs.create', 'avoirs.validate',
     'reglements.view', 'reglements.edit', 'reglements.create', 'reglements.validate',
@@ -102,6 +110,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'bl.view', 'bl.create',
     'scans.view', 'scans.create',
     'etiquettes.view', 'etiquettes.print',
+    'commandes.view', 'commandes.print',
   ],
   BL_ONLY: [
     // Profil "Créateur BL uniquement"
@@ -111,6 +120,7 @@ export const DEFAULT_PERMISSIONS: Record<string, Permission[]> = {
     'bl.view', 'bl.create',
     'scans.view', 'scans.create',
     'etiquettes.view', 'etiquettes.print',
+    'commandes.view', 'commandes.print',
   ],
 };
 
@@ -120,6 +130,7 @@ export const PERMISSION_GROUPS = [
   { name: 'Tiers', permissions: ['tiers.view', 'tiers.edit', 'tiers.create'] },
   { name: 'Articles', permissions: ['articles.view', 'articles.edit', 'articles.create'] },
   { name: 'Bons de Livraison', permissions: ['bl.view', 'bl.edit', 'bl.create', 'bl.validate'] },
+  { name: 'Bons de commande', permissions: ['commandes.view', 'commandes.edit', 'commandes.create', 'commandes.validate', 'commandes.print'] },
   { name: 'Archives d’expéditions', permissions: ['expeditions.view', 'expeditions.edit', 'expeditions.create'] },
   { name: 'Scans & Accusés Réception', permissions: ['scans.view', 'scans.create', 'scans.delete'] },
   { name: 'Étiquettes', permissions: ['etiquettes.view', 'etiquettes.print', 'etiquettes.manage'] },
@@ -156,6 +167,7 @@ export const PAGE_PERMISSIONS: Record<string, Permission> = {
   'tiers': 'tiers.view',
   'articles': 'articles.view',
   'bons-livraison': 'bl.view',
+  'commandes': 'commandes.view',
   'expeditions': 'expeditions.view',
   'factures-clients': 'factures.view',
   'avoirs-clients': 'avoirs.view',

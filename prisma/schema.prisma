@@ -243,6 +243,55 @@ model LigneBonLivraison {
   @@index([bonLivraisonId])
 }
 
+// V3.33 - Bons de commande (suivi commande -> BL -> facture)
+model BonCommande {
+  id              String   @id @default(cuid())
+  numero          String   @unique
+  dateCommande    DateTime
+  dateReception   DateTime?
+  clientId        String
+  referenceClient String?  // N° de bon de commande du client
+  statut          String   @default("EN_COURS")  // EN_COURS, FACTUREE, ANNULEE
+  infoLibre       String?
+  notes           String?
+  totalHT         Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lignes          LigneBonCommande[]
+  liens           CommandeBonLivraison[]
+
+  @@index([clientId])
+  @@index([statut])
+}
+
+model LigneBonCommande {
+  id            String   @id @default(cuid())
+  commandeId    String
+  articleId     String?
+  designation   String
+  quantite      Float    @default(0)
+  prixUnitaire  Float    @default(0)
+  totalHT       Float    @default(0)
+
+  commande      BonCommande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+
+  @@index([commandeId])
+}
+
+// Lien BL <-> commande (table d'attelage pour ne pas modifier la table BonLivraison en prod)
+model CommandeBonLivraison {
+  id         String   @id @default(cuid())
+  commandeId String
+  blId       String
+  createdAt  DateTime @default(now())
+
+  commande   BonCommande @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+
+  @@unique([commandeId, blId])
+  @@index([blId])
+}
+
 model ExpeditionArchive {
   id              String   @id @default(cuid())
   blId            String?  @unique
