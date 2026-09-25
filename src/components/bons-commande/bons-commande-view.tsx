@@ -567,7 +567,7 @@ export function CommandesView() {
         onOpenChange={setOfOpen}
         commande={ofCommande}
         client={ofCommande?.clientId ? clientName(ofCommande.clientId) : ''}
-        entreprise={parametres}
+        articles={articles}
         accent={ACCENT}
       />
     </div>

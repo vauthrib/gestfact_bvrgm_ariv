@@ -292,6 +292,19 @@ model CommandeBonLivraison {
   @@index([blId])
 }
 
+// V3.36 - Modèles d'ordre de fabrication (même mécanique que les étiquettes)
+model OfTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  width           Float    @default(210)
+  height          Float    @default(148.5)
+  backgroundImage String?  // Image de fond en base64 (JPG/PNG)
+  fields          String   @default("[]") // JSON: tableau de champs positionnables
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 model ExpeditionArchive {
   id              String   @id @default(cuid())
   blId            String?  @unique

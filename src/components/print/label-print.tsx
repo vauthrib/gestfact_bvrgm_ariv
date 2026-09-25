@@ -152,7 +152,7 @@ function normalizeTemplateKey(rawKey: string): string {
   return rawKey.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
-function resolveTemplate(value: string | undefined, data: Record<string, string>): string {
+export function resolveTemplate(value: string | undefined, data: Record<string, string>): string {
   return (value || '$code').replace(/[$#]([a-zA-ZÀ-ÿ][a-zA-ZÀ-ÿ0-9_-]*)/g, (_, rawKey: string) => {
     const key = normalizeTemplateKey(rawKey);
     const aliases: Record<string, string> = { ref: 'code', reference: 'code', qte: 'quantite', nbl: 'numero', bl: 'numero' };
@@ -173,7 +173,7 @@ function getRequiredTemplateInputs(template: LabelTemplateData): string[] {
   return Array.from(keys);
 }
 
-function renderField(field: LabelField, data: Record<string, string>, scale: number, baseUrl: string, qrToken: string) {
+export function renderField(field: LabelField, data: Record<string, string>, scale: number, baseUrl: string, qrToken: string) {
   if (field.type === 'qrcode') {
     const qrValue = `${baseUrl}/label/${encodeURIComponent(qrToken)}`;
 

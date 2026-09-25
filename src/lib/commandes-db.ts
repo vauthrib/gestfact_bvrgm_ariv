@@ -61,5 +61,21 @@ export async function ensureCommandesTables(): Promise<void> {
     await prisma.$executeRawUnsafe(`ALTER TABLE "CommandeBonLivraison" ADD CONSTRAINT "CommandeBonLivraison_commandeId_fkey" FOREIGN KEY ("commandeId") REFERENCES "BonCommande"("id") ON DELETE CASCADE ON UPDATE CASCADE;`);
   } catch {}
 
+  // V3.36 - Modèles d'ordre de fabrication
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "OfTemplate" (
+      "id" TEXT NOT NULL,
+      "name" TEXT NOT NULL,
+      "width" DOUBLE PRECISION NOT NULL DEFAULT 210,
+      "height" DOUBLE PRECISION NOT NULL DEFAULT 148.5,
+      "backgroundImage" TEXT,
+      "fields" TEXT NOT NULL DEFAULT '[]',
+      "isDefault" BOOLEAN NOT NULL DEFAULT false,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "OfTemplate_pkey" PRIMARY KEY ("id")
+    );
+  `);
+
   ready = true;
 }
