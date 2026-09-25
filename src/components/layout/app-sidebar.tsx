@@ -42,8 +42,8 @@ const allMenuItems: { id: PageView; label: string; icon: React.ReactNode; separa
   { id: 'dashboard', label: 'Tableau de bord', icon: <LayoutDashboard className="w-5 h-5" />, permission: 'dashboard.view' },
   { id: 'tiers', label: 'Tiers', icon: <Users className="w-5 h-5" />, permission: 'tiers.view' },
   { id: 'articles', label: 'Articles', icon: <Package className="w-5 h-5" />, permission: 'articles.view' },
-  { id: 'bons-livraison', label: 'Bons de Livraison', icon: <Truck className="w-5 h-5" />, permission: 'bl.view' },
   { id: 'commandes', label: 'Bons de commande', icon: <ClipboardList className="w-5 h-5" />, permission: 'commandes.view' },
+  { id: 'bons-livraison', label: 'Bons de Livraison', icon: <Truck className="w-5 h-5" />, permission: 'bl.view' },
   { id: 'factures-clients', label: 'Factures Clients', icon: <FileText className="w-5 h-5" />, permission: 'factures.view' },
   { id: 'avoirs-clients', label: 'Avoirs Clients', icon: <Undo2 className="w-5 h-5" />, permission: 'avoirs.view' },
   { id: 'reglements-clients', label: 'Règlements Clients', icon: <CreditCard className="w-5 h-5" />, permission: 'reglements.view', separatorAfter: true },
@@ -77,7 +77,7 @@ export function AppSidebar({ currentView, onViewChange, collapsed, onToggle, use
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
           <span className="font-bold text-lg">
-            ARIV <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">V3.33</span>
+            ARIV <span className="bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">V3.34</span>
           </span>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle}>
